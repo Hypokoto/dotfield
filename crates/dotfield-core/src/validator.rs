@@ -112,11 +112,21 @@ impl Validator {
             "launcher",
             "app_menu",
             "hud",
+            "profile_switcher",
             "close_window",
             "fullscreen",
             "lock",
             "screenshot_area",
             "screenshot_full",
+            "volume_up",
+            "volume_down",
+            "volume_mute",
+            "mic_mute",
+            "brightness_up",
+            "brightness_down",
+            "media_play_pause",
+            "media_next",
+            "media_prev",
         ];
 
         let mut seen_keys: std::collections::HashMap<String, String> =

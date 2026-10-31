@@ -229,6 +229,140 @@ terminal = "Super+Return"
     }
 
     #[test]
+    fn test_kitty_colors_fragment() {
+        let toml_data = r#"
+[meta]
+name = "test-kitty"
+
+[compositor]
+engine = "sway"
+
+[apps]
+terminal = "kitty"
+launcher = "fuzzel"
+
+[theme]
+palette = "controlled-chaos"
+
+[bindings]
+terminal = "Super+Return"
+"#;
+        let profile: Profile = toml_data.parse().expect("Must parse");
+        let fragments = Compiler::compile(&profile).expect("Must compile");
+        let kitty = fragments
+            .iter()
+            .find(|f| f.target_path == "kitty/colors.conf")
+            .expect("Must have kitty fragment");
+        assert!(kitty.content.contains("background #0A0A0C"));
+        assert!(kitty.content.contains("foreground #E8E6E3"));
+        assert!(kitty.content.contains("cursor #FFB000"));
+        assert!(kitty.content.contains("color1 #E63946"));
+        assert!(kitty.content.contains("color2 #7BC47F"));
+    }
+
+    #[test]
+    fn test_alacritty_colors_fragment() {
+        let toml_data = r#"
+[meta]
+name = "test-alacritty"
+
+[compositor]
+engine = "sway"
+
+[apps]
+terminal = "alacritty"
+launcher = "fuzzel"
+
+[theme]
+palette = "controlled-chaos"
+
+[bindings]
+terminal = "Super+Return"
+"#;
+        let profile: Profile = toml_data.parse().expect("Must parse");
+        let fragments = Compiler::compile(&profile).expect("Must compile");
+        let alacritty = fragments
+            .iter()
+            .find(|f| f.target_path == "alacritty/colors.toml")
+            .expect("Must have alacritty fragment");
+        assert!(alacritty.content.contains("background = \"#0A0A0C\""));
+        assert!(alacritty.content.contains("cursor = \"#FFB000\""));
+        assert!(alacritty.content.contains("red = \"#E63946\""));
+        assert!(alacritty.content.contains("green = \"#7BC47F\""));
+    }
+
+    #[test]
+    fn test_ghostty_colors_fragment() {
+        let toml_data = r#"
+[meta]
+name = "test-ghostty"
+
+[compositor]
+engine = "sway"
+
+[apps]
+terminal = "ghostty"
+launcher = "fuzzel"
+
+[theme]
+palette = "controlled-chaos"
+
+[bindings]
+terminal = "Super+Return"
+"#;
+        let profile: Profile = toml_data.parse().expect("Must parse");
+        let fragments = Compiler::compile(&profile).expect("Must compile");
+        let ghostty = fragments
+            .iter()
+            .find(|f| f.target_path == "ghostty/themes/dotfield-theme")
+            .expect("Must have ghostty fragment");
+        assert!(ghostty.content.contains("background = #0A0A0C"));
+        assert!(ghostty.content.contains("cursor-color = #FFB000"));
+        assert!(ghostty.content.contains("palette = 1=#E63946"));
+        assert!(ghostty.content.contains("palette = 2=#7BC47F"));
+    }
+
+    #[test]
+    fn test_media_and_osd_keybindings() {
+        let toml_data = r#"
+[meta]
+name = "test-media"
+
+[compositor]
+engine = "sway"
+
+[apps]
+terminal = "foot"
+launcher = "fuzzel"
+
+[theme]
+palette = "controlled-chaos"
+
+[bindings]
+volume_up = "XF86AudioRaiseVolume"
+volume_down = "XF86AudioLowerVolume"
+profile_switcher = "Super+p"
+lock = "Super+Escape"
+"#;
+        let profile: Profile = toml_data.parse().expect("Must parse");
+        assert!(Validator::validate(&profile).is_ok());
+        let fragments = Compiler::compile(&profile).expect("Must compile");
+        let sway = fragments
+            .iter()
+            .find(|f| f.target_path.contains("sway"))
+            .unwrap();
+        assert!(sway
+            .content
+            .contains("bindsym --no-warn XF86AudioRaiseVolume exec \"~/.config/dotfield/scripts/osd.sh volume_up\""));
+        assert!(sway
+            .content
+            .contains("bindsym --no-warn Mod4+p exec \"dotfield-gui --switcher\""));
+        assert!(sway
+            .content
+            .contains("bindsym --no-warn Mod4+Escape exec \"~/.config/dotfield/scripts/lock.sh\""));
+    }
+
+    #[test]
     fn test_niri_quoted_exec_action() {
         let toml_data = r#"
 [meta]

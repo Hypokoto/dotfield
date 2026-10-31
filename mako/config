@@ -1,32 +1,76 @@
 # Mako notification daemon configuration managed by Dotfield
-# Controlled Chaos color palette
+# Controlled Chaos color palette — Void Black · Crimson · Industrial Amber · Steel
 
+# Typography & Geometry
 font=JetBrainsMono Nerd Font 10
-width=360
-height=160
+width=380
+height=180
 margin=16
 padding=12,16
 border-size=2
 border-radius=8
+layer=overlay
+max-visible=5
 default-timeout=6000
 group-by=app-name,summary,urgency
 
-# Default (Normal Urgency)
+# Format & Markup
+format=<b>%s</b>\n%b
+markup=1
+actions=1
+
+# Icons
+icons=1
+max-icon-size=48
+icon-location=left
+
+# Default Normal Urgency (Industrial Amber Accent)
 background-color=#0A0A0C
 text-color=#E8E6E3
 border-color=#FFB000
+progress-color=source #FFB000
+button-color=#1C1C23
+button-border-color=#34343D
+button-text-color=#E8E6E3
 
-# Low Urgency
+# Low Urgency (Subdued Steel & Iron)
 [urgency=low]
 background-color=#121216
 text-color=#A1A1AA
 border-color=#34343D
+progress-color=source #8B949E
 default-timeout=4000
 
-# Critical Urgency
+# Critical Urgency (Crimson Disruption & Zero-Timeout)
 [urgency=critical]
 background-color=#121216
 text-color=#E8E6E3
 border-color=#E63946
+progress-color=source #E63946
 default-timeout=0
 ignore-timeout=1
+
+# OSD & Ephemeral Notifications (No Notification History Pollution)
+[category=volume]
+history=0
+default-timeout=2000
+
+[category=brightness]
+history=0
+default-timeout=2000
+
+[category=osd]
+history=0
+default-timeout=2000
+
+# Dotfield Engine Notifications
+[app-name=dotfield]
+border-color=#FFB000
+
+# Screenshot Notifications
+[app-name=Screenshot]
+border-color=#FFD166
+
+# Do-Not-Disturb Mode
+[mode=do-not-disturb]
+invisible=1

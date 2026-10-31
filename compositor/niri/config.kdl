@@ -98,6 +98,52 @@ binds {
     Mod+Shift+7 { move-column-to-workspace 7; }
     Mod+Shift+8 { move-column-to-workspace 8; }
     Mod+Shift+9 { move-column-to-workspace 9; }
+
+    // Media & Hardware Volume/Brightness Controls (OSD Integrated)
+    XF86AudioRaiseVolume allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh volume_up"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh volume_down"; }
+    XF86AudioMute        allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh volume_mute"; }
+    XF86AudioMicMute     allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh mic_mute"; }
+    XF86MonBrightnessUp   allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh brightness_up"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh brightness_down"; }
+    XF86AudioPlay        allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh media_play_pause"; }
+    XF86AudioNext        allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh media_next"; }
+    XF86AudioPrev        allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh media_prev"; }
+
+    // System Utilities & Dotfield Tools
+    Mod+Slash { spawn "dotfield-gui" "--hud"; }
+    Mod+P { spawn "dotfield-gui" "--switcher"; }
+    Mod+Escape { spawn "sh" "-c" "~/.config/dotfield/scripts/lock.sh"; }
+    Print { spawn "sh" "-c" "~/.config/dotfield/scripts/screenshot.sh --full"; }
+    Shift+Print { spawn "sh" "-c" "~/.config/dotfield/scripts/screenshot.sh --area"; }
+    Mod+Shift+S { spawn "sh" "-c" "~/.config/dotfield/scripts/screenshot.sh --area"; }
+}
+
+// Window Rules (Floating & Ergonomics)
+window-rule {
+    match app-id="dotfield-gui"
+    open-floating true
+    default-column-width { fixed 780; }
+}
+
+window-rule {
+    match app-id="pavucontrol"
+    open-floating true
+}
+
+window-rule {
+    match app-id="imv"
+    open-floating true
+}
+
+window-rule {
+    match app-id="mpv"
+    open-floating true
+}
+
+window-rule {
+    match app-id="file-roller"
+    open-floating true
 }
 
 // Modular Drop-ins (Dotfield Managed)

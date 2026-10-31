@@ -1,9 +1,10 @@
 # Swaylock configuration managed by Dotfield
-# Controlled Chaos color palette
+# Controlled Chaos color palette — Void Black · Crimson · Industrial Amber · Steel
 
 daemonize
 ignore-empty-password
 show-failed-attempts
+font=JetBrainsMono Nerd Font
 
 # Colors (Hex without #)
 color=0A0A0C
@@ -31,6 +32,6 @@ text-clear-color=FFB000
 text-ver-color=FFB000
 text-wrong-color=E63946
 
-indicator-radius=80
-indicator-thickness=8
+indicator-radius=90
+indicator-thickness=10
 indicator-idle-visible

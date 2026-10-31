@@ -1,4 +1,5 @@
 # Alacritty configuration managed by Dotfield
+# Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
 
 [general]
 import = ["~/.config/alacritty/colors.toml"]
@@ -7,12 +8,57 @@ import = ["~/.config/alacritty/colors.toml"]
 size = 11.0
 
 [font.normal]
-family = "monospace"
+family = "JetBrainsMono Nerd Font"
+style = "Regular"
+
+[font.bold]
+family = "JetBrainsMono Nerd Font"
+style = "Bold"
+
+[font.italic]
+family = "JetBrainsMono Nerd Font"
+style = "Italic"
 
 [window]
 padding = { x = 12, y = 12 }
 dynamic_padding = false
 opacity = 1.0
 
+[scrolling]
+history = 10000
+multiplier = 3
+
+[selection]
+save_to_clipboard = true
+
 [cursor]
 style = { shape = "Block", blinking = "Never" }
+unfocused_hollow = true
+
+[mouse]
+hide_when_typing = true
+
+[[keyboard.bindings]]
+key = "C"
+mods = "Control|Shift"
+action = "Copy"
+
+[[keyboard.bindings]]
+key = "V"
+mods = "Control|Shift"
+action = "Paste"
+
+[[keyboard.bindings]]
+key = "Plus"
+mods = "Control|Shift"
+action = "IncreaseFontSize"
+
+[[keyboard.bindings]]
+key = "Minus"
+mods = "Control"
+action = "DecreaseFontSize"
+
+[[keyboard.bindings]]
+key = "Key0"
+mods = "Control"
+action = "ResetFontSize"

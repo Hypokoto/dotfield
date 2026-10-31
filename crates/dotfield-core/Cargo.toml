@@ -1,0 +1,20 @@
+[package]
+name = "dotfield-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Core library for Dotfield ricing compiler, validation, and generational deployment"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+similar.workspace = true
+walkdir.workspace = true
+tempfile.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

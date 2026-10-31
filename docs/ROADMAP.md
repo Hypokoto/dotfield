@@ -106,7 +106,7 @@ flowchart LR
 ## Phase 6: Native Core & CLI Engine (`dotfield-core` & `dotfield-cli`)
 *Goal: Implement the Rust compiler, validation engine, transactional deployer, and CLI tool.*
 
-- [ ] **Crate Architecture (`crates/`)**:
+- [x] **Crate Architecture (`crates/`)**:
   - `dotfield-core`:
     - TOML deserializers for Profiles, Apps, Bindings, Themes, Security.
     - Path and binary resolution on `$PATH`.
@@ -115,8 +115,8 @@ flowchart LR
     - Selective reload controller (IPC commands for Sway, Niri, Mako, etc.).
     - State journal and rollback logic (`.dotfield/state.json`).
   - `dotfield-cli`:
-    - Commands: `status`, `check`, `diff`, `apply`, `rollback`, `list-profiles`.
-    - Rich terminal outputs with color-coded diffs using `colored` or `anstream`.
+    - Commands: `status`, `check`, `diff`, `apply`, `rollback`, `list`.
+    - Rich terminal outputs with color-coded diffs using `colored` and `similar`.
 
 ---
 

@@ -1,0 +1,18 @@
+# Gitleaks configuration for dotfield
+title = "dotfield gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlist for non-sensitive placeholders and docs"
+paths = [
+  '''docs/.*''',
+  '''tests/.*''',
+  '''GEMINI\.md'''
+]
+regexes = [
+  '''(?i)example[_-]?key''',
+  '''(?i)sample[_-]?secret''',
+  '''00000000-0000-0000-0000-000000000000'''
+]

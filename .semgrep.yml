@@ -1,0 +1,32 @@
+rules:
+  - id: dotfield-no-hardcoded-credentials
+    patterns:
+      - pattern-regex: '(?i)(api[_-]?key|secret[_-]?token|auth[_-]?password)\s*=\s*["''][a-zA-Z0-9_\-]{16,}["'']'
+    message: "Potential hardcoded credential or secret found in configuration or code."
+    languages: [generic]
+    severity: ERROR
+
+  - id: dotfield-avoid-unsafe-command-injection-rust
+    patterns:
+      - pattern: std::process::Command::new("sh").arg("-c").arg($CMD)
+    message: "Avoid calling shell directly with user-provided arguments in Rust; prefer discrete Command::new args."
+    languages: [rust]
+    severity: WARNING
+
+  - id: dotfield-secure-file-permissions
+    patterns:
+      - pattern: std::fs::set_permissions($PATH, std::os::unix::fs::PermissionsExt::from_mode(0o777))
+    message: "Overly permissive file permissions (0777). Dotfield configs must be owner-restricted (0600 or 0700)."
+    languages: [rust]
+    severity: ERROR
+
+  - id: dotfield-shell-set-eoupipefail
+    patterns:
+      - pattern-regex: '^#!/bin/(ba)?sh'
+      - pattern-not-regex: 'set -euo pipefail'
+    paths:
+      include:
+        - "**/*.sh"
+    message: "Shell scripts should start with 'set -euo pipefail' for defensive execution."
+    languages: [generic]
+    severity: WARNING

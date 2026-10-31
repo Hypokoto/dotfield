@@ -1,0 +1,42 @@
+# Pre-commit configuration for dotfield
+default_stages: [pre-commit]
+fail_fast: true
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: Gitleaks Secret Scanner
+        entry: gitleaks detect --no-git --redact -v
+        language: system
+        pass_filenames: false
+
+      - id: semgrep
+        name: Semgrep Static Security Analysis
+        entry: semgrep --config=.semgrep.yml --error
+        language: system
+        pass_filenames: false
+
+      - id: cargo-fmt
+        name: Cargo Format Check
+        entry: cargo fmt -- --check
+        language: system
+        files: '\.rs$'
+        pass_filenames: false
+
+      - id: cargo-check
+        name: Cargo Typecheck
+        entry: cargo check
+        language: system
+        files: '\.rs$'
+        pass_filenames: false

@@ -1,0 +1,42 @@
+[meta]
+name = "default"
+description = "Default balanced Wayland rice"
+version = "0.1.0"
+
+[compositor]
+target = "sway"
+gaps_inner = 8
+gaps_outer = 6
+border_width = 2
+
+[apps]
+terminal = "foot"
+launcher = "fuzzel"
+editor = "nvim"
+multiplexer = "zellij"
+file_manager = "foot -e yazi"
+browser = "firefox"
+bar = "i3status-rust"
+notifications = "mako"
+
+[bindings]
+terminal = "Super+Return"
+launcher = "Super+space"
+editor = "Super+e"
+close_window = "Super+q"
+toggle_floating = "Super+Shift+space"
+fullscreen = "Super+f"
+reload_config = "Super+Shift+r"
+
+[theme]
+palette = "catppuccin-mocha"
+font_sans = "Inter 10"
+font_mono = "JetBrainsMono Nerd Font 10"
+accent_color = "#89b4fa"
+background = "#1e1e2e"
+foreground = "#cdd6f4"
+
+[security]
+isolate_browser = true
+enforce_firejail = false
+enforce_nftables = false

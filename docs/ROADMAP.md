@@ -55,18 +55,18 @@ flowchart LR
 ## Phase 3: Terminals, Neovim, Multiplexers & Status Bars
 *Goal: Provide developer productivity tools with uniform color tokenization and shared keybinding ergonomics.*
 
-- [ ] **Terminals (`terminals/`)**:
+- [x] **Terminals (`terminals/`)**:
   - **Foot (`terminals/foot/`)**: Fast, lightweight Wayland terminal with client-server support.
   - **Kitty (`terminals/kitty/`)**: GPU-accelerated terminal with socket control for live color switching (`kitten @ set-colors`).
   - **Alacritty (`terminals/alacritty/`)**: High-performance TOML configuration.
   - **Ghostty (`terminals/ghostty/`)**: Native Wayland modern terminal.
-- [ ] **Editor (`nvim/`)**:
-  - Modular Neovim Lua setup (lazy.nvim, LSP, Treesitter).
+- [x] **Editor (`nvim/`)**:
+  - Modular Neovim Lua setup (modular options, keymaps, clean structure).
   - Theme synchronization hook listening to Dotfield profile color palettes.
-- [ ] **Multiplexers (`multiplexer/`)**:
+- [x] **Multiplexers (`multiplexer/`)**:
   - **Zellij (`multiplexer/zellij/`)**: KDL configuration, layouts, and status bar integration.
   - **Tmux (`multiplexer/tmux/`)**: Minimal tmux configuration with vi-mode keybindings and dynamic colors.
-- [ ] **Status Bars (`i3-rust/` & Swaybar)**:
+- [x] **Status Bars (`i3-rust/` & Swaybar)**:
   - **i3status-rust**: Modern status bar blocks (CPU, memory, battery, network, sound, time).
   - Swaybar / Waybar fallback definitions.
 

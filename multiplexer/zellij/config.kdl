@@ -1,0 +1,8 @@
+// Zellij configuration managed by Dotfield
+
+theme "dotfield"
+default_layout "compact"
+mouse_mode true
+copy_on_select true
+pane_frames true
+simplified_ui false

@@ -1,0 +1,48 @@
+# i3status-rust configuration managed by Dotfield
+# Tokens derived from Controlled Chaos palette
+
+[theme]
+theme = "plain"
+
+[theme.overrides]
+idle_bg = "#121216"
+idle_fg = "#E8E6E3"
+info_bg = "#121216"
+info_fg = "#8B949E"
+good_bg = "#121216"
+good_fg = "#8B949E"
+warning_bg = "#121216"
+warning_fg = "#FFB000"
+critical_bg = "#E63946"
+critical_fg = "#E8E6E3"
+separator = " "
+
+[icons]
+icons = "none"
+
+[[block]]
+block = "cpu"
+interval = 2
+format = "CPU: $utilization"
+
+[[block]]
+block = "memory"
+format = "MEM: $mem_used_percents"
+interval = 5
+
+[[block]]
+block = "disk_space"
+path = "/"
+info_type = "available"
+interval = 60
+format = "DISK: $available"
+
+[[block]]
+block = "battery"
+interval = 10
+format = "BAT: $percentage"
+
+[[block]]
+block = "time"
+interval = 5
+format = "%a %d-%b %H:%M"

@@ -1,6 +1,6 @@
 # Engineering Plan Review: Phase 4 (Notifications, OSD & System Utilities)
 
-**Review Target:** [`docs/designs/phase-4-notifications-osd-utilities.md`](file:///home/hypokoto/dev/projects/dotfield/docs/designs/phase-4-notifications-osd-utilities.md)
+**Review Target:** [`docs/designs/phase-4-notifications-osd-utilities.md`](../designs/phase-4-notifications-osd-utilities.md)
 **Reviewer:** Pair Programming Partner (via `gstack-plan-eng-review`)
 **Outcome:** APPROVED
 **Verdict Date:** 2026-10-31
@@ -37,7 +37,7 @@ All dependencies (`mako`, `makoctl`, `swaylock`, `swayidle`, `swaybg`, `grim`, `
 2. **Swaylock Lockscreen (`osd/swaylock/config`)**:
    - Indicator ring styling with Controlled Chaos color flags (`inside-color`, `ring-color`, `key-hl-color`, `line-color`).
 3. **Swayidle Idle Daemon (`osd/swayidle/config`)**:
-   - Graceful idle events: display power off at 300s, screen lock at 600s, lock before sleep.
+   - Graceful idle events: screen lock at 290s, display power off at 300s, lock before sleep.
 4. **Screenshot Script (`scripts/screenshot.sh`)**:
    - Executable bash script supporting `--area`, `--window`, and `--full`, saving to `~/Pictures/Screenshots/` and copying to Wayland clipboard.
 5. **Wallpaper Script (`scripts/wallpaper.sh`)**:

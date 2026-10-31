@@ -1,6 +1,6 @@
 # Engineering Plan Review: Phase 7 (Custom GUI Utilities & Event Daemon)
 
-**Review Target:** [`docs/designs/phase-7-gui-utilities-daemon.md`](file:///home/hypokoto/dev/projects/dotfield/docs/designs/phase-7-gui-utilities-daemon.md)
+**Review Target:** [`docs/designs/phase-7-gui-utilities-daemon.md`](../designs/phase-7-gui-utilities-daemon.md)
 **Reviewer:** Pair Programming Partner (via `gstack-plan-eng-review`)
 **Outcome:** APPROVED
 **Verdict Date:** 2026-10-31
@@ -44,7 +44,7 @@ Phase 7 delivers the graphical and automated interface layers of Dotfield:
    - `src/power.rs`: Sysfs power supply monitor determining AC vs. Battery state.
    - `src/main.rs`: Daemon event loop and `--once` execution mode applying appropriate profiles.
 4. **Documentation & Roadmap**:
-   - Update [`docs/ROADMAP.md`](file:///home/hypokoto/dev/projects/dotfield/docs/ROADMAP.md) marking Phase 7 items complete.
+   - Update [`docs/ROADMAP.md`](../ROADMAP.md) marking Phase 7 items complete.
 5. **Quality Verification**:
    - Run `cargo fmt -- --check`, `cargo check`, `cargo test`, `cargo clippy -- -D warnings`, `gitleaks detect --no-git --redact -v`, `semgrep --config=.semgrep.yml --error .`, and `pre-commit run --all-files`.
 

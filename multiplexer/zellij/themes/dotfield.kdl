@@ -5,13 +5,13 @@ themes {
     dotfield {
         fg "#E8E6E3"
         bg "#0A0A0C"
-        black "#121216"
+        black "#1C1C23"
         red "#E63946"
-        green "#8B949E"
+        green "#7BC47F"
         yellow "#FFB000"
-        blue "#8B949E"
-        magenta "#A1A1AA"
-        cyan "#34343D"
+        blue "#82AAFF"
+        magenta "#C792EA"
+        cyan "#8B949E"
         white "#E8E6E3"
         orange "#FFB000"
     }

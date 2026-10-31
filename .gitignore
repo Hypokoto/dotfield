@@ -32,3 +32,6 @@ private/
 
 # Pre-commit cache
 .pre-commit-config.yaml.cache
+
+# Local wallpapers and media assets
+background/

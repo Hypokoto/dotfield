@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use dotfield_core::{Compiler, GenerationManager, Profile, Reloader};
+use dotfield_core::{Compiler, GenerationManager, Profile, Reloader, Validator};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 slint::include_modules!();
@@ -33,27 +33,26 @@ struct Cli {
     profiles_dir: PathBuf,
 }
 
-fn resolve_active_profile_path(explicit_path: Option<&PathBuf>) -> PathBuf {
+fn resolve_active_profile_path(explicit_path: Option<&PathBuf>) -> Result<PathBuf> {
     if let Some(p) = explicit_path {
-        if p.exists() {
-            return p.clone();
-        }
+        let resolved = Profile::resolve_profile_path(p);
+        anyhow::ensure!(
+            resolved.exists(),
+            "Specified profile path does not exist: {}",
+            p.display()
+        );
+        return Ok(resolved);
     }
 
     let mgr = GenerationManager::new(GenerationManager::default_dir());
     if let Ok(Some(state)) = mgr.get_state() {
-        let candidate = PathBuf::from("profiles").join(format!("{}.toml", state.active_profile));
+        let candidate = Profile::resolve_profile_path(&state.active_profile);
         if candidate.exists() {
-            return candidate;
+            return Ok(candidate);
         }
     }
 
-    let default_path = PathBuf::from("profiles/default.toml");
-    if default_path.exists() {
-        default_path
-    } else {
-        PathBuf::from("default.toml")
-    }
+    Ok(Profile::resolve_profile_path("default"))
 }
 
 fn run_hud(profile_path: &Path) -> Result<()> {
@@ -72,7 +71,12 @@ fn run_hud(profile_path: &Path) -> Result<()> {
             || action == "multiplexer"
         {
             "apps"
-        } else if action.starts_with("focus_") || action.starts_with("move_") || action == "close" {
+        } else if action.starts_with("focus_")
+            || action.starts_with("move_")
+            || action == "close"
+            || action == "close_window"
+            || action == "fullscreen"
+        {
             "window"
         } else {
             "system"
@@ -139,8 +143,11 @@ fn load_available_profiles(
             let path = entry.path();
             if let Ok(profile) = Profile::from_file(&path) {
                 let is_active = profile.meta.name == active_name;
-                let security = if profile.meta.name.contains("hardening") {
-                    "Hardened"
+                let security = if profile.security.firejail == Some(true)
+                    || profile.security.nftables == Some(true)
+                    || profile.security.apparmor == Some(true)
+                {
+                    "Hardening declared (not enforced)"
                 } else {
                     "Standard"
                 };
@@ -202,45 +209,60 @@ fn run_switcher(profiles_dir: &Path) -> Result<()> {
 
             if let Some(path) = found_path {
                 match Profile::from_file(&path) {
-                    Ok(profile) => match Compiler::compile(&profile) {
-                        Ok(fragments) => {
-                            let mgr = GenerationManager::new(GenerationManager::default_dir());
-                            match mgr.deploy(&profile, &fragments) {
-                                Ok(new_gen) => {
-                                    let _ = Reloader::reload_changed_targets(&fragments);
-                                    switcher.set_status_message(SharedString::from(format!(
-                                        "✔ Generation {new_gen} deployed ('{target_str}')"
-                                    )));
+                    Ok(profile) => {
+                        if let Err(e) = Validator::validate(&profile) {
+                            switcher.set_status_message(SharedString::from(format!(
+                                "Validation failed: {e}"
+                            )));
+                        } else {
+                            match Compiler::compile(&profile) {
+                                Ok(fragments) => {
+                                    let mgr =
+                                        GenerationManager::new(GenerationManager::default_dir());
+                                    match mgr.deploy(&profile, &fragments) {
+                                        Ok(new_gen) => {
+                                            let reload_note =
+                                                match Reloader::reload_changed_targets(&fragments) {
+                                                    Ok(_) => String::new(),
+                                                    Err(e) => format!(" (reload failed: {e})"),
+                                                };
+                                            switcher.set_status_message(SharedString::from(
+                                                format!(
+                                                    "✔ Generation {new_gen} deployed ('{target_str}'){reload_note}"
+                                                ),
+                                            ));
 
-                                    // Refresh active state in cards
-                                    if let Ok(updated) = load_available_profiles(
-                                        &profiles_dir_owned,
-                                        &profile.meta.name,
-                                    ) {
-                                        *loaded_ref.borrow_mut() = updated;
-                                        let new_cards: Vec<ProfileCardData> = loaded_ref
-                                            .borrow()
-                                            .iter()
-                                            .map(|(_, c)| c.clone())
-                                            .collect();
-                                        switcher.set_profiles(ModelRc::from(Rc::new(
-                                            VecModel::from(new_cards),
-                                        )));
+                                            // Refresh active state in cards
+                                            if let Ok(updated) = load_available_profiles(
+                                                &profiles_dir_owned,
+                                                &profile.meta.name,
+                                            ) {
+                                                *loaded_ref.borrow_mut() = updated;
+                                                let new_cards: Vec<ProfileCardData> = loaded_ref
+                                                    .borrow()
+                                                    .iter()
+                                                    .map(|(_, c)| c.clone())
+                                                    .collect();
+                                                switcher.set_profiles(ModelRc::from(Rc::new(
+                                                    VecModel::from(new_cards),
+                                                )));
+                                            }
+                                        }
+                                        Err(e) => {
+                                            switcher.set_status_message(SharedString::from(
+                                                format!("Deploy failed: {e}"),
+                                            ));
+                                        }
                                     }
                                 }
                                 Err(e) => {
                                     switcher.set_status_message(SharedString::from(format!(
-                                        "Deploy failed: {e}"
+                                        "Compile failed: {e}"
                                     )));
                                 }
                             }
                         }
-                        Err(e) => {
-                            switcher.set_status_message(SharedString::from(format!(
-                                "Compile failed: {e}"
-                            )));
-                        }
-                    },
+                    }
                     Err(e) => {
                         switcher.set_status_message(SharedString::from(format!(
                             "Failed to read profile: {e}"
@@ -263,12 +285,17 @@ fn run_switcher(profiles_dir: &Path) -> Result<()> {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    let profiles_dir = if cli.profiles_dir.as_os_str() == "profiles" && !cli.profiles_dir.exists() {
+        Profile::default_profiles_dir()
+    } else {
+        cli.profiles_dir
+    };
 
     if cli.switcher {
-        run_switcher(&cli.profiles_dir)?;
+        run_switcher(&profiles_dir)?;
     } else {
         // Default to HUD if --hud or neither specified
-        let profile_path = resolve_active_profile_path(cli.profile.as_ref());
+        let profile_path = resolve_active_profile_path(cli.profile.as_ref())?;
         run_hud(&profile_path)?;
     }
 

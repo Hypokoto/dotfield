@@ -14,6 +14,9 @@ $cmd_duration\
 $line_break\
 $character"""
 
+scan_timeout = 10
+command_timeout = 150
+
 palette = "controlled_chaos"
 
 [palettes.controlled_chaos]
@@ -49,9 +52,13 @@ format = "[$symbol$branch]($style) "
 [git_status]
 style = "bold crimson"
 format = "([\\[$all_status$ahead_behind\\]]($style) )"
+ignore_submodules = true
+
+[package]
+disabled = true
 
 [git_state]
-style = "bold iron"
+style = "bold amber"
 format = "[$state( $progress_current/$progress_total)]($style) "
 
 [rust]

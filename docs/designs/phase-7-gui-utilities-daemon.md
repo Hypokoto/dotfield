@@ -40,10 +40,10 @@ dotfield/
 ```
 
 ### 1.2 Slint UI Components & Visual Tokens
-In strict accordance with [`PALETTE.md`](file:///home/hypokoto/dev/projects/dotfield/PALETTE.md):
+In strict accordance with [`PALETTE.md`](../../PALETTE.md):
 - **Backgrounds**: `Void` (`#0A0A0C`), `Obsidian` (`#121216`), `Graphite` (`#1C1C23`)
 - **Borders & Dividers**: `Iron` (`#34343D`)
-- **Foreground / Text**: `Bone` (`#E8E6E3`), `Iron` (`#8A8A93` for muted secondary)
+- **Foreground / Text**: `Bone` (`#E8E6E3`), `Ash` (`#A1A1AA` for muted secondary)
 - **Accents**: `Amber` (`#FFB000`) for active selections/highlights, `Crimson` (`#E63946`) for security/hardening badges.
 
 #### Keybind HUD (`--hud`)
@@ -58,9 +58,9 @@ In strict accordance with [`PALETTE.md`](file:///home/hypokoto/dev/projects/dotf
 
 ### 1.3 Background Event Daemon (`dotfieldd`)
 - Monitors `/sys/class/power_supply/` for power source state:
-  - **AC Power** (`online = 1`): Automatically activates `default.toml` profile (enabling full desktop ricing, Zellij, high-refresh rates, rich bar).
-  - **Battery Power** (`online = 0` / discharging): Automatically switches to `minimal.toml` profile (reducing background load, low resource footprint).
-- Supports `--daemon` (continuous polling/inotify loop) and `--check` / `--once` (single evaluation for automated scripts and testing).
+  - **AC Power** (`online = 1`): Automatically activates compositor-matched profile (`default.toml` on Sway or `minimal.toml` on Niri, auto-detected via active compositor socket `SWAYSOCK` vs `NIRI_SOCKET`).
+  - **Battery Power** (`online = 0` / discharging): Automatically switches to engine-matched low-power profile (`battery.toml` on Sway or `minimal.toml` on Niri, reducing background load, low resource footprint).
+- Supports `--daemon` (continuous polling loop) and `--once` (single evaluation for automated scripts and testing, with optional `--dry-run`).
 - Communicates transitions via logging and executes atomic transitions through `dotfield-core`.
 
 ---

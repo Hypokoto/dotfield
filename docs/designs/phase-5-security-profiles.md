@@ -43,7 +43,7 @@ Security drop-in fragments provide modular sandboxing for desktop applications (
   - Security: Baseline sandboxing, minimal background overhead.
 - **`profiles/hardening.toml`**: Maximum security and strict sandboxing.
   - Compositor: Sway
-  - Apps: Foot (sandboxed via Firejail), Fuzzel, Neovim, Zellij
+  - Apps: Foot, Fuzzel, Neovim, Zellij
   - Security: Firejail browser isolation, strict NFTables, AppArmor abstraction drop-in.
 
 ---

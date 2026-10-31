@@ -12,6 +12,8 @@ set $menu_full rofi -show drun
 
 ### Output & Wallpaper
 output * bg #0A0A0C solid_color
+output * max_render_time 1
+output * adaptive_sync on
 
 ### Window Geometry & Borders
 default_border pixel 2
@@ -32,8 +34,8 @@ client.placeholder      #1C1C23 #0A0A0C #E8E6E3 #1C1C23   #1C1C23
 input "type:keyboard" {
     xkb_layout "us"
     xkb_options "caps:escape"
-    repeat_delay 250
-    repeat_rate 35
+    repeat_delay 200
+    repeat_rate 50
 }
 
 input "type:touchpad" {

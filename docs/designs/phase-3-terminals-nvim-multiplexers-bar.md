@@ -100,11 +100,11 @@ dotfield/
 ## 4. Verification & Testing Plan
 
 1. **Syntax & Configuration Lints**:
-   - `alacritty --dry-run` or TOML validation.
-   - `foot --verify-config`.
-   - `kitty --config-file ... --dump-commands`.
+   - `alacritty migrate --dry-run --config-file terminals/alacritty/alacritty.toml` or TOML validation.
+   - `foot --check-config` (or `foot -C`).
+   - `kitty --config ... sh -c "exit 0"`.
    - `nvim --headless "+qa"` to verify clean Lua loading without errors or deprecations.
    - `zellij setup --check`.
-   - `tmux -f ... new-session -d -s test && tmux kill-server`.
+   - `tmux -L dotfield-test -f ... new-session -d -s test && tmux -L dotfield-test kill-server`.
 2. **Quality Gates**:
    - `pre-commit run --all-files` (passes all 10 hooks: `trailing-whitespace`, `end-of-file-fixer`, `check-yaml`, `check-toml`, `check-added-large-files`, `gitleaks`, `semgrep`, `cargo-fmt`, `cargo-check`, `cargo-clippy`).

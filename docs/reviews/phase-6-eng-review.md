@@ -1,6 +1,6 @@
 # Engineering Plan Review: Phase 6 (Native Core & CLI Engine)
 
-**Review Target:** [`docs/designs/phase-6-native-core-cli-engine.md`](file:///home/hypokoto/dev/projects/dotfield/docs/designs/phase-6-native-core-cli-engine.md)
+**Review Target:** [`docs/designs/phase-6-native-core-cli-engine.md`](../designs/phase-6-native-core-cli-engine.md)
 **Reviewer:** Pair Programming Partner (via `gstack-plan-eng-review`)
 **Outcome:** APPROVED
 **Verdict Date:** 2026-10-31
@@ -20,8 +20,8 @@ Phase 6 implements the core compilation and operational logic of Dotfield:
 | Evaluation Dimension | Status | Notes |
 | :--- | :--- | :--- |
 | **Separation of Concerns** | **PASS** | Pure library `dotfield-core` decoupled from CLI frontend `dotfield-cli`, enabling easy GUI reuse in Phase 7. |
-| **Transactional Generational Engine** | **PASS** | Staging to `~/.dotfield/staging/`, committing to `~/.dotfield/generations/N/`, atomic pointer swap `~/.dotfield/current`, and persistent rollback history in `state.json`. |
-| **Selective Reload Capability** | **PASS** | Computes diffs between generation $N-1$ and $N$ and fires reloads only for affected components (`swaymsg`, `niri msg`, `makoctl`, `kitty @ set-colors`, `tmux`). |
+| **Transactional Generational Engine** | **PASS** | Writes generation fragments directly to `~/.dotfield/generations/N/`, atomically swaps `~/.dotfield/current` with failure compensation, reconciles live symlinks, and tracks rollback history in `state.json`. |
+| **Selective Reload Capability** | **PASS** | Target-aware reloader inspects newly compiled fragment targets and signals only active desktop components (`swaymsg`, `niri msg`, `makoctl`, `kitty @ set-colors`, `tmux`). |
 | **Error Handling & Code Safety** | **PASS** | Strict `thiserror` / `anyhow` error propagation; zero `unwrap()` or `panic!()` in library crate. |
 | **Toolchain & Quality Gates** | **PASS** | Fully tested with `cargo check`, `cargo test`, `cargo fmt`, and `cargo clippy -- -D warnings`. |
 

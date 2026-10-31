@@ -2,7 +2,7 @@
 
 > **Void Black · Crimson · Industrial Amber · Steel**
 
-A dark, industrial color system for `dotfied`, designed around three principles: chaos, discipline, and productivity.
+A dark, industrial color system for `dotfield`, designed around three principles: chaos, discipline, and productivity.
 
 The interface remains restrained and functional while selective accents communicate intensity, focus, and action.
 
@@ -77,7 +77,7 @@ Applies to Foot, Kitty, Ghostty, and Alacritty.
 | Background | `#0A0A0C` |
 | Foreground | `#E8E6E3` |
 | Cursor | `#FFB000` |
-| Selection background | `#34343D` |
+| Selection background | `#1C1C23` |
 | Selection foreground | `#E8E6E3` |
 
 Use a consistent ANSI palette across all supported terminal emulators.
@@ -101,7 +101,7 @@ Use amber for selection and crimson for matched search terms. Keep the rest of t
 |---|---|
 | Background | `#121216` |
 | Text | `#E8E6E3` |
-| Normal border | `#34343D` |
+| Normal border | `#FFB000` |
 | Urgent border | `#E63946` |
 
 Notifications should remain compact. Reserve crimson for urgent notifications rather than using it for every message.
@@ -184,7 +184,7 @@ Suggested location:
 [meta]
 name = "Controlled Chaos"
 variant = "dark"
-description = "Industrial dark theme for dotfied"
+description = "Industrial dark theme for dotfield"
 
 [colors]
 background = "#0A0A0C"

@@ -11,8 +11,8 @@ Supersedes: hypokoto-main-design-20261031-121534.md
 Dotfield compiles abstract profiles into concrete desktop targets. Before the compiler engine (Phase 6) can generate configuration fragments, the target applications must have clean, robust, and standalone-functional baseline configurations that support modular drop-ins. In addition, the visual appearance of Sway, Niri, Fuzzel, Rofi, and the Starship prompt must strictly adhere to the unified Controlled Chaos palette token system (`PALETTE.md`) to prevent aesthetic fragmentation.
 
 ## What Makes This Cool
-1. **Fallback Safety**: Base compositor configurations are fully functional standalone with sensible default bindings (Super+Return spawns terminal, Super+Space launches Fuzzel, Super+Q kills window). The user is never trapped in a broken session if Dotfield's generated drop-in is absent or cleared.
-2. **Deterministic Drop-in Override**: `include ~/.config/sway/config.d/*.conf` and `include "config.kdl.d/*.kdl"` are placed at the end of the base configs, allowing Dotfield-compiled fragments to cleanly override or extend bindings with surgical precision.
+1. **Fallback Safety**: Base compositor configurations are fully functional standalone with sensible default bindings (Super+Return spawns terminal, Super+Space launches Fuzzel, Super+Q kills window). To guarantee Niri's configuration parser remains valid even if no custom profile has been generated, Dotfield maintains a persistent valid placeholder at `config.kdl.d/00-generated-bindings.kdl`.
+2. **Deterministic Drop-in Override**: `include ~/.config/sway/config.d/*.conf` and explicit include paths in Niri (`include "config.kdl.d/00-generated-bindings.kdl"`) are placed at the end of the base configs, allowing Dotfield-compiled fragments to cleanly override or extend bindings with surgical precision.
 3. **Controlled Chaos Aesthetic Coherence**: The exact same palette tokens (`#0A0A0C` Void, `#121216` Obsidian, `#FFB000` Industrial Amber, `#E63946` Crimson, `#E8E6E3` Bone, `#34343D` Iron) govern Sway borders, Niri active column highlights, Fuzzel search match highlights, Rofi list items, and the Starship prompt.
 
 ## Constraints
@@ -29,7 +29,7 @@ Dotfield compiles abstract profiles into concrete desktop targets. Before the co
 ## Approaches Considered
 
 ### Approach A: Discrete Fragment Overrides (Approved)
-- **Summary**: Full standalone base configs (`sway/config`, `niri/config.kdl`) with built-in fallbacks that include `config.d/*.conf` and `config.kdl.d/*.kdl` as late overrides. Modular configs for Fuzzel, Rofi, Zsh, and Starship.
+- **Summary**: Full standalone base configs (`sway/config`, `niri/config.kdl`) with built-in fallbacks that include `config.d/*.conf` in Sway and explicit drop-in file paths in Niri (`config.kdl.d/00-generated-bindings.kdl`) as late overrides. Modular configs for Fuzzel, Rofi, Zsh, and Starship.
 - **Effort**: Medium (M)
 - **Risk**: Low
 - **Pros**: Standalone functional, crash-resilient, clean boundary between base desktop configuration and compiler outputs.
@@ -49,8 +49,8 @@ Dotfield compiles abstract profiles into concrete desktop targets. Before the co
 **Approach A: Discrete Fragment Overrides**. It provides guaranteed fallback safety, clean modularity, and native syntax compatibility across both Sway and Niri KDL.
 
 ## Open Questions
-1. **Duplicate Keybinding Handling in Sway**: When a generated fragment in `config.d/` binds a key that was already bound in the base config, does Sway issue a warning? (Remedy: In Sway, subsequent bindings override earlier ones cleanly, but using unbind or careful default structuring ensures zero noise).
-2. **Niri Dynamic KDL Reload**: Niri natively reloads when `config.kdl` changes; does touching an included file in `config.kdl.d/` trigger the inotify reload, or is `niri msg action reload-config` needed? (Remedy: Dotfield's selective reload engine explicitly executes `niri msg action reload-config`).
+1. **Duplicate Keybinding Handling in Sway**: When a generated fragment in `config.d/` binds a key that was already bound in the base config, Sway warns by default when `bindsym` overwrites an existing binding. (Remedy: Dotfield's compiler emits `bindsym --no-warn` or uses `unbindsym` for intentional replacements to eliminate warning noise).
+2. **Niri Dynamic KDL Reload**: Niri natively reloads when `config.kdl` changes; does touching an included file in `config.kdl.d/` trigger the inotify reload, or is `niri msg action load-config-file` needed? (Remedy: Dotfield's selective reload engine explicitly executes `niri msg action load-config-file`).
 
 ## Success Criteria
 1. `compositor/sway/config` and `compositor/sway/config.d/00-generated-bindings.conf` created and verified.

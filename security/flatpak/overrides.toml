@@ -5,10 +5,6 @@
 # Enforce native Wayland display and disable X11 socket sharing
 socket = ["wayland", "!x11", "!fallback-x11"]
 
-# Restrict legacy audio server leaks
-nosocket = ["pulseaudio"]
-features = ["pipewire"]
-
 # Deny global filesystem snooping by default
 filesystem = ["!home", "!host"]
 

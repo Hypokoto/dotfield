@@ -35,8 +35,8 @@ The architecture prioritizes native Wayland primitives with low memory footprint
     - Ring wrong: `Crimson #E63946`
     - Key highlight: `Bone #E8E6E3`
 - **Swayidle** (`osd/swayidle/config`):
+  - 290s (<5m): Lock screen via `swaylock -f` before display blanking.
   - 300s (5m): Dim/turn off displays (`swaymsg "output * power off"` or `niri msg action power-off-monitors`).
-  - 600s (10m): Lock screen via `swaylock`.
   - Resume: Turn displays back on.
   - Before sleep: Lock screen immediately (`swaylock -f`).
 
@@ -74,8 +74,8 @@ dotfield/
 ## 3. Verification & Testing Plan
 
 1. **Syntax & Config Verification**:
-   - `mako --dry-run` or validation against man page specs.
-   - `swaylock -C` / argument validation.
+   - `mako --config <path>` isolated parser verification in a test environment.
+   - Swaylock configuration verification (validate directive keys and color hex codes against manpage schema without starting a live lock session).
    - Shell script linting with `shellcheck` or clean bash execution tests.
 2. **Quality Gates**:
-   - `pre-commit run --all-files` (all 10 hooks: whitespace, EOF, YAML, TOML, gitleaks, semgrep, cargo-fmt, cargo-check, cargo-clippy).
+   - `pre-commit run --all-files` (all 10 hooks: trailing-whitespace, end-of-file-fixer, check-yaml, check-toml, check-added-large-files, gitleaks, semgrep, cargo-fmt, cargo-check, cargo-clippy).

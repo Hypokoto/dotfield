@@ -19,7 +19,11 @@ impl Compiler {
             "niri" => {
                 fragments.push(Self::compile_niri_bindings(profile)?);
             }
-            _ => {}
+            other => {
+                return Err(crate::error::DotfieldError::Compilation(format!(
+                    "Unsupported compositor engine: '{other}'"
+                )));
+            }
         }
 
         // Fuzzel launcher configuration
@@ -41,21 +45,27 @@ impl Compiler {
         for (action, keybind) in &profile.bindings {
             let sway_key = keybind.replace("Super+", "Mod4+");
             let cmd = match action.as_str() {
-                "terminal" => format!("exec {}", profile.apps.terminal),
-                "launcher" => format!("exec {}", profile.apps.launcher),
-                "hud" => "exec dotfield-gui --hud".to_string(),
+                "terminal" => Self::sway_exec(&profile.apps.terminal),
+                "launcher" => Self::sway_exec(&profile.apps.launcher),
+                "app_menu" => Self::sway_exec("rofi -show drun"),
+                "hud" => Self::sway_exec("dotfield-gui --hud"),
                 "close_window" => "kill".to_string(),
                 "fullscreen" => "fullscreen toggle".to_string(),
-                "lock" => "exec swaylock -f".to_string(),
+                "lock" => Self::sway_exec("swaylock -f"),
                 "screenshot_area" => {
-                    "exec ~/.config/dotfield/scripts/screenshot.sh --area".to_string()
+                    Self::sway_exec("~/.config/dotfield/scripts/screenshot.sh --area")
                 }
                 "screenshot_full" => {
-                    "exec ~/.config/dotfield/scripts/screenshot.sh --full".to_string()
+                    Self::sway_exec("~/.config/dotfield/scripts/screenshot.sh --full")
                 }
-                other => format!("exec {other}"),
+                action if action.starts_with("exec:") => Self::sway_exec(&action[5..]),
+                other => {
+                    return Err(crate::error::DotfieldError::Compilation(format!(
+                        "Unknown keybinding action: '{other}'"
+                    )));
+                }
             };
-            content.push_str(&format!("bindsym {sway_key} {cmd}\n"));
+            content.push_str(&format!("bindsym --no-warn {sway_key} {cmd}\n"));
         }
 
         Ok(CompiledFragment {
@@ -72,11 +82,12 @@ impl Compiler {
         for (action, keybind) in &profile.bindings {
             let niri_key = keybind.replace("Super+", "Mod+");
             let statement = match action.as_str() {
-                "terminal" => format!("spawn \"{}\";", profile.apps.terminal),
-                "launcher" => format!("spawn \"{}\";", profile.apps.launcher),
+                "terminal" => Self::niri_spawn(&profile.apps.terminal),
+                "launcher" => Self::niri_spawn(&profile.apps.launcher),
+                "app_menu" => "spawn \"rofi\" \"-show\" \"drun\";".to_string(),
                 "hud" => "spawn \"dotfield-gui\" \"--hud\";".to_string(),
                 "close_window" => "close-window;".to_string(),
-                "fullscreen" => "maximize-column;".to_string(),
+                "fullscreen" => "fullscreen-window;".to_string(),
                 "lock" => "spawn \"swaylock\" \"-f\";".to_string(),
                 "screenshot_area" => {
                     "spawn \"sh\" \"-c\" \"~/.config/dotfield/scripts/screenshot.sh --area\";"
@@ -86,7 +97,18 @@ impl Compiler {
                     "spawn \"sh\" \"-c\" \"~/.config/dotfield/scripts/screenshot.sh --full\";"
                         .to_string()
                 }
-                other => format!("spawn \"{other}\";"),
+                action if action.starts_with("exec:") => {
+                    let cmd = &action[5..];
+                    format!(
+                        "spawn \"sh\" \"-c\" \"{}\";",
+                        cmd.replace('\\', "\\\\").replace('"', "\\\"")
+                    )
+                }
+                other => {
+                    return Err(crate::error::DotfieldError::Compilation(format!(
+                        "Unknown keybinding action: '{other}'"
+                    )));
+                }
             };
             content.push_str(&format!("    {niri_key} {{ {statement} }}\n"));
         }
@@ -99,15 +121,102 @@ impl Compiler {
         })
     }
 
+    pub(crate) fn split_command_args(cmd: &str) -> Vec<String> {
+        let mut tokens = Vec::new();
+        let mut current = String::new();
+        let mut in_single = false;
+        let mut in_double = false;
+        let mut escaped = false;
+        let mut token_active = false;
+
+        for c in cmd.chars() {
+            if escaped {
+                current.push(c);
+                token_active = true;
+                escaped = false;
+                continue;
+            }
+
+            match c {
+                '\\' if !in_single => {
+                    escaped = true;
+                    token_active = true;
+                }
+                '\'' if !in_double => {
+                    in_single = !in_single;
+                    token_active = true;
+                }
+                '"' if !in_single => {
+                    in_double = !in_double;
+                    token_active = true;
+                }
+                c if c.is_whitespace() && !in_single && !in_double => {
+                    if token_active {
+                        tokens.push(std::mem::take(&mut current));
+                        token_active = false;
+                    }
+                }
+                _ => {
+                    current.push(c);
+                    token_active = true;
+                }
+            }
+        }
+
+        if escaped {
+            current.push('\\');
+        }
+        if token_active {
+            tokens.push(current);
+        }
+
+        tokens
+    }
+
+    fn niri_spawn(cmd: &str) -> String {
+        let trimmed = cmd.trim();
+        if trimmed.is_empty() {
+            return "spawn \"\";".to_string();
+        }
+
+        // If the command contains shell syntax, metacharacters, environment variables ($),
+        // tilde expansion (~), or leading VAR=value environment assignments,
+        // route it through a shell wrapper so Niri expands them rather than passing them literally.
+        const SHELL_META: &[char] = &[
+            '$', '~', '&', '|', ';', '<', '>', '*', '?', '`', '(', ')', '{', '}', '\n',
+        ];
+
+        let has_leading_env = trimmed
+            .split_whitespace()
+            .next()
+            .is_some_and(|first| first.contains('=') && !first.starts_with('-'));
+
+        if trimmed.contains(SHELL_META) || has_leading_env {
+            format!(
+                "spawn \"sh\" \"-c\" \"{}\";",
+                trimmed.replace('\\', "\\\\").replace('"', "\\\"")
+            )
+        } else {
+            let parts = Self::split_command_args(trimmed);
+            let quoted = parts
+                .iter()
+                .map(|p| format!("\"{}\"", p.replace('\\', "\\\\").replace('"', "\\\"")))
+                .collect::<Vec<_>>()
+                .join(" ");
+            format!("spawn {quoted};")
+        }
+    }
+
     fn compile_fuzzel_colors(_profile: &Profile) -> Result<CompiledFragment> {
         let content = r#"# Controlled Chaos color palette fragment for Fuzzel
 [colors]
-background=0A0A0Cee
-text=E8E6E3ff
-match=FFB000ff
-selection=1C1C23ff
-selection-text=E8E6E3ff
-border=FFB000ff
+background=121216fa
+text=e8e6e3ff
+match=e63946ff
+selection=1c1c23ff
+selection-text=ffd166ff
+selection-match=ffb000ff
+border=ffb000ff
 "#;
         Ok(CompiledFragment {
             target_path: "fuzzel/colors.ini".to_string(),
@@ -117,25 +226,30 @@ border=FFB000ff
 
     fn compile_foot_colors(_profile: &Profile) -> Result<CompiledFragment> {
         let content = r#"# Controlled Chaos color palette fragment for Foot
-[colors]
+[colors-dark]
 background=0A0A0C
 foreground=E8E6E3
-regular0=121216
+regular0=1C1C23
 regular1=E63946
-regular2=8B949E
+regular2=7BC47F
 regular3=FFB000
-regular4=8B949E
-regular5=A1A1AA
-regular6=34343D
+regular4=82AAFF
+regular5=C792EA
+regular6=8B949E
 regular7=E8E6E3
-bright0=34343D
-bright1=E63946
-bright2=8B949E
-bright3=FFB000
-bright4=8B949E
-bright5=A1A1AA
-bright6=A1A1AA
-bright7=E8E6E3
+bright0=53535D
+bright1=FF6B76
+bright2=9AE6A0
+bright3=FFD166
+bright4=A4C0FF
+bright5=D9ABF4
+bright6=B0B8C1
+bright7=FFFFFF
+
+# Selection & cursor
+cursor=0A0A0C FFB000
+selection-foreground=E8E6E3
+selection-background=1C1C23
 "#;
         Ok(CompiledFragment {
             target_path: "foot/colors.ini".to_string(),
@@ -153,7 +267,7 @@ padding=12
 border-size=2
 border-radius=4
 default-timeout=6000
-group-by=summary
+group-by=app-name,summary,urgency
 
 background-color=#0A0A0C
 text-color=#E8E6E3
@@ -170,10 +284,18 @@ background-color=#121216
 text-color=#E8E6E3
 border-color=#E63946
 default-timeout=0
+ignore-timeout=1
 "#;
         Ok(CompiledFragment {
             target_path: "mako/config".to_string(),
             content: content.to_string(),
         })
+    }
+
+    fn sway_exec(cmd: &str) -> String {
+        format!(
+            "exec \"{}\"",
+            cmd.trim().replace('\\', "\\\\").replace('"', "\\\"")
+        )
     }
 }

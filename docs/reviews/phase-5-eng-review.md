@@ -1,6 +1,6 @@
 # Engineering Plan Review: Phase 5 (Security Hardening & Profile Definitions)
 
-**Review Target:** [`docs/designs/phase-5-security-profiles.md`](file:///home/hypokoto/dev/projects/dotfield/docs/designs/phase-5-security-profiles.md)
+**Review Target:** [`docs/designs/phase-5-security-profiles.md`](../designs/phase-5-security-profiles.md)
 **Reviewer:** Pair Programming Partner (via `gstack-plan-eng-review`)
 **Outcome:** APPROVED
 **Verdict Date:** 2026-10-31
@@ -37,13 +37,14 @@ In addition, Phase 5 expands and validates concrete Dotfield semantic profiles (
 2. **AppArmor Profile (`security/apparmor/dotfield-daemon`)**:
    - Deny read access to `~/.ssh/**`, `~/.gnupg/**`, `~/.aws/**`, and audit writes.
 3. **Flatpak Overrides (`security/flatpak/overrides.toml`)**:
-   - Sockets: `wayland`, `!x11`, `!fallback-x11`, `!pulseaudio`, `pipewire`.
+   - Sockets: `wayland`, `!x11`, `!fallback-x11`, `!pulseaudio`.
+   - Filesystems: `xdg-run/pipewire-0`.
 4. **NFTables Workstation Filter (`security/nft/workstation.nft`)**:
    - Ingress filter: drop by default, accept established/related, accept loopback (`iif "lo"`), accept ICMP.
 5. **Concrete Profiles (`profiles/`)**:
    - Complete `default.toml` (Sway + Foot + Fuzzel + Neovim + Zellij + Mako).
    - Complete `minimal.toml` (Niri + Foot + Fuzzel + Neovim + Tmux).
-   - Complete `hardening.toml` (Sway + Firejail Foot + Fuzzel + Neovim + Zellij + NFTables + AppArmor).
+   - Complete `hardening.toml` (Sway + Fuzzel + Neovim + Zellij + NFTables + AppArmor).
 
 ---
 

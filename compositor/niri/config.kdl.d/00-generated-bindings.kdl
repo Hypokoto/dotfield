@@ -7,7 +7,7 @@ binds {
     Mod+Space { spawn "fuzzel"; }
     Mod+Shift+Space { spawn "rofi" "-show" "drun"; }
     Mod+Q { close-window; }
-    Mod+F { maximize-column; }
+    Mod+Shift+F { fullscreen-window; }
 
     // Keybind HUD (Slint overlay)
     Mod+Slash { spawn "dotfield-gui" "--hud"; }

@@ -11,6 +11,9 @@ configuration {
     drun-display-format: "{name}";
     disable-history: false;
     sidebar-mode: false;
+    matching: "fuzzy";
+    sorting-method: "fzf";
+    threads: 0;
 }
 
 @theme "/dev/null"
@@ -24,7 +27,6 @@ configuration {
     crimson: #E63946;
     fg-col: #E8E6E3;
     fg-muted: #A1A1AA;
-    width: 600;
 }
 
 element-text, element-icon , mode-switcher {
@@ -33,6 +35,7 @@ element-text, element-icon , mode-switcher {
 }
 
 window {
+    width: 600px;
     height: 380px;
     border: 2px;
     border-color: @border-col;

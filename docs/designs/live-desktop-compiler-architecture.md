@@ -13,18 +13,18 @@ Traditional Linux ricing and dotfile management (GNU Stow, chezmoi) treat config
 **Dotfield turns your desktop into a compiled, reversible state machine.**
 Instead of manually editing 5 different syntax formats, a single command:
 ```bash
-dotfield morph --to pentest
+dotfield apply pentest
 ```
-atomically evaluates a semantic intent, compiles validated configuration fragments across all desktop surfaces, checks for external manual drifts, stages files, atomically swaps them, and issues selective IPC reloads in under 50ms without killing the user's Wayland session.
+atomically evaluates a semantic intent, compiles validated configuration fragments across all desktop surfaces, checks for external manual drifts, stages files, atomically swaps them, and issues selective IPC reloads in under 50ms (for compilation, validation, staging, and atomic pointer swap) without killing the user's Wayland session.
 If the result isn't desired:
 ```bash
-dotfield undo
+dotfield rollback
 ```
 instantly reverts the entire desktop state back to the previous generation via an append-only state ledger.
 
 ## Constraints
 1. **Zero-Session Disruption**: Must never restart the compositor session or unceremoniously kill running client applications.
-2. **Strict Drop-In Isolation**: Must only manage dedicated `.d` configuration fragments (e.g. `~/.config/sway/config.d/00-dotfield.conf` and `~/.config/niri/config.kdl.d/00-dotfield.kdl`), leaving base user configurations unmolested.
+2. **Strict Drop-In Isolation**: Must only manage dedicated `.d` configuration fragments (e.g. `~/.config/sway/config.d/00-generated-bindings.conf` and `~/.config/niri/config.kdl.d/00-generated-bindings.kdl`), leaving base user configurations unmolested. While Sway loads `include config.d/*` by default in standard distributions, Niri requires an explicit one-time user include (`include "config.kdl.d/00-generated-bindings.kdl"`) in `~/.config/niri/config.kdl`. Dotfield preflight diagnostics detect and report when this include directive is missing without modifying the user's base configuration.
 3. **No Unsafe In-Place Overwrites**: Multi-file transactions must stage in `.dotfield/staging/`, pass preflight validation (e.g. `niri validate`, `sway -C`), and activate via atomic symlink swap.
 4. **Wayland First**: Focus on Wayland compositors (Sway, Niri) with native IPC reloading.
 
@@ -32,7 +32,7 @@ instantly reverts the entire desktop state back to the previous generation via a
 1. **Strongly-Typed Intermediate Representation (IR)**: A semantic TOML profile must lower into a Rust AST/IR before target adapters compile to concrete syntax, avoiding combinatorial explosion.
 2. **Dedicated Fragment Ownership (`config.d`)**: Dotfield owns only its generated fragments, preventing catastrophic destruction of unmanaged user settings.
 3. **Generational Symlink Swapping**: Atomically pointing `current -> generations/N/` provides instantaneous, zero-corruption rollbacks.
-4. **Single-Compositor MVP Foundation**: The complete loop (`morph`, `preview`, `apply`, `undo` with selective reload) must be proven on a primary compositor along with terminal, theme, Mako, and Zellij before attempting cross-compositor transpilation.
+4. **Single-Compositor MVP Foundation**: The complete loop (`apply`, `check`, `diff`, `rollback` with selective reload) must be proven on a primary compositor along with terminal, theme, Mako, and Zellij before attempting cross-compositor transpilation.
 
 ## Approaches Considered
 
@@ -68,15 +68,15 @@ instantly reverts the entire desktop state back to the previous generation via a
 
 ## Recommended Approach
 **Pragmatic Evolution**: Build **Approach A as the foundational engine for Approach B**.
-Implement `dotfield-core` (the strongly-typed IR, adapters, transactional generational staging, drift detection, and rollback ledger) and `dotfield-cli` (commands: `morph`, `preview`, `apply`, `undo`, `diff`, `status`, `check`). Structure the codebase as a Cargo workspace so that the Slint Wayland overlay HUD (`dotfield-gui`) plugs directly into the core library in the subsequent phase without rewriting any compiler or transactional logic.
+Implement `dotfield-core` (the strongly-typed IR, adapters, transactional generational staging, drift detection, and rollback ledger) and `dotfield-cli` (commands: `status`, `check`, `diff`, `apply`, `rollback`, `list`). Structure the codebase as a Cargo workspace so that the Slint Wayland overlay HUD (`dotfield-gui`) plugs directly into the core library in the subsequent phase without rewriting any compiler or transactional logic.
 
 ## Open Questions
 1. **External Drift Reconciliation**: When a user modifies `~/.config/sway/config.d/00-dotfield.conf` by hand, how should Dotfield prompt for resolution during non-interactive or scripted runs?
 2. **Compositor Target Precedence**: Should Sway or Niri serve as the initial validation target for Milestone 1 of Phase 6? (Sway has universal ubiquity; Niri has native live KDL reload and built-in `niri validate`).
 
 ## Success Criteria
-1. Running `dotfield apply pentest` compiles, validates, stages, symlinks, and reloads Sway/Niri, Foot/Kitty, Mako, and Zellij in < 100ms.
-2. Running `dotfield undo` instantly restores the previous generation with matching selective IPC reloads and 0 session interruption.
+1. Running `dotfield apply pentest` compiles, validates, stages, symlinks, and reloads Sway/Niri, Foot/Kitty, Mako, and Zellij in < 50ms (for compilation, validation, staging, and atomic pointer swap).
+2. Running `dotfield rollback` instantly restores the previous generation with matching selective IPC reloads and 0 session interruption.
 3. Terminal diff outputs (`dotfield diff`) clearly display file changes and drift warnings with zero silent overwrites.
 
 ## Distribution Plan

@@ -2,12 +2,21 @@
 # Workstation stateful packet filter
 # Managed by Dotfield
 
-flush ruleset
+# Scope ruleset to dotfield table to preserve Docker, Podman, and VPN configurations.
+# Retain table across reloads so dynamically configured ports in host_ports are preserved.
+add table inet dotfield
+add set inet dotfield host_ports { type inet_service; flags interval; }
 
-table inet filter {
+# Declare input chain idempotently and flush rules on reload to avoid duplication
+add chain inet dotfield input { type filter hook input priority filter; policy drop; }
+flush chain inet dotfield input
+
+# Declare output chain idempotently
+add chain inet dotfield output { type filter hook output priority filter; policy accept; }
+flush chain inet dotfield output
+
+table inet dotfield {
     chain input {
-        type filter hook input priority filter; policy drop;
-
         # Allow established and related connections
         ct state established,related accept
 
@@ -17,14 +26,29 @@ table inet filter {
         # Allow loopback interface traffic
         iif "lo" accept
 
-        # Allow basic ICMP / ping for network diagnostics
+        # Allow inbound DHCPv4 server replies (RFC 2131)
+        udp sport 67 udp dport 68 accept
+
+        # Allow DHCPv6 client discovery replies
+        udp sport 547 udp dport 546 accept
+
+        # Allow basic ICMP / ping for network diagnostics (reach ICMPv6 behind extension headers)
         ip protocol icmp accept
-        ip6 nexthdr ipv6-icmp accept
+        meta l4proto ipv6-icmp accept
+
+        # Allow inbound VPN handshake listeners (Tailscale 41641, WireGuard 51820)
+        udp dport { 41641, 51820 } accept
+
+        # Allow container bridges and VPN interfaces to access host DNS resolver (port 53)
+        iifname { "docker0", "podman*", "br-*", "veth*", "wg*", "tailscale*" } meta l4proto { tcp, udp } th dport 53 accept
+
+        # Allow configured host-bound services (e.g. published container proxy ports)
+        tcp dport @host_ports accept
+        udp dport @host_ports accept
     }
 
-    chain forward {
-        type filter hook forward priority filter; policy drop;
-    }
+    # Forwarding is left unmanaged in the dotfield table so container runtimes
+    # (Docker, Podman) and VPN tunnels (Wireguard, Tailscale) manage their own forwarded traffic.
 
     chain output {
         type filter hook output priority filter; policy accept;

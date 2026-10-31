@@ -1,0 +1,40 @@
+# Dotfield Battery Rice Profile
+# Lightweight resource footprint for Sway on battery power
+
+[meta]
+name = "battery"
+description = "Low-power Wayland workstation using Sway, Tmux, and minimal daemons"
+version = "1.0.0"
+
+[compositor]
+engine = "sway"
+scaling = 1.0
+
+[apps]
+terminal = "foot"
+launcher = "fuzzel"
+editor = "nvim"
+multiplexer = "tmux"
+notifications = "mako"
+bar = "none"
+
+[theme]
+palette = "controlled-chaos"
+font_family = "monospace"
+font_size = 11
+
+[bindings]
+terminal = "Super+Return"
+launcher = "Super+space"
+app_menu = "Super+Shift+space"
+close_window = "Super+q"
+fullscreen = "Super+f"
+hud = "Super+slash"
+screenshot_area = "Print"
+screenshot_full = "Shift+Print"
+lock = "Super+Escape"
+
+[security]
+firejail = false
+flatpak_overrides = true
+nftables = false

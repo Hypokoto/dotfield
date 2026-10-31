@@ -1,6 +1,6 @@
 # Engineering Plan Review: Phase 3 (Terminals, Neovim, Multiplexers & Bar)
 
-**Review Target:** [`docs/designs/phase-3-terminals-nvim-multiplexers-bar.md`](file:///home/hypokoto/dev/projects/dotfield/docs/designs/phase-3-terminals-nvim-multiplexers-bar.md)
+**Review Target:** [`docs/designs/phase-3-terminals-nvim-multiplexers-bar.md`](../designs/phase-3-terminals-nvim-multiplexers-bar.md)
 **Reviewer:** Pair Programming Partner (via `gstack-plan-eng-review`)
 **Outcome:** APPROVED
 **Verdict Date:** 2026-10-31
@@ -23,11 +23,11 @@ All 8 target tools have been confirmed present in the system environment (`/usr/
 
 | Evaluation Dimension | Status | Notes |
 | :--- | :--- | :--- |
-| **Drop-in Fragment Isolation** | **PASS** | Every tool includes its color palette from an isolated file (`colors.ini`, `colors.conf`, `colors.toml`, `themes/dotfield.kdl`, etc.). |
+| **Drop-in Fragment Isolation** | **PASS** | Every tool includes its color palette from an isolated file (`colors.ini`, `colors.conf`, `colors.toml`, `themes/dotfield.kdl`, etc.), with the explicit exception of i3status-rust whose Controlled Chaos palette is configured directly in `i3-rust/config.toml`. |
 | **Selective Reload Capability** | **PASS** | Kitty (`kitten @ set-colors`), Tmux (`tmux source-file`), Foot (SIGHUP), Zellij (KDL hot-reload), and Neovim (`palette.reload()`) reload without tearing down running sessions. |
 | **Controlled Chaos Token Adherence** | **PASS** | Backgrounds strictly use `Void #0A0A0C` / `Obsidian #121216`, text `Bone #E8E6E3`, borders `Iron #34343D`, accents `Amber #FFB000` / `Crimson #E63946`. |
 | **Security & Safety Standards** | **PASS** | Zero unsafe eval strings, clean file permissions, 100% compliant with `.semgrep.yml` and `.gitleaks.toml`. |
-| **Verification Feasibility** | **PASS** | Each tool can be independently validated via CLI (`foot --check-config`, `kitty --dump-commands`, `nvim --headless "+qa"`, `zellij setup --check`, etc.). |
+| **Verification Feasibility** | **PASS** | Each tool can be independently validated via CLI (`foot --check-config`, `kitty --debug-config` (or runtime load check), `nvim --headless "+qa"`, `zellij setup --check`, etc.). |
 
 ---
 

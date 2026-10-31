@@ -32,12 +32,18 @@ pub fn execute(profile_path: &Path) -> Result<()> {
 
     // 4. Selective reload
     println!("{}", "Executing selective reload...".dimmed());
-    let reloaded = Reloader::reload_changed_targets(&fragments)?;
-    if reloaded.is_empty() {
-        println!("  No active processes required reload.");
-    } else {
-        for target in reloaded {
-            println!("  ✔ Reloaded: {}", target.green());
+    match Reloader::reload_changed_targets(&fragments) {
+        Ok(reloaded) if reloaded.is_empty() => {
+            println!("  No active processes required reload.");
+        }
+        Ok(reloaded) => {
+            for target in reloaded {
+                println!("  ✔ Reloaded: {}", target.green());
+            }
+        }
+        Err(e) => {
+            eprintln!("  {} Reload incomplete: {e}", "!".yellow().bold());
+            anyhow::bail!("Deployment succeeded, but reload of changed targets failed: {e}");
         }
     }
 

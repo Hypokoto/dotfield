@@ -25,6 +25,11 @@ opt.incsearch = true
 opt.splitright = true
 opt.splitbelow = true
 opt.scrolloff = 8
-opt.updatetime = 250
+
+-- Performance & Low-Latency Tuning
+opt.updatetime = 100
 opt.timeoutlen = 300
+opt.undofile = true
+opt.swapfile = false
+opt.synmaxcol = 300
 opt.clipboard = "unnamedplus"

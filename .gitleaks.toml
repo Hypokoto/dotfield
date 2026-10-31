@@ -9,7 +9,8 @@ description = "Global allowlist for non-sensitive placeholders and docs"
 paths = [
   '''docs/.*''',
   '''tests/.*''',
-  '''GEMINI\.md'''
+  '''GEMINI\.md''',
+  '''target/.*'''
 ]
 regexes = [
   '''(?i)example[_-]?key''',

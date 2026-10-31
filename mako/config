@@ -9,7 +9,7 @@ padding=12
 border-size=2
 border-radius=4
 default-timeout=6000
-group-by=summary
+group-by=app-name,summary,urgency
 
 # Default (Normal Urgency)
 background-color=#0A0A0C
@@ -29,3 +29,4 @@ background-color=#121216
 text-color=#E8E6E3
 border-color=#E63946
 default-timeout=0
+ignore-timeout=1

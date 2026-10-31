@@ -6,22 +6,22 @@ foreground = E8E6E3
 selection-background = 1C1C23
 selection-foreground = E8E6E3
 
-cursor-color = E8E6E3
+cursor-color = FFB000
 cursor-text = 0A0A0C
 
-palette = 0=#121216
+palette = 0=#1C1C23
 palette = 1=#E63946
-palette = 2=#8B949E
+palette = 2=#7BC47F
 palette = 3=#FFB000
-palette = 4=#8B949E
-palette = 5=#A1A1AA
-palette = 6=#34343D
+palette = 4=#82AAFF
+palette = 5=#C792EA
+palette = 6=#8B949E
 palette = 7=#E8E6E3
-palette = 8=#34343D
-palette = 9=#E63946
-palette = 10=#8B949E
-palette = 11=#FFB000
-palette = 12=#8B949E
-palette = 13=#A1A1AA
-palette = 14=#A1A1AA
-palette = 15=#E8E6E3
+palette = 8=#53535D
+palette = 9=#FF6B76
+palette = 10=#9AE6A0
+palette = 11=#FFD166
+palette = 12=#A4C0FF
+palette = 13=#D9ABF4
+palette = 14=#B0B8C1
+palette = 15=#FFFFFF

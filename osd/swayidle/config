@@ -1,12 +1,12 @@
 # Swayidle configuration managed by Dotfield
-# Graceful idle timeouts, screen blanking, and lock triggers
+# Graceful idle timeouts, screen blanking, and lock triggers.
+# Launch with: swayidle -w (the -w flag ensures before-sleep commands complete before suspend)
 
 # Lock screen before suspend/sleep
 before-sleep 'swaylock -f'
 
-# Turn off display after 300s (5m)
-timeout 300 'swaymsg "output * power off" 2>/dev/null || niri msg action power-off-monitors 2>/dev/null' \
-        resume 'swaymsg "output * power on" 2>/dev/null || true'
+# Lock screen after 290s (just before display blanking)
+timeout 290 'swaylock -f'
 
-# Lock screen after 600s (10m)
-timeout 600 'swaylock -f'
+# Turn off display after 300s (5m)
+timeout 300 'swaymsg "output * power off" 2>/dev/null || niri msg action power-off-monitors 2>/dev/null' resume 'swaymsg "output * power on" 2>/dev/null || niri msg action power-on-monitors 2>/dev/null || true'

@@ -21,7 +21,30 @@ export component ProfileSwitcher inherits Window {
     callback apply-profile(string);
     callback close-clicked();
 
-    VerticalLayout {
+    forward-focus: key-handler;
+
+    key-handler := FocusScope {
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.close-clicked();
+                return accept;
+            }
+            if (event.text == "1" && root.profiles.length > 0) {
+                root.apply-profile(root.profiles[0].name);
+                return accept;
+            }
+            if (event.text == "2" && root.profiles.length > 1) {
+                root.apply-profile(root.profiles[1].name);
+                return accept;
+            }
+            if (event.text == "3" && root.profiles.length > 2) {
+                root.apply-profile(root.profiles[2].name);
+                return accept;
+            }
+            return reject;
+        }
+
+        VerticalLayout {
         padding: 24px;
         spacing: 16px;
 
@@ -111,26 +134,42 @@ export component ProfileSwitcher inherits Window {
                                 }
                             }
 
-                            if (!p.active): Rectangle {
+                            if (!p.active): apply-btn := FocusScope {
                                 width: 90px;
                                 height: 26px;
-                                background: Palette.graphite;
-                                border-radius: 4px;
-                                border-width: 1px;
-                                border-color: Palette.iron;
-
-                                Text {
-                                    text: "Apply";
-                                    font-size: 12px;
-                                    font-weight: 600;
-                                    color: Palette.amber;
-                                    horizontal-alignment: center;
-                                    vertical-alignment: center;
+                                accessible-role: button;
+                                accessible-label: p.name;
+                                accessible-action-default => {
+                                    root.apply-profile(p.name);
+                                }
+                                key-pressed(event) => {
+                                    if (event.text == Key.Return || event.text == " ") {
+                                        root.apply-profile(p.name);
+                                        return accept;
+                                    }
+                                    return reject;
                                 }
 
-                                TouchArea {
-                                    clicked => {
-                                        root.apply-profile(p.name);
+                                Rectangle {
+                                    background: apply-btn.has-focus ? Palette.iron : (apply-touch.has-hover ? Palette.iron : Palette.graphite);
+                                    border-radius: 4px;
+                                    border-width: 1px;
+                                    border-color: apply-btn.has-focus ? Palette.amber : Palette.iron;
+
+                                    Text {
+                                        text: "Apply";
+                                        font-size: 12px;
+                                        font-weight: 600;
+                                        color: Palette.amber;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+
+                                    apply-touch := TouchArea {
+                                        clicked => {
+                                            apply-btn.focus();
+                                            root.apply-profile(p.name);
+                                        }
                                     }
                                 }
                             }
@@ -157,7 +196,7 @@ export component ProfileSwitcher inherits Window {
                             Text {
                                 text: "Security: " + p.security;
                                 font-size: 11px;
-                                color: p.security == "Hardened" ? Palette.crimson : Palette.bone-muted;
+                                color: p.security == "Hardening declared (not enforced)" ? Palette.crimson : Palette.bone-muted;
                             }
                         }
                     }
@@ -192,6 +231,7 @@ export component ProfileSwitcher inherits Window {
                     vertical-alignment: center;
                 }
             }
+        }
         }
     }
 }

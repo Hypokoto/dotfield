@@ -10,11 +10,12 @@ flowchart LR
     P4 --> P5[Phase 5: Security & Profiles]
     P5 --> P6[Phase 6: Native Rust CLI Engine]
     P6 --> P7[Phase 7: Custom Slint GUIs]
+    P7 --> P8[Phase 8: Non-Rust Performance & Latency]
 ```
 
 ---
 
-## Phase 1: Foundation, Quality Gates, Tooling & Documentation (Current)
+## Phase 1: Foundation, Quality Gates, Tooling & Documentation
 *Goal: Establish a solid engineering substrate, security scanning, CI linting, and architectural blueprints.*
 
 - [x] **Documentation**:
@@ -35,18 +36,18 @@ flowchart LR
 ## Phase 2: Compositor, Launchers & Shell Setup
 *Goal: Build modular, fragment-friendly baseline configurations for Wayland window management, application launchers, and command shells.*
 
-- [ ] **Compositors (`compositor/`)**:
+- [x] **Compositors (`compositor/`)**:
   - **Sway (`compositor/sway/`)**:
     - Base config structure with `include ~/.config/sway/config.d/*.conf`.
     - Keybinding fragment targets (`00-generated-bindings.conf`).
     - Window rules, workspace definitions, input/output device handling.
   - **Niri (`compositor/niri/`)**:
     - Scrollable-tiling KDL modular configurations (`config.kdl`).
-    - Keybinding block abstractions (`include "config.kdl.d/generated.kdl"`).
-- [ ] **Launchers (`launcher/`)**:
+    - Keybinding block abstractions (`include "config.kdl.d/00-generated-bindings.kdl"`).
+- [x] **Launchers (`launcher/`)**:
   - **Fuzzel (`launcher/fuzzel/`)**: Wayland-native lightweight launcher with dynamic theme variables.
   - **Rofi (`launcher/rofi/`)**: Wayland-fork (Wayland Rofi) rasi theme configurations and modes (drun, run, window).
-- [ ] **Shell Environment (`shell/`)**:
+- [x] **Shell Environment (`shell/`)**:
   - **Zsh (`shell/zsh/`)**: Clean modular `.zshrc`, plugins, aliases, and environment variables.
   - **Starship (`shell/starship/`)**: Cross-shell prompt preset with color palette overrides matching active dotfield profile.
 
@@ -99,7 +100,8 @@ flowchart LR
 - [x] **Concrete Profiles (`profiles/`)**:
   - `profiles/default.toml`: Balanced daily-driver rice (Foot, Fuzzel, Sway, Starship, Zellij, Mako).
   - `profiles/minimal.toml`: Ultra-lightweight setup for low-resource environments (Foot, Fuzzel, Niri, Tmux).
-  - `profiles/hardening.toml`: Maximum isolation profile with strict Firejail wrapping, AppArmor drop-ins, and NFTables enforcement.
+  - `profiles/battery.toml`: Lightweight low-power setup for mobile/battery environments (Foot, Fuzzel, Sway, Tmux).
+  - `profiles/hardening.toml`: Maximum isolation profile declaring Firejail wrapping, AppArmor drop-ins, and NFTables settings (active system enforcement is planned).
 
 ---
 
@@ -109,11 +111,11 @@ flowchart LR
 - [x] **Crate Architecture (`crates/`)**:
   - `dotfield-core`:
     - TOML deserializers for Profiles, Apps, Bindings, Themes, Security.
-    - Path and binary resolution on `$PATH`.
-    - Template generation engine (converting semantic bindings to Sway, Niri, Fuzzel configs).
-    - Diff and transaction staging manager (`.dotfield/staging`).
-    - Selective reload controller (IPC commands for Sway, Niri, Mako, etc.).
-    - State journal and rollback logic (`.dotfield/state.json`).
+    - Path and binary resolution on `$PATH` with execution bit validation.
+    - Template generation engine (converting semantic bindings to Sway, Niri, Fuzzel, Foot, Mako configs).
+    - Generational deployment and rollback state manager (`.dotfield/generations/`, `.dotfield/state.json`).
+    - Selective reload controller (native IPC for Sway, Niri, Mako; process reloading for Kitty, Tmux; dynamic fragment compilation for Kitty and Tmux planned).
+    - [ ] Transaction staging manager (`.dotfield/staging`) with pre-flight dry-run syntax verification (planned for follow-up release).
   - `dotfield-cli`:
     - Commands: `status`, `check`, `diff`, `apply`, `rollback`, `list`.
     - Rich terminal outputs with color-coded diffs using `colored` and `similar`.
@@ -124,8 +126,52 @@ flowchart LR
 *Goal: Deliver smooth, native Wayland graphical interfaces for profile management and system interaction.*
 
 - [x] **Slint GUI Utilities (`crates/dotfield-gui/`)**:
-  - **Rice Menu (`rice-menu`)**: Quick Wayland popover for toggling profiles, themes, and screen scale.
-  - **Profile Switcher (`profile-switcher`)**: Graphical card viewer displaying rice presets with live screenshots/previews.
-  - **Keybind HUD (`keybind-hud`)**: Instant searchable cheat-sheet showing current active keybindings compiled by Dotfield.
+  - **Keybind HUD (`--hud`)**: Instant searchable cheat-sheet showing active keybindings compiled by Dotfield.
+  - **Profile Switcher (`--switcher`)**: Interactive card viewer displaying profiles with metadata and keyboard-accessible apply controls.
+  - [ ] **Rice Menu (`rice-menu`)**: Quick Wayland popover for toggling themes and screen scale (planned for follow-up release).
+  - [ ] **Profile Screenshot Previews**: Live preview captures in switcher cards (planned for follow-up release).
 - [x] **Daemon (`dotfieldd`)**:
-  - Background event subscriber for automatic profile switching (AC/Battery, display dock/undock).
+  - Background event subscriber for automatic profile switching on power state changes (AC / Battery via sysfs).
+
+---
+
+## Phase 8: Non-Rust Desktop System Performance, Latency Optimization, and Productivity Hardening
+*Goal: Synchronize and optimize all non-Rust desktop configuration fragments, scripts, themes, and pipelines for sub-millisecond input latency, instantaneous shell prompt rendering, and seamless vi-mode navigation.*
+
+- [x] **Compositors (`compositor/`)**:
+  - **Sway (`compositor/sway/config`)**:
+    - Configure `output * max_render_time 1` for vblank-synchronized frame dispatch.
+    - Accelerate typematic repeat to `repeat_delay 200` ms and `repeat_rate 50` cps.
+    - Enable `output * adaptive_sync on` (VRR).
+  - **Niri (`compositor/niri/config.kdl`)**:
+    - Accelerate input repeat rates to `repeat-delay 200` and `repeat-rate 50`.
+    - Optimize window animation curves and focus transitions.
+- [x] **Shell & Prompt (`shell/`)**:
+  - **Zsh (`shell/zsh/.zshrc`)**:
+    - Eliminate vi-mode mode switch lag with `export KEYTIMEOUT=1` (10ms).
+    - Implement 24-hour timestamp check for `compinit -C` to achieve sub-15ms shell startup.
+    - Add `AUTO_CD`, `AUTO_PUSHD`, and completion caching rules.
+  - **Starship (`shell/starship/starship.toml`)**:
+    - Enforce sub-10ms prompt rendering with `scan_timeout = 10` and `command_timeout = 150`.
+    - Optimize git status query thresholds for massive workspaces.
+- [x] **Terminals (`terminals/`)**:
+  - **Kitty (`terminals/kitty/kitty.conf`)**:
+    - Set `repaint_delay 6`, `input_delay 1`, `sync_to_monitor yes`, and `wayland_enable_ime no`.
+  - **Foot (`terminals/foot/foot.ini`)**:
+    - Set `box-drawings-uses-font-glyphs=yes` and `gamma-correct-blending=no`.
+  - **Ghostty (`terminals/ghostty/config`)**:
+    - Set `gtk-single-instance = true` and `auto-update = "off"`.
+- [x] **Multiplexers (`multiplexer/`)**:
+  - **Tmux (`multiplexer/tmux/tmux.conf`)**:
+    - Eliminate 500ms escape lag with `set -s escape-time 0`.
+    - Enable `focus-events on`, `history-limit 50000`, and vi-mode copy pipe to `wl-copy`.
+  - **Zellij (`multiplexer/zellij/config.kdl`)**:
+    - Set `copy_command "wl-copy"` and `copy_on_select true`.
+- [x] **Editor (`nvim/`)**:
+  - **Neovim Options (`nvim/lua/core/options.lua`)**:
+    - Set `opt.updatetime = 100`, `opt.undofile = true`, `opt.swapfile = false`, and `opt.synmaxcol = 300`.
+- [x] **Launchers (`launcher/`)**:
+  - **Fuzzel (`launcher/fuzzel/fuzzel.ini`)**: Set `layer=overlay`, `match-mode=fzf`, and `exit-on-keyboard-focus-loss=yes`.
+  - **Rofi (`launcher/rofi/config.rasi`)**: Enable `matching: "fuzzy"`, `sorting-method: "fzf"`, and `threads: 0`.
+- [x] **Utilities & Scripts (`scripts/`)**:
+  - **Screenshot (`scripts/screenshot.sh`)**: Pipe `grim` directly to `wl-copy` while teeing to destination file to eliminate disk-wait latency.

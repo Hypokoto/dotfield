@@ -21,7 +21,7 @@ Overall engineering grade: **A-**. The foundation is robust, secure, and ready f
 | :--- | :--- | :--- | :--- |
 | `premise-table` | 1 | PASS | All 4 architectural premises verified against `docs/designs/live-desktop-compiler-architecture.md#L38-L43`. |
 | `already-done` | 1 | PASS | Base commit `259fcc6` and `a546547` verified clean on `main`. |
-| `surface-check` | 1 | PASS | CLI syntax (`morph`, `preview`, `apply`, `undo`, `diff`, `status`, `check`) confirmed across all specs. |
+| `surface-check` | 1 | PASS | Historical snapshot: initial concepts (morph, preview, undo) superseded by current CLI syntax (apply, rollback, list, status, check, diff). |
 | `binding-decisions` | 1 | PASS | Approved approach: Approach A as foundation for Approach B (headless core + CLI first, Slint HUD second). |
 | `numbers` | 1 | PASS | Pre-commit execution < 3s, gitleaks 28.9ms, semgrep ~1.5s, cargo check 0.7s. |
 | `deferred-asks` | 1 | PASS | Slint GUI HUD deliberately sequenced for Phase 7 after Phase 6 core engine verification. |
@@ -32,7 +32,7 @@ Overall engineering grade: **A-**. The foundation is robust, secure, and ready f
 ## 3. Section Audits
 
 ### 3.1 Architecture Review
-* **Drop-in Fragment Isolation**: Dotfield strictly owns `~/.config/<tool>/config.d/00-dotfield.*`. User-maintained base configs remain untouched.
+* **Drop-in Fragment Isolation**: Dotfield strictly owns generated drop-in targets such as `00-generated-bindings.conf` and `00-generated-bindings.kdl` inside `config.d/`. User-maintained base configs remain untouched.
 * **Design-Twice Shape Analysis**:
   * *Shape A (Direct Fragment Writer)*: Writing individual files to `~/.config/<tool>/config.d/`.
   * *Shape B (Generational Symlink Swapper - Selected)*: Pointing `~/.dotfield/current -> ~/.dotfield/generations/N/`, with app `config.d/` symlinking into `current/`.
@@ -60,11 +60,12 @@ Overall engineering grade: **A-**. The foundation is robust, secure, and ready f
 
 ## 4. Review Findings & Remediation Plan
 
-### Finding R1: Directory Naming Inconsistency
+### Finding R1: Directory Naming Inconsistency [RESOLVED]
 * **Severity**: `[INFORMATIONAL]` (confidence: 9/10)
-* **Location**: `security/apparmour`
-* **Issue**: Directory is spelled `security/apparmour` (British English with 'u'), whereas standard Linux conventions, documentation (`GEMINI.md`, `docs/ARCHITECTURE.md`), and system tools use `apparmor`.
-* **Remedy**: Rename `security/apparmour` to `security/apparmor` to avoid path confusion.
+* **Location**: `security/apparmour` (historical path)
+* **Status**: Resolved on `main`.
+* **Issue**: The directory was originally misspelled as `security/apparmour`.
+* **Remedy**: Renamed the directory from `security/apparmour` to standard `security/apparmor`.
 
 ### Finding R2: Clippy Hook in Pre-Commit
 * **Severity**: `[INFORMATIONAL]` (confidence: 8/10)
@@ -80,7 +81,7 @@ Overall engineering grade: **A-**. The foundation is robust, secure, and ready f
 
 ---
 
-## ## GSTACK REVIEW REPORT
+## GSTACK REVIEW REPORT
 
 | Review | Trigger | Why | Runs | Status | Findings |
 |---|---|---|---|---|---|

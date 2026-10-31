@@ -19,7 +19,20 @@ export component KeybindHud inherits Window {
     callback search-changed(string);
     callback close-clicked();
 
-    VerticalLayout {
+    forward-focus: key-handler;
+
+    key-handler := FocusScope {
+        forward-focus: search-input;
+
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.close-clicked();
+                return accept;
+            }
+            return reject;
+        }
+
+        VerticalLayout {
         padding: 20px;
         spacing: 14px;
 
@@ -176,6 +189,7 @@ export component KeybindHud inherits Window {
                     }
                 }
             }
+        }
         }
     }
 }

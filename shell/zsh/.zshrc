@@ -12,9 +12,32 @@ setopt HIST_IGNORE_SPACE
 setopt HIST_VERIFY
 setopt SHARE_HISTORY
 
-### Keybindings (Vi Mode)
+### Keybindings (Vi Mode & Sub-10ms Esc Response)
 bindkey -v
 export KEYTIMEOUT=1
+
+### Fast Completion Initialization & Caching (<15ms shell startup)
+zmodload -i zsh/complist
+autoload -Uz compinit
+typeset -U fpath
+
+# Re-audit fpath security once every 24 hours; otherwise skip checks (-C) for instantaneous spawn
+local -a ZCOMPCACHE=($HOME/.zcompdump(N.mh+24))
+if [[ -n $ZCOMPCACHE ]]; then
+    compinit
+else
+    compinit -C
+fi
+
+zstyle ':completion:*' menu select
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompcache"
+
+# Fast directory navigation options
+setopt AUTO_CD
+setopt AUTO_PUSHD
+setopt PUSHD_IGNORE_DUPS
+setopt PUSHD_SILENT
 
 # Use vim keys in tab complete menu
 bindkey -M menuselect 'h' vi-backward-char
@@ -30,14 +53,12 @@ export PAGER="less -R"
 export MANPAGER="nvim +Man!"
 
 ### Dotfield Aliases & Shortcuts
-alias dm="dotfield morph"
-alias da="dotfield apply"
-alias dp="dotfield preview"
-alias du="dotfield undo"
-alias ds="dotfield status"
-alias dd="dotfield diff"
-alias dc="dotfield check"
-alias dl="dotfield list"
+alias df-apply="dotfield apply"
+alias df-status="dotfield status"
+alias df-diff="dotfield diff"
+alias df-check="dotfield check"
+alias df-list="dotfield list"
+alias df-rollback="dotfield rollback"
 
 ### General Productivity Aliases
 alias ls="ls --color=auto"

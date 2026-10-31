@@ -2,6 +2,7 @@
 # Managed by Dotfield
 
 abi <abi/3.0>,
+include <tunables/global>
 
 profile dotfield-daemon flags=(attach_disconnected,mediate_deleted) {
   include <abstractions/base>
@@ -22,5 +23,15 @@ profile dotfield-daemon flags=(attach_disconnected,mediate_deleted) {
   # Allow reading/writing to dotfield state and cache
   owner @{HOME}/.dotfield/** rwk,
   owner @{HOME}/.config/dotfield/** rwk,
+  owner @{HOME}/.config/{sway/config.d,niri/config.kdl.d,fuzzel,foot,mako}/ rw,
+  owner @{HOME}/.config/{sway/config.d,niri/config.kdl.d,fuzzel,foot,mako}/** rwl,
+  @{PROC}/ r,
+  @{PROC}/*/{stat,cmdline,comm,status} r,
+  owner @{run}/user/*/{sway-ipc.*,niri.*,wayland-*,mako*} rw,
   owner /tmp/dotfield-* rwk,
+
+  # Allow monitoring hardware power status
+  /sys/class/power_supply/ r,
+  /sys/class/power_supply/** r,
+  /sys/devices/**/power_supply/** r,
 }

@@ -7,8 +7,16 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use clap::Parser;
 use colored::Colorize;
-use dotfield_core::{Compiler, GenerationManager, Profile, Reloader};
+use dotfield_core::{Compiler, GenerationManager, Profile, Reloader, Validator};
 use power::{detect_power_source, PowerSource};
+
+fn parse_non_zero_interval(val: &str) -> std::result::Result<u64, String> {
+    let secs: u64 = val.parse().map_err(|e| format!("{e}"))?;
+    if secs == 0 {
+        return Err("interval_secs must be greater than 0".to_string());
+    }
+    Ok(secs)
+}
 
 #[derive(Parser, Debug)]
 #[command(
@@ -22,7 +30,7 @@ struct Cli {
     daemon: bool,
 
     /// Polling interval in seconds (default: 5)
-    #[arg(long, default_value = "5")]
+    #[arg(long, default_value = "5", value_parser = parse_non_zero_interval)]
     interval_secs: u64,
 
     /// Perform a single evaluation of hardware state and apply profile
@@ -33,13 +41,13 @@ struct Cli {
     #[arg(long)]
     dry_run: bool,
 
-    /// Profile TOML to activate when on AC / Mains power
-    #[arg(long, default_value = "profiles/default.toml")]
-    ac_profile: PathBuf,
+    /// Profile TOML to activate when on AC / Mains power (default: auto-detected per compositor)
+    #[arg(long)]
+    ac_profile: Option<PathBuf>,
 
-    /// Profile TOML to activate when on Battery power
-    #[arg(long, default_value = "profiles/minimal.toml")]
-    battery_profile: PathBuf,
+    /// Profile TOML to activate when on Battery power (default: auto-detected per compositor)
+    #[arg(long)]
+    battery_profile: Option<PathBuf>,
 
     /// Sysfs power supply path
     #[arg(long, default_value = "/sys/class/power_supply")]
@@ -51,24 +59,24 @@ fn apply_profile_if_needed(
     dry_run: bool,
     source_label: &str,
 ) -> Result<()> {
-    if !target_profile_path.exists() {
+    let resolved_path = Profile::resolve_profile_path(target_profile_path);
+    if !resolved_path.exists() {
         println!(
             "{}",
             format!(
                 "[dotfieldd] Target profile path does not exist: {}",
-                target_profile_path.display()
+                resolved_path.display()
             )
             .yellow()
         );
-        return Ok(());
+        anyhow::bail!(
+            "Target profile path does not exist: {}",
+            resolved_path.display()
+        );
     }
 
-    let profile = Profile::from_file(target_profile_path).with_context(|| {
-        format!(
-            "Failed to read profile at {}",
-            target_profile_path.display()
-        )
-    })?;
+    let profile = Profile::from_file(&resolved_path)
+        .with_context(|| format!("Failed to read profile at {}", resolved_path.display()))?;
 
     let mgr = GenerationManager::new(GenerationManager::default_dir());
     let current_active = mgr
@@ -84,6 +92,40 @@ fn apply_profile_if_needed(
                 profile.meta.name
             )
             .dimmed()
+        );
+        return Ok(());
+    }
+
+    // Verify profile compositor matches running Wayland compositor session
+    let swaysock_present = std::env::var("SWAYSOCK")
+        .map(|s| !s.is_empty())
+        .unwrap_or(false);
+    let nirisock_present = std::env::var("NIRI_SOCKET")
+        .map(|s| !s.is_empty())
+        .unwrap_or(false);
+
+    if swaysock_present && profile.compositor.engine != "sway" {
+        println!(
+            "{}",
+            format!(
+                "[dotfieldd] Warning: Running compositor is Sway, but profile '{}' targets engine '{}'. Skipping switch.",
+                profile.meta.name, profile.compositor.engine
+            )
+            .yellow()
+            .bold()
+        );
+        return Ok(());
+    }
+
+    if nirisock_present && profile.compositor.engine != "niri" {
+        println!(
+            "{}",
+            format!(
+                "[dotfieldd] Warning: Running compositor is Niri, but profile '{}' targets engine '{}'. Skipping switch.",
+                profile.meta.name, profile.compositor.engine
+            )
+            .yellow()
+            .bold()
         );
         return Ok(());
     }
@@ -106,6 +148,8 @@ fn apply_profile_if_needed(
         return Ok(());
     }
 
+    Validator::validate(&profile)
+        .with_context(|| format!("Validation failed for profile '{}'", profile.meta.name))?;
     let fragments = Compiler::compile(&profile)?;
     let new_gen = mgr.deploy(&profile, &fragments)?;
     println!(
@@ -118,28 +162,61 @@ fn apply_profile_if_needed(
         .bold()
     );
 
-    let reloaded = Reloader::reload_changed_targets(&fragments)?;
-    for target in reloaded {
-        println!("{}", format!("[dotfieldd]   ✔ Reloaded {target}").green());
+    match Reloader::reload_changed_targets(&fragments) {
+        Ok(reloaded) => {
+            for target in reloaded {
+                println!("{}", format!("[dotfieldd]   ✔ Reloaded {target}").green());
+            }
+        }
+        Err(e) => {
+            eprintln!(
+                "{}",
+                format!("[dotfieldd] Warning: failed to reload changed targets: {e}").yellow()
+            );
+        }
     }
 
     Ok(())
 }
 
+fn resolve_default_profiles(cli: &Cli) -> (PathBuf, PathBuf) {
+    let nirisock_present = std::env::var("NIRI_SOCKET")
+        .map(|s| !s.is_empty())
+        .unwrap_or(false);
+
+    let default_ac = if nirisock_present {
+        PathBuf::from("profiles/minimal.toml")
+    } else {
+        PathBuf::from("profiles/default.toml")
+    };
+
+    let default_battery = if nirisock_present {
+        PathBuf::from("profiles/minimal.toml")
+    } else {
+        PathBuf::from("profiles/battery.toml")
+    };
+
+    let ac = cli.ac_profile.clone().unwrap_or(default_ac);
+    let battery = cli.battery_profile.clone().unwrap_or(default_battery);
+    (ac, battery)
+}
+
 fn run_evaluation(cli: &Cli, last_source: &mut Option<PowerSource>) -> Result<()> {
+    let (ac_profile, battery_profile) = resolve_default_profiles(cli);
     let current_source = detect_power_source(&cli.sysfs_path);
 
     if Some(current_source) != *last_source {
-        *last_source = Some(current_source);
-
         match current_source {
             PowerSource::Ac => {
-                apply_profile_if_needed(&cli.ac_profile, cli.dry_run, "AC Power")?;
+                apply_profile_if_needed(&ac_profile, cli.dry_run, "AC Power")?;
+                *last_source = Some(current_source);
             }
             PowerSource::Battery => {
-                apply_profile_if_needed(&cli.battery_profile, cli.dry_run, "Battery Power")?;
+                apply_profile_if_needed(&battery_profile, cli.dry_run, "Battery Power")?;
+                *last_source = Some(current_source);
             }
             PowerSource::Unknown => {
+                *last_source = Some(current_source);
                 println!(
                     "{}",
                     "[dotfieldd] Hardware power state unknown; maintaining current generation."

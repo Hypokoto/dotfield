@@ -21,7 +21,7 @@ flowchart TD
     E --> F[Atomic Deployment & Symlinking]
     F --> G[Selective Reload Engine]
     G --> H1[swaymsg reload]
-    G --> H2[niri msg action reload-config]
+    G --> H2[niri msg action load-config-file]
     G --> H3[makoctl reload]
     F --> I[State Store: .dotfield/state.json]
 ```
@@ -90,7 +90,7 @@ flowchart TD
    Only affected subsystems are signaled:
    - If only `fuzzel.ini` changed: no compositor reload needed.
    - If Sway bindings changed: execute `swaymsg reload`.
-   - If Niri bindings changed: execute `niri msg action reload-config`.
+   - If Niri bindings changed: execute `niri msg action load-config-file`.
    - If Mako changed: execute `makoctl reload`.
 
 ---
@@ -101,6 +101,6 @@ Dotfield integrates Linux security controls into the ricing workflow:
 - **Firejail**: Automatic profile wrappers for network-facing applications (browsers, matrix clients).
 - **NFTables**: Application-level firewall rulesets (`security/nft/`).
 - **Flatpak**: Fine-grained sandbox permission overrides (`flatpak override --user ...`).
-- **AppArmor**: Custom profiles for untrusted binary execution (`security/apparmour/`).
+- **AppArmor**: Custom profiles for untrusted binary execution (`security/apparmor/`).
 
 The `hardening.toml` profile activates these isolation boundaries automatically.

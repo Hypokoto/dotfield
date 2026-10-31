@@ -75,13 +75,13 @@ flowchart LR
 ## Phase 4: Desktop OSD, Notifications & Utilities
 *Goal: Deliver responsive user feedback, volume/brightness overlays, and notifications.*
 
-- [ ] **Notifications (`mako/`)**:
+- [x] **Notifications (`mako/`)**:
   - Wayland notification daemon configuration (`~/.config/mako/config`).
   - Style rules for normal, low, and critical urgency levels.
   - Reload hook (`makoctl reload`).
-- [ ] **On-Screen Display (`osd/`)**:
-  - **SwayOSD / Avizo**: Pop-up HUD for audio volume, microphone mute, screen brightness, and caps-lock indicator.
-- [ ] **System Utilities**:
+- [x] **On-Screen Display (`osd/`)**:
+  - **SwayOSD / Avizo / Lock & Idle**: Minimal indicator ring lockscreen (`swaylock`) and idle timeout management (`swayidle`).
+- [x] **System Utilities**:
   - Screenshot pipeline (grim + slurp + wl-copy).
   - Wallpaper management (swaybg / wbg).
   - Idle management and screen locking (swayidle + swaylock / hyprlock).

@@ -1,0 +1,31 @@
+# Mako notification daemon configuration managed by Dotfield
+# Controlled Chaos color palette
+
+font=monospace 10
+width=360
+height=160
+margin=16
+padding=12
+border-size=2
+border-radius=4
+default-timeout=6000
+group-by=summary
+
+# Default (Normal Urgency)
+background-color=#0A0A0C
+text-color=#E8E6E3
+border-color=#FFB000
+
+# Low Urgency
+[urgency=low]
+background-color=#121216
+text-color=#A1A1AA
+border-color=#34343D
+default-timeout=4000
+
+# Critical Urgency
+[urgency=critical]
+background-color=#121216
+text-color=#E8E6E3
+border-color=#E63946
+default-timeout=0

@@ -1,0 +1,36 @@
+# Swaylock configuration managed by Dotfield
+# Controlled Chaos color palette
+
+daemonize
+ignore-empty-password
+show-failed-attempts
+
+# Colors (Hex without #)
+color=0A0A0C
+inside-color=0A0A0C
+inside-clear-color=121216
+inside-ver-color=121216
+inside-wrong-color=121216
+
+ring-color=34343D
+ring-clear-color=FFB000
+ring-ver-color=FFB000
+ring-wrong-color=E63946
+
+line-color=00000000
+line-clear-color=00000000
+line-ver-color=00000000
+line-wrong-color=00000000
+
+key-hl-color=E8E6E3
+bs-hl-color=E63946
+separator-color=00000000
+
+text-color=E8E6E3
+text-clear-color=FFB000
+text-ver-color=FFB000
+text-wrong-color=E63946
+
+indicator-radius=80
+indicator-thickness=8
+indicator-idle-visible

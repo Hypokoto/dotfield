@@ -11,6 +11,7 @@ flowchart LR
     P5 --> P6[Phase 6: Native Rust CLI Engine]
     P6 --> P7[Phase 7: Custom Slint GUIs]
     P7 --> P8[Phase 8: Non-Rust Performance & Latency]
+    P8 --> P9[Phase 9: Comprehensive UI & UX Overhaul]
 ```
 
 ---
@@ -175,3 +176,30 @@ flowchart LR
   - **Rofi (`launcher/rofi/config.rasi`)**: Enable `matching: "fuzzy"`, `sorting-method: "fzf"`, and `threads: 0`.
 - [x] **Utilities & Scripts (`scripts/`)**:
   - **Screenshot (`scripts/screenshot.sh`)**: Pipe `grim` directly to `wl-copy` while teeing to destination file to eliminate disk-wait latency.
+
+---
+
+## Phase 9: Comprehensive UI & UX Overhaul (Slint Desktop Craft, Tokens, & Desktop Experience)
+*Goal: Re-architect and polish all desktop visual surfaces, design tokens, Slint GUI components, application launchers, and notification styling according to the Controlled Chaos design system and Impeccable craft floor.*
+
+- [x] **Design Tokens (`crates/dotfield-gui/ui/palette.slint`)**:
+  - Complete tokenization of Controlled Chaos colors (`void`, `obsidian`, `graphite`, `iron`, `ash`, `bone`, `amber`, `pale-amber`, `crimson`, `blood-red`, `steel`, `success-green`).
+  - Standardized font scale, spacing rhythm, and border radii.
+- [x] **Keybind HUD (`crates/dotfield-gui/ui/hud.slint`)**:
+  - Authored vector close button with responsive hover feedback.
+  - Reactive search bar with focus ring and keyboard input affordances.
+  - Zero-match empty state with contextual troubleshooting tips.
+  - Styled keyboard modifier chips (`Super`, `Ctrl`, `Alt`) and action key pills.
+  - Styled category badges (`apps`, `window`, `system`) and `[Esc]` dismissal hints.
+- [x] **Profile Switcher (`crates/dotfield-gui/ui/switcher.slint`)**:
+  - Tactile numeric hotkey badges (`[1]`, `[2]`, `[3]`) for rapid keyboard switching.
+  - Card elevation, subtle depth borders, and smooth hover state transitions.
+  - Discrete semantic metadata chips (Compositor, Apps, Security).
+  - Tactile Apply button micro-interactions and generational status feedback.
+- [x] **Launchers & Notifications**:
+  - **Fuzzel (`launcher/fuzzel/fuzzel.ini`)**: 8px border radius, Controlled Chaos selection colors, symmetric padding.
+  - **Rofi (`launcher/rofi/config.rasi`)**: 8px radius, clean search input styling, amber selection indicator.
+  - **Mako (`mako/config`)**: 8px radius, urgency border hierarchy (Amber, Iron, Crimson).
+- [x] **Prompts & Bars**:
+  - **Starship (`shell/starship/starship.toml`)**: Mode-specific visual indicators and crisp symbol delimiters.
+  - **i3status-rust (`i3-rust/config.toml`)**: Clean status spacing and urgency accent tokens.

@@ -39,7 +39,7 @@ window {
     height: 380px;
     border: 2px;
     border-color: @border-col;
-    border-radius: 6px;
+    border-radius: 8px;
     background-color: @bg-col;
 }
 

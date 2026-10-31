@@ -1,13 +1,13 @@
 # Mako notification daemon configuration managed by Dotfield
 # Controlled Chaos color palette
 
-font=monospace 10
+font=JetBrainsMono Nerd Font 10
 width=360
 height=160
 margin=16
-padding=12
+padding=12,16
 border-size=2
-border-radius=4
+border-radius=8
 default-timeout=6000
 group-by=app-name,summary,urgency
 

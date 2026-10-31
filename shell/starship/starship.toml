@@ -35,7 +35,9 @@ green = "#7BC47F"
 [character]
 success_symbol = "[❯](bold amber)"
 error_symbol = "[❯](bold crimson)"
-vimcmd_symbol = "[❮](bold steel)"
+vimcmd_symbol = "[❮](bold amber)"
+vimcmd_replace_symbol = "[❮](bold crimson)"
+vimcmd_replace_one_symbol = "[❮](bold crimson)"
 vimcmd_visual_symbol = "[❮](bold pale_amber)"
 
 [directory]

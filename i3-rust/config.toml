@@ -15,7 +15,9 @@ warning_bg = "#121216"
 warning_fg = "#FFB000"
 critical_bg = "#E63946"
 critical_fg = "#E8E6E3"
-separator = " "
+separator = " │ "
+separator_fg = "#34343D"
+separator_bg = "#121216"
 
 [icons]
 icons = "none"

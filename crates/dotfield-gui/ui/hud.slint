@@ -9,8 +9,8 @@ export struct KeybindItem {
 
 export component KeybindHud inherits Window {
     title: "Dotfield Keybind HUD";
-    width: 680px;
-    height: 480px;
+    width: 720px;
+    height: 520px;
     background: Palette.void;
 
     in property <string> profile-name: "default";
@@ -33,155 +33,221 @@ export component KeybindHud inherits Window {
         }
 
         VerticalLayout {
-        padding: 20px;
-        spacing: 14px;
+            padding: Palette.space-xl;
+            spacing: Palette.space-md;
 
-        // Header
-        HorizontalLayout {
-            alignment: space-between;
-            VerticalLayout {
-                spacing: 4px;
-                Text {
-                    text: "DOTFIELD // KEYBIND HUD";
-                    font-size: 16px;
-                    font-weight: 700;
-                    color: Palette.amber;
-                }
-                Text {
-                    text: "Active Profile: " + root.profile-name;
-                    font-size: 12px;
-                    color: Palette.bone-muted;
-                }
-            }
-            Rectangle {
-                width: 28px;
-                height: 28px;
-                border-radius: 4px;
-                background: Palette.graphite;
-                border-width: 1px;
-                border-color: Palette.iron;
-
-                Text {
-                    text: "✕";
-                    font-size: 14px;
-                    color: Palette.bone;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
+            // Header
+            HorizontalLayout {
+                alignment: space-between;
+                VerticalLayout {
+                    spacing: Palette.space-xs;
+                    Text {
+                        text: "DOTFIELD // KEYBIND HUD";
+                        font-size: Palette.font-lg;
+                        font-weight: 700;
+                        color: Palette.amber;
+                    }
+                    Text {
+                        text: "Active Profile: " + root.profile-name;
+                        font-size: Palette.font-sm;
+                        color: Palette.ash;
+                    }
                 }
 
-                TouchArea {
-                    clicked => {
-                        root.close-clicked();
+                close-btn := Rectangle {
+                    width: 28px;
+                    height: 28px;
+                    border-radius: Palette.radius-sm;
+                    background: close-touch.has-hover ? Palette.iron : Palette.graphite;
+                    border-width: 1px;
+                    border-color: close-touch.has-hover ? Palette.pale-amber : Palette.iron;
+
+                    Text {
+                        text: "✕";
+                        font-size: 13px;
+                        font-weight: 600;
+                        color: close-touch.has-hover ? Palette.amber : Palette.bone;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    close-touch := TouchArea {
+                        clicked => {
+                            root.close-clicked();
+                        }
                     }
                 }
             }
-        }
 
-        // Search Bar
-        Rectangle {
-            height: 38px;
-            background: Palette.obsidian;
-            border-radius: 6px;
-            border-width: 1px;
-            border-color: Palette.iron;
+            // Search Bar with Active Focus Ring
+            search-box := Rectangle {
+                height: 40px;
+                background: Palette.obsidian;
+                border-radius: Palette.radius-md;
+                border-width: 1px;
+                border-color: search-input.has-focus ? Palette.amber : Palette.iron;
 
-            search-input := LineEdit {
-                placeholder-text: "Search keybinds or actions...";
-                x: 8px;
-                width: parent.width - 16px;
-                height: parent.height;
-                edited => {
-                    root.search-changed(self.text);
+                HorizontalLayout {
+                    padding-left: Palette.space-md;
+                    padding-right: Palette.space-md;
+                    spacing: Palette.space-sm;
+
+                    Text {
+                        text: "⌕";
+                        font-size: 16px;
+                        color: search-input.has-focus ? Palette.amber : Palette.ash;
+                        vertical-alignment: center;
+                    }
+
+                    search-input := LineEdit {
+                        placeholder-text: "Search keybinds or actions (e.g. terminal, window, super)...";
+                        height: parent.height;
+                        edited => {
+                            root.search-changed(self.text);
+                        }
+                    }
                 }
             }
-        }
 
-        // Table Header
-        Rectangle {
-            height: 24px;
-            background: Palette.graphite;
-            border-radius: 4px;
-            HorizontalLayout {
-                padding-left: 12px;
-                padding-right: 12px;
-                spacing: 12px;
-                Text {
-                    text: "ACTION";
-                    font-size: 11px;
-                    font-weight: 600;
-                    color: Palette.bone-muted;
-                    width: 180px;
-                    vertical-alignment: center;
-                }
-                Text {
-                    text: "CATEGORY";
-                    font-size: 11px;
-                    font-weight: 600;
-                    color: Palette.bone-muted;
-                    width: 140px;
-                    vertical-alignment: center;
-                }
-                Text {
-                    text: "KEYBINDING";
-                    font-size: 11px;
-                    font-weight: 600;
-                    color: Palette.bone-muted;
-                    horizontal-alignment: right;
-                    vertical-alignment: center;
+            // Table Header
+            Rectangle {
+                height: 26px;
+                background: Palette.graphite;
+                border-radius: Palette.radius-sm;
+                HorizontalLayout {
+                    padding-left: Palette.space-md;
+                    padding-right: Palette.space-md;
+                    spacing: Palette.space-md;
+                    Text {
+                        text: "ACTION";
+                        font-size: Palette.font-xs;
+                        font-weight: 700;
+                        color: Palette.ash;
+                        width: 200px;
+                        vertical-alignment: center;
+                    }
+                    Text {
+                        text: "CATEGORY";
+                        font-size: Palette.font-xs;
+                        font-weight: 700;
+                        color: Palette.ash;
+                        width: 130px;
+                        vertical-alignment: center;
+                    }
+                    Text {
+                        text: "KEYBINDING";
+                        font-size: Palette.font-xs;
+                        font-weight: 700;
+                        color: Palette.ash;
+                        horizontal-alignment: right;
+                        vertical-alignment: center;
+                    }
                 }
             }
-        }
 
-        // Scrollable List
-        ScrollView {
-            VerticalLayout {
-                spacing: 6px;
-                for item in root.items: Rectangle {
-                    height: 36px;
-                    background: Palette.obsidian;
-                    border-radius: 4px;
-                    border-width: 1px;
-                    border-color: Palette.iron;
+            // Zero-Match Empty State
+            if (root.items.length == 0): Rectangle {
+                height: 240px;
+                background: Palette.obsidian;
+                border-radius: Palette.radius-md;
+                border-width: 1px;
+                border-color: Palette.iron;
 
-                    HorizontalLayout {
-                        padding-left: 12px;
-                        padding-right: 12px;
-                        spacing: 12px;
+                VerticalLayout {
+                    alignment: center;
+                    spacing: Palette.space-sm;
 
-                        Text {
-                            text: item.action;
-                            font-size: 13px;
-                            font-weight: 500;
-                            color: Palette.bone;
-                            width: 180px;
-                            vertical-alignment: center;
-                        }
+                    Text {
+                        text: "No matching keybindings";
+                        font-size: Palette.font-md;
+                        font-weight: 600;
+                        color: Palette.bone;
+                        horizontal-alignment: center;
+                    }
+                    Text {
+                        text: root.search-query != "" ? "No actions found matching \"" + root.search-query + "\"" : "No keybindings configured for profile \"" + root.profile-name + "\"";
+                        font-size: Palette.font-sm;
+                        color: Palette.ash;
+                        horizontal-alignment: center;
+                    }
+                    Rectangle { height: Palette.space-xs; }
+                    Text {
+                        text: "Tip: Try searching for \"terminal\", \"window\", \"focus\", or press Escape to dismiss";
+                        font-size: Palette.font-xs;
+                        color: Palette.pale-amber;
+                        horizontal-alignment: center;
+                    }
+                }
+            }
 
-                        Text {
-                            text: item.category;
-                            font-size: 12px;
-                            color: Palette.bone-muted;
-                            width: 140px;
-                            vertical-alignment: center;
-                        }
+            // Scrollable Keybind List
+            if (root.items.length > 0): ScrollView {
+                VerticalLayout {
+                    spacing: Palette.space-sm;
+                    for item in root.items: Rectangle {
+                        height: 38px;
+                        background: Palette.obsidian;
+                        border-radius: Palette.radius-sm;
+                        border-width: 1px;
+                        border-color: Palette.iron;
 
                         HorizontalLayout {
-                            alignment: end;
-                            Rectangle {
-                                background: Palette.graphite;
-                                border-radius: 4px;
-                                border-width: 1px;
-                                border-color: Palette.iron;
-                                height: 24px;
-                                HorizontalLayout {
-                                    padding-left: 8px;
-                                    padding-right: 8px;
-                                    Text {
-                                        text: item.keybind;
-                                        font-size: 12px;
-                                        font-weight: 600;
-                                        color: Palette.amber;
-                                        vertical-alignment: center;
+                            padding-left: Palette.space-md;
+                            padding-right: Palette.space-md;
+                            spacing: Palette.space-md;
+
+                            Text {
+                                text: item.action;
+                                font-size: Palette.font-base;
+                                font-weight: 500;
+                                color: Palette.bone;
+                                width: 200px;
+                                vertical-alignment: center;
+                            }
+
+                            // Category Badge
+                            HorizontalLayout {
+                                width: 130px;
+                                alignment: start;
+                                Rectangle {
+                                    background: item.category == "apps" ? #1C1C23 : (item.category == "window" ? #181820 : #14141A);
+                                    border-radius: Palette.radius-sm;
+                                    border-width: 1px;
+                                    border-color: Palette.iron;
+                                    height: 22px;
+                                    HorizontalLayout {
+                                        padding-left: Palette.space-sm;
+                                        padding-right: Palette.space-sm;
+                                        Text {
+                                            text: item.category;
+                                            font-size: Palette.font-xs;
+                                            font-weight: 600;
+                                            color: item.category == "apps" ? Palette.pale-amber : (item.category == "window" ? Palette.steel : Palette.ash);
+                                            vertical-alignment: center;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Keybinding Pill
+                            HorizontalLayout {
+                                alignment: end;
+                                Rectangle {
+                                    background: Palette.graphite;
+                                    border-radius: Palette.radius-sm;
+                                    border-width: 1px;
+                                    border-color: Palette.iron;
+                                    height: 26px;
+                                    HorizontalLayout {
+                                        padding-left: Palette.space-sm;
+                                        padding-right: Palette.space-sm;
+                                        Text {
+                                            text: item.keybind;
+                                            font-size: Palette.font-sm;
+                                            font-weight: 600;
+                                            color: Palette.amber;
+                                            vertical-alignment: center;
+                                        }
                                     }
                                 }
                             }
@@ -189,7 +255,23 @@ export component KeybindHud inherits Window {
                     }
                 }
             }
-        }
+
+            // Footer Status Bar
+            HorizontalLayout {
+                alignment: space-between;
+                Text {
+                    text: root.items.length + " keybinding(s) displayed";
+                    font-size: Palette.font-xs;
+                    color: Palette.ash;
+                    vertical-alignment: center;
+                }
+                Text {
+                    text: "[Esc] dismiss  •  [↑/↓] scroll list";
+                    font-size: Palette.font-xs;
+                    color: Palette.steel;
+                    vertical-alignment: center;
+                }
+            }
         }
     }
 }

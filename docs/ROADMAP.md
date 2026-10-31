@@ -91,15 +91,15 @@ flowchart LR
 ## Phase 5: Security Hardening & Profile Definitions
 *Goal: Formalize sandboxing policies, firewall rulesets, and concrete user profile configurations.*
 
-- [ ] **Security Modules (`security/`)**:
+- [x] **Security Modules (`security/`)**:
   - **Firejail (`security/firejail/`)**: Custom profiles for web browsers, electron apps, and untrusted binaries.
-  - **AppArmor (`security/apparmour/`)**: Hardened profiles for sensitive background daemons.
-  - **Flatpak (`security/flatpak/`)**: Declarative permission overrides (`--unshare=network`, `--nosocket=wayland` where applicable).
-  - **NFTables (`security/nft/`)**: Workstation firewall ruleset (blocking unsolicited inbound, DNS leak prevention).
-- [ ] **Concrete Profiles (`profiles/`)**:
-  - `profiles/default.toml`: Balanced daily-driver rice (Foot, Fuzzel, Sway, Starship).
-  - `profiles/minimal.toml`: Ultra-lightweight setup for low-resource environments (Foot, Fuzzel, Sway, no heavy daemons).
-  - `profiles/hardening.toml`: Maximum isolation profile with strict Firejail wrapping and NFTables enforcement.
+  - **AppArmor (`security/apparmor/`)**: Hardened profiles for sensitive background daemons.
+  - **Flatpak (`security/flatpak/`)**: Declarative permission overrides (`socket = ["wayland", "!x11"]`, pipewire features).
+  - **NFTables (`security/nft/`)**: Workstation firewall ruleset (blocking unsolicited inbound, loopback accept, established/related tracking).
+- [x] **Concrete Profiles (`profiles/`)**:
+  - `profiles/default.toml`: Balanced daily-driver rice (Foot, Fuzzel, Sway, Starship, Zellij, Mako).
+  - `profiles/minimal.toml`: Ultra-lightweight setup for low-resource environments (Foot, Fuzzel, Niri, Tmux).
+  - `profiles/hardening.toml`: Maximum isolation profile with strict Firejail wrapping, AppArmor drop-ins, and NFTables enforcement.
 
 ---
 

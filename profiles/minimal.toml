@@ -1,42 +1,41 @@
+# Dotfield Minimal Rice Profile
+# Ultra-lightweight resource footprint
+
 [meta]
 name = "minimal"
-description = "Minimalist lightweight rice for maximum performance"
-version = "0.1.0"
+description = "Lean, scrollable-tiling Wayland workstation using Niri and minimal daemons"
+version = "1.0.0"
 
 [compositor]
-target = "sway"
-gaps_inner = 0
-gaps_outer = 0
-border_width = 1
+engine = "niri"
+scaling = 1.0
 
 [apps]
 terminal = "foot"
 launcher = "fuzzel"
 editor = "nvim"
 multiplexer = "tmux"
-file_manager = "foot -e lf"
-browser = "firefox"
-bar = "swaybar"
 notifications = "mako"
+bar = "none"
+
+[theme]
+palette = "controlled-chaos"
+font_family = "monospace"
+font_size = 11
 
 [bindings]
 terminal = "Super+Return"
 launcher = "Super+space"
-editor = "Super+e"
+app_menu = "Super+Shift+space"
 close_window = "Super+q"
-toggle_floating = "Super+Shift+space"
 fullscreen = "Super+f"
-reload_config = "Super+Shift+r"
-
-[theme]
-palette = "monochrome"
-font_sans = "monospace 10"
-font_mono = "monospace 10"
-accent_color = "#ffffff"
-background = "#000000"
-foreground = "#e0e0e0"
+hud = "Super+slash"
+screenshot_area = "Print"
+screenshot_full = "Shift+Print"
+lock = "Super+Escape"
 
 [security]
-isolate_browser = false
-enforce_firejail = false
-enforce_nftables = false
+firejail = false
+flatpak_overrides = true
+nftables = false
+apparmor = false

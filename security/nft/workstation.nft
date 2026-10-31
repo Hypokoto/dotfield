@@ -1,0 +1,32 @@
+#!/usr/sbin/nft -f
+# Workstation stateful packet filter
+# Managed by Dotfield
+
+flush ruleset
+
+table inet filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+
+        # Allow established and related connections
+        ct state established,related accept
+
+        # Drop invalid packets immediately
+        ct state invalid drop
+
+        # Allow loopback interface traffic
+        iif "lo" accept
+
+        # Allow basic ICMP / ping for network diagnostics
+        ip protocol icmp accept
+        ip6 nexthdr ipv6-icmp accept
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+    }
+
+    chain output {
+        type filter hook output priority filter; policy accept;
+    }
+}

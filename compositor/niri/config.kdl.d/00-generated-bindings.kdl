@@ -1,0 +1,14 @@
+// Dotfield Generated Niri Keybindings Fragment
+// Target: ~/.config/niri/config.kdl.d/00-generated-bindings.kdl
+// This file is atomically compiled by Dotfield. Manual edits will be flagged as drift.
+
+binds {
+    Mod+Return { spawn "foot"; }
+    Mod+Space { spawn "fuzzel"; }
+    Mod+Shift+Space { spawn "rofi" "-show" "drun"; }
+    Mod+Q { close-window; }
+    Mod+F { maximize-column; }
+
+    // Keybind HUD (Slint overlay)
+    Mod+Slash { spawn "dotfield-gui" "--hud"; }
+}

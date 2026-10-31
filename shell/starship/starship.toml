@@ -1,0 +1,68 @@
+# Dotfield Starship Prompt Configuration
+# Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
+
+format = """
+$username\
+$hostname\
+$directory\
+$git_branch\
+$git_state\
+$git_status\
+$rust\
+$package\
+$cmd_duration\
+$line_break\
+$character"""
+
+palette = "controlled_chaos"
+
+[palettes.controlled_chaos]
+void = "#0A0A0C"
+obsidian = "#121216"
+graphite = "#1C1C23"
+iron = "#34343D"
+ash = "#A1A1AA"
+bone = "#E8E6E3"
+crimson = "#E63946"
+amber = "#FFB000"
+pale_amber = "#FFD166"
+steel = "#8B949E"
+green = "#7BC47F"
+
+[character]
+success_symbol = "[❯](bold amber)"
+error_symbol = "[❯](bold crimson)"
+vimcmd_symbol = "[❮](bold steel)"
+vimcmd_visual_symbol = "[❮](bold pale_amber)"
+
+[directory]
+style = "bold amber"
+truncation_length = 3
+truncate_to_repo = true
+read_only = " 󰌾"
+
+[git_branch]
+symbol = " "
+style = "bold ash"
+format = "[$symbol$branch]($style) "
+
+[git_status]
+style = "bold crimson"
+format = "([\\[$all_status$ahead_behind\\]]($style) )"
+
+[git_state]
+style = "bold iron"
+format = "[$state( $progress_current/$progress_total)]($style) "
+
+[rust]
+symbol = "󱘗 "
+style = "bold crimson"
+format = "[$symbol($version )]($style)"
+
+[cmd_duration]
+min_time = 2_000
+style = "bold steel"
+format = "[$duration]($style) "
+
+[line_break]
+disabled = false

@@ -467,7 +467,20 @@ impl GenerationManager {
             ),
             ("fuzzel/colors.ini", "fuzzel", "colors.ini"),
             ("foot/colors.ini", "foot", "colors.ini"),
+            ("kitty/colors.conf", "kitty", "colors.conf"),
+            ("alacritty/colors.toml", "alacritty", "colors.toml"),
+            (
+                "ghostty/themes/dotfield-theme",
+                "ghostty/themes",
+                "dotfield-theme",
+            ),
             ("mako/config", "mako", "config"),
+            ("tmux/colors.conf", "tmux", "colors.conf"),
+            (
+                "zellij/themes/dotfield.kdl",
+                "zellij/themes",
+                "dotfield.kdl",
+            ),
         ];
 
         let mut renamed_backups: Vec<(PathBuf, PathBuf)> = Vec::new();
@@ -482,34 +495,53 @@ impl GenerationManager {
                 };
 
                 let live_dir = config_dir.join(target_dir_rel);
+
+                // Self-heal any broken dangling symlinks in the path hierarchy
+                let mut check_ancestor = live_dir.clone();
+                while let Some(parent) = check_ancestor.parent() {
+                    if let Ok(meta) = fs::symlink_metadata(&check_ancestor) {
+                        if meta.file_type().is_symlink() && !check_ancestor.exists() {
+                            let _ = fs::remove_file(&check_ancestor);
+                        }
+                    }
+                    if parent == config_dir {
+                        break;
+                    }
+                    check_ancestor = parent.to_path_buf();
+                }
+
                 fs::create_dir_all(&live_dir)?;
                 let live_symlink = live_dir.join(file_name);
                 let current_source = current_dir.join(&frag.target_path);
 
                 if let Ok(meta) = fs::symlink_metadata(&live_symlink) {
-                    let is_our_symlink = meta.file_type().is_symlink()
-                        && fs::read_link(&live_symlink)
-                            .map(|dest| dest.starts_with(&current_dir))
-                            .unwrap_or(false);
-
-                    if is_our_symlink {
-                        fs::remove_file(&live_symlink)?;
+                    if meta.file_type().is_symlink() && !live_symlink.exists() {
+                        let _ = fs::remove_file(&live_symlink);
                     } else {
-                        let mut backup = live_symlink.with_extension("dotfield-bak");
-                        if backup.exists() {
-                            let ts = chrono_now();
-                            let mut candidate =
-                                live_symlink.with_extension(format!("dotfield-bak.{ts}"));
-                            let mut counter = 1;
-                            while candidate.exists() {
-                                candidate = live_symlink
-                                    .with_extension(format!("dotfield-bak.{ts}.{counter}"));
-                                counter += 1;
+                        let is_our_symlink = meta.file_type().is_symlink()
+                            && fs::read_link(&live_symlink)
+                                .map(|dest| dest.starts_with(&current_dir))
+                                .unwrap_or(false);
+
+                        if is_our_symlink {
+                            fs::remove_file(&live_symlink)?;
+                        } else {
+                            let mut backup = live_symlink.with_extension("dotfield-bak");
+                            if backup.exists() {
+                                let ts = chrono_now();
+                                let mut candidate =
+                                    live_symlink.with_extension(format!("dotfield-bak.{ts}"));
+                                let mut counter = 1;
+                                while candidate.exists() {
+                                    candidate = live_symlink
+                                        .with_extension(format!("dotfield-bak.{ts}.{counter}"));
+                                    counter += 1;
+                                }
+                                backup = candidate;
                             }
-                            backup = candidate;
+                            fs::rename(&live_symlink, &backup)?;
+                            renamed_backups.push((backup, live_symlink.clone()));
                         }
-                        fs::rename(&live_symlink, &backup)?;
-                        renamed_backups.push((backup, live_symlink.clone()));
                     }
                 }
                 symlink(&current_source, &live_symlink)?;

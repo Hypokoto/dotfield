@@ -27,7 +27,7 @@ icons = "material-nf"
 block = "custom"
 command = "cat ~/.dotfield/state.json 2>/dev/null | grep -o '\"active_profile\": *\"[^\"]*\"' | cut -d'\"' -f4 || echo 'default'"
 interval = 5
-format = " 󰄛 $output "
+format = " 󰄛 $text "
 
 # 2. CPU Utilization & Frequency
 [[block]]

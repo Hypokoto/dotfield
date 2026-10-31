@@ -341,9 +341,6 @@ background-color=#0A0A0C
 text-color=#E8E6E3
 border-color=#FFB000
 progress-color=source #FFB000
-button-color=#1C1C23
-button-border-color=#34343D
-button-text-color=#E8E6E3
 
 [urgency=low]
 background-color=#121216

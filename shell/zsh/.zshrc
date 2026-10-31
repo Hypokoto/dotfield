@@ -126,5 +126,6 @@ alias gl="git log --oneline --graph --decorate -n 15"
 
 ### Starship Prompt Initialization
 if command -v starship >/dev/null 2>&1; then
+    export STARSHIP_CONFIG="${HOME}/.config/starship.toml"
     eval "$(starship init zsh)"
 fi

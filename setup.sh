@@ -39,7 +39,7 @@ cd "${SCRIPT_DIR}"
 
 # Default parameters
 PREFIX="${HOME}/.local/bin"
-PROFILE="default"
+PROFILE=""
 DO_BUILD=true
 DO_SYSTEMD=false
 DO_DEPLOY=true
@@ -54,6 +54,7 @@ Usage: ./setup.sh [OPTIONS]
 Options:
   -p, --profile <name>   Initial profile to compile and apply (default: 'default')
                          Available: default, minimal, hardening, battery
+  -f, --force            Force replacement of existing configs (backing them up with .bak)
   --prefix <dir>         Directory to install binaries into (default: ~/.local/bin)
   --no-build             Skip compiling Rust crates with cargo
   --skip-deploy          Do not run 'dotfield apply' after installation
@@ -63,17 +64,22 @@ Options:
 
 Examples:
   ./setup.sh
-  ./setup.sh --profile minimal
+  ./setup.sh --profile minimal --force
   ./setup.sh --prefix /usr/local/bin --systemd
 EOF
 }
 
 # Parse command line flags
+FORCE_DEPLOY=false
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -p|--profile)
             PROFILE="$2"
             shift 2
+            ;;
+        -f|--force)
+            FORCE_DEPLOY=true
+            shift
             ;;
         --prefix)
             PREFIX="$2"
@@ -106,6 +112,14 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+if [[ -z "${PROFILE}" ]]; then
+    if [[ -n "${NIRI_SOCKET:-}" ]] || pgrep -x niri >/dev/null 2>&1; then
+        PROFILE="minimal"
+    else
+        PROFILE="default"
+    fi
+fi
 
 echo -e "${BOLD}======================================================${NC}"
 echo -e "${BOLD}       Dotfield Desktop Suite Installer               ${NC}"
@@ -249,6 +263,15 @@ ensure_config_link_or_dir() {
     local src="$1"
     local dest="$2"
 
+    # 1. Clean broken or dead symlinks
+    if [[ -L "${dest}" && ! -e "${dest}" ]]; then
+        info "Cleaning dangling broken symlink: ${dest}"
+        if [[ "${DRY_RUN}" != true ]]; then
+            rm -f "${dest}"
+        fi
+    fi
+
+    # 2. Check if destination does not exist
     if [[ ! -e "${dest}" ]]; then
         if [[ "${DRY_RUN}" == true ]]; then
             info "[dry-run] cp -r ${src} ${dest}"
@@ -257,8 +280,33 @@ ensure_config_link_or_dir() {
             cp -r "${src}" "${dest}"
             success "Staged base config: ${dest}"
         fi
+    elif [[ "${FORCE_DEPLOY}" == true ]]; then
+        if [[ "${DRY_RUN}" == true ]]; then
+            info "[dry-run] backup ${dest} and replace with ${src}"
+        else
+            local ts
+            ts=$(date +%s)
+            mv "${dest}" "${dest}.bak.${ts}"
+            mkdir -p "$(dirname "${dest}")"
+            cp -r "${src}" "${dest}"
+            success "Replaced base config (backed up to ${dest}.bak.${ts}): ${dest}"
+        fi
     else
-        info "Config already exists: ${dest} (preserving)"
+        # If destination is Niri and contains stock upstream template, upgrade it automatically
+        if [[ "${dest}" == *"/niri"* && -f "${dest}/config.kdl" ]] && ! grep -q "00-generated-bindings" "${dest}/config.kdl"; then
+            if [[ "${DRY_RUN}" == true ]]; then
+                info "[dry-run] backup stock unriced Niri template and replace with ${src}"
+            else
+                local ts
+                ts=$(date +%s)
+                mv "${dest}" "${dest}.bak.${ts}"
+                mkdir -p "$(dirname "${dest}")"
+                cp -r "${src}" "${dest}"
+                success "Replaced stock unriced Niri template (backed up to ${dest}.bak.${ts}): ${dest}"
+            fi
+        else
+            info "Config already exists: ${dest} (preserving)"
+        fi
     fi
 }
 
@@ -276,12 +324,15 @@ ensure_config_link_or_dir "${SCRIPT_DIR}/osd/avizo" "${HOME}/.config/avizo"
 ensure_config_link_or_dir "${SCRIPT_DIR}/osd/swaylock" "${HOME}/.config/swaylock"
 ensure_config_link_or_dir "${SCRIPT_DIR}/osd/swayidle" "${HOME}/.config/swayidle"
 ensure_config_link_or_dir "${SCRIPT_DIR}/i3-rust" "${HOME}/.config/i3status-rust"
+ensure_config_link_or_dir "${SCRIPT_DIR}/i3-rust" "${HOME}/.config/i3status-rs"
 ensure_config_link_or_dir "${SCRIPT_DIR}/multiplexer/tmux" "${HOME}/.config/tmux"
 ensure_config_link_or_dir "${SCRIPT_DIR}/multiplexer/zellij" "${HOME}/.config/zellij"
 ensure_config_link_or_dir "${SCRIPT_DIR}/wlogout" "${HOME}/.config/wlogout"
 ensure_config_link_or_dir "${SCRIPT_DIR}/shell/starship/starship.toml" "${HOME}/.config/starship.toml"
 ensure_config_link_or_dir "${SCRIPT_DIR}/shell/zsh/.zshrc" "${HOME}/.zshrc"
 ensure_config_link_or_dir "${SCRIPT_DIR}/profiles" "${HOME}/.config/dotfield/profiles"
+ensure_config_link_or_dir "${SCRIPT_DIR}/background/Wallpapers" "${HOME}/.config/dotfield/background/Wallpapers"
+ensure_config_link_or_dir "${SCRIPT_DIR}/background/Gifs" "${HOME}/.config/dotfield/background/Gifs"
 
 # Ensure modular drop-in directories exist
 if [[ "${DRY_RUN}" != true ]]; then
@@ -352,6 +403,20 @@ if [[ "${DO_DEPLOY}" == true ]]; then
         "${PREFIX}/dotfield" check "${PROFILE_FILE}"
         "${PREFIX}/dotfield" apply "${PROFILE_FILE}"
         success "Applied profile '${PROFILE}'"
+
+        # Immediately trigger live wallpaper and desktop reload
+        if [[ -x "${HOME}/.config/dotfield/scripts/wallpaper.sh" ]]; then
+            "${HOME}/.config/dotfield/scripts/wallpaper.sh" || true
+        fi
+        if command -v niri >/dev/null 2>&1 && pgrep -x niri >/dev/null 2>&1; then
+            niri msg action load-config-file 2>/dev/null || true
+        fi
+        if command -v swaymsg >/dev/null 2>&1 && pgrep -x sway >/dev/null 2>&1; then
+            swaymsg reload 2>/dev/null || true
+        fi
+        if command -v makoctl >/dev/null 2>&1 && pgrep -x mako >/dev/null 2>&1; then
+            makoctl reload 2>/dev/null || true
+        fi
     fi
 fi
 

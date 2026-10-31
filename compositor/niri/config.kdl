@@ -46,6 +46,9 @@ layout {
 
 prefer-no-csd
 
+spawn-at-startup "sh" "-c" "~/.config/dotfield/scripts/wallpaper.sh"
+spawn-at-startup "mako"
+
 // Fallback Keybindings
 binds {
     Mod+Return { spawn "foot"; }

@@ -11,9 +11,10 @@ set $menu fuzzel
 set $menu_full rofi -show drun
 
 ### Output & Wallpaper
-output * bg #0A0A0C solid_color
 output * max_render_time 1
 output * adaptive_sync on
+exec_always ~/.config/dotfield/scripts/wallpaper.sh
+exec mako
 
 ### Window Geometry & Borders
 default_border pixel 2
@@ -137,3 +138,20 @@ for_window [window_type="dialog"] floating enable
 ### Modular Drop-ins (Dotfield Managed)
 # Fragments in config.d are loaded alphabetically and take precedence over defaults
 include ~/.config/sway/config.d/*.conf
+
+### Status Bar (i3status-rust Controlled Chaos)
+bar {
+    position top
+    status_command i3status-rs ~/.config/i3status-rust/config.toml
+    font pango:JetBrainsMono Nerd Font 10
+    strip_workspace_numbers yes
+    colors {
+        background #0A0A0C
+        statusline #E8E6E3
+        separator  #34343D
+        focused_workspace  #FFB000 #1C1C23 #FFB000
+        active_workspace   #34343D #121216 #E8E6E3
+        inactive_workspace #121216 #0A0A0C #8B949E
+        urgent_workspace   #E63946 #9D0208 #FFFFFF
+    }
+}

@@ -1,0 +1,181 @@
+import { Palette } from "palette.slint";
+import { LineEdit, ScrollView } from "std-widgets.slint";
+
+export struct KeybindItem {
+    action: string,
+    keybind: string,
+    category: string,
+}
+
+export component KeybindHud inherits Window {
+    title: "Dotfield Keybind HUD";
+    width: 680px;
+    height: 480px;
+    background: Palette.void;
+
+    in property <string> profile-name: "default";
+    in property <[KeybindItem]> items: [];
+    out property <string> search-query: search-input.text;
+    callback search-changed(string);
+    callback close-clicked();
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 14px;
+
+        // Header
+        HorizontalLayout {
+            alignment: space-between;
+            VerticalLayout {
+                spacing: 4px;
+                Text {
+                    text: "DOTFIELD // KEYBIND HUD";
+                    font-size: 16px;
+                    font-weight: 700;
+                    color: Palette.amber;
+                }
+                Text {
+                    text: "Active Profile: " + root.profile-name;
+                    font-size: 12px;
+                    color: Palette.bone-muted;
+                }
+            }
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: 4px;
+                background: Palette.graphite;
+                border-width: 1px;
+                border-color: Palette.iron;
+
+                Text {
+                    text: "✕";
+                    font-size: 14px;
+                    color: Palette.bone;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                TouchArea {
+                    clicked => {
+                        root.close-clicked();
+                    }
+                }
+            }
+        }
+
+        // Search Bar
+        Rectangle {
+            height: 38px;
+            background: Palette.obsidian;
+            border-radius: 6px;
+            border-width: 1px;
+            border-color: Palette.iron;
+
+            search-input := LineEdit {
+                placeholder-text: "Search keybinds or actions...";
+                x: 8px;
+                width: parent.width - 16px;
+                height: parent.height;
+                edited => {
+                    root.search-changed(self.text);
+                }
+            }
+        }
+
+        // Table Header
+        Rectangle {
+            height: 24px;
+            background: Palette.graphite;
+            border-radius: 4px;
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                spacing: 12px;
+                Text {
+                    text: "ACTION";
+                    font-size: 11px;
+                    font-weight: 600;
+                    color: Palette.bone-muted;
+                    width: 180px;
+                    vertical-alignment: center;
+                }
+                Text {
+                    text: "CATEGORY";
+                    font-size: 11px;
+                    font-weight: 600;
+                    color: Palette.bone-muted;
+                    width: 140px;
+                    vertical-alignment: center;
+                }
+                Text {
+                    text: "KEYBINDING";
+                    font-size: 11px;
+                    font-weight: 600;
+                    color: Palette.bone-muted;
+                    horizontal-alignment: right;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Scrollable List
+        ScrollView {
+            VerticalLayout {
+                spacing: 6px;
+                for item in root.items: Rectangle {
+                    height: 36px;
+                    background: Palette.obsidian;
+                    border-radius: 4px;
+                    border-width: 1px;
+                    border-color: Palette.iron;
+
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        spacing: 12px;
+
+                        Text {
+                            text: item.action;
+                            font-size: 13px;
+                            font-weight: 500;
+                            color: Palette.bone;
+                            width: 180px;
+                            vertical-alignment: center;
+                        }
+
+                        Text {
+                            text: item.category;
+                            font-size: 12px;
+                            color: Palette.bone-muted;
+                            width: 140px;
+                            vertical-alignment: center;
+                        }
+
+                        HorizontalLayout {
+                            alignment: end;
+                            Rectangle {
+                                background: Palette.graphite;
+                                border-radius: 4px;
+                                border-width: 1px;
+                                border-color: Palette.iron;
+                                height: 24px;
+                                HorizontalLayout {
+                                    padding-left: 8px;
+                                    padding-right: 8px;
+                                    Text {
+                                        text: item.keybind;
+                                        font-size: 12px;
+                                        font-weight: 600;
+                                        color: Palette.amber;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

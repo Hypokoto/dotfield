@@ -1,0 +1,197 @@
+import { Palette } from "palette.slint";
+import { ScrollView } from "std-widgets.slint";
+
+export struct ProfileCardData {
+    name: string,
+    description: string,
+    compositor: string,
+    apps: string,
+    security: string,
+    active: bool,
+}
+
+export component ProfileSwitcher inherits Window {
+    title: "Dotfield Profile Switcher";
+    width: 760px;
+    height: 520px;
+    background: Palette.void;
+
+    in property <[ProfileCardData]> profiles: [];
+    in property <string> status-message: "Select a profile to switch";
+    callback apply-profile(string);
+    callback close-clicked();
+
+    VerticalLayout {
+        padding: 24px;
+        spacing: 16px;
+
+        // Header
+        HorizontalLayout {
+            alignment: space-between;
+            VerticalLayout {
+                spacing: 4px;
+                Text {
+                    text: "DOTFIELD // PROFILE SWITCHER";
+                    font-size: 18px;
+                    font-weight: 700;
+                    color: Palette.amber;
+                }
+                Text {
+                    text: "Declarative Linux Ricing & Generational Swapper";
+                    font-size: 12px;
+                    color: Palette.bone-muted;
+                }
+            }
+
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: 4px;
+                background: Palette.graphite;
+                border-width: 1px;
+                border-color: Palette.iron;
+
+                Text {
+                    text: "✕";
+                    font-size: 14px;
+                    color: Palette.bone;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                TouchArea {
+                    clicked => {
+                        root.close-clicked();
+                    }
+                }
+            }
+        }
+
+        // Cards List
+        ScrollView {
+            VerticalLayout {
+                spacing: 12px;
+                for p in root.profiles: Rectangle {
+                    height: 104px;
+                    background: p.active ? Palette.graphite : Palette.obsidian;
+                    border-radius: 8px;
+                    border-width: p.active ? 2px : 1px;
+                    border-color: p.active ? Palette.amber : Palette.iron;
+
+                    VerticalLayout {
+                        padding: 14px;
+                        spacing: 8px;
+
+                        HorizontalLayout {
+                            alignment: space-between;
+                            HorizontalLayout {
+                                spacing: 10px;
+                                Text {
+                                    text: p.name;
+                                    font-size: 15px;
+                                    font-weight: 700;
+                                    color: p.active ? Palette.amber : Palette.bone;
+                                }
+
+                                if (p.active): Rectangle {
+                                    background: Palette.amber;
+                                    border-radius: 3px;
+                                    height: 18px;
+                                    HorizontalLayout {
+                                        padding-left: 6px;
+                                        padding-right: 6px;
+                                        Text {
+                                            text: "ACTIVE";
+                                            font-size: 10px;
+                                            font-weight: 700;
+                                            color: Palette.void;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (!p.active): Rectangle {
+                                width: 90px;
+                                height: 26px;
+                                background: Palette.graphite;
+                                border-radius: 4px;
+                                border-width: 1px;
+                                border-color: Palette.iron;
+
+                                Text {
+                                    text: "Apply";
+                                    font-size: 12px;
+                                    font-weight: 600;
+                                    color: Palette.amber;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+
+                                TouchArea {
+                                    clicked => {
+                                        root.apply-profile(p.name);
+                                    }
+                                }
+                            }
+                        }
+
+                        Text {
+                            text: p.description;
+                            font-size: 12px;
+                            color: Palette.bone-muted;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 16px;
+                            Text {
+                                text: "Compositor: " + p.compositor;
+                                font-size: 11px;
+                                color: Palette.bone-muted;
+                            }
+                            Text {
+                                text: "Apps: " + p.apps;
+                                font-size: 11px;
+                                color: Palette.bone-muted;
+                            }
+                            Text {
+                                text: "Security: " + p.security;
+                                font-size: 11px;
+                                color: p.security == "Hardened" ? Palette.crimson : Palette.bone-muted;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Footer / Status Bar
+        Rectangle {
+            height: 32px;
+            background: Palette.obsidian;
+            border-radius: 6px;
+            border-width: 1px;
+            border-color: Palette.iron;
+
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                alignment: space-between;
+
+                Text {
+                    text: root.status-message;
+                    font-size: 12px;
+                    color: Palette.bone;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: "Controlled Chaos UI // Wayland";
+                    font-size: 11px;
+                    color: Palette.bone-muted;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}

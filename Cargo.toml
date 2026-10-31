@@ -2,6 +2,8 @@
 members = [
     "crates/dotfield-core",
     "crates/dotfield-cli",
+    "crates/dotfield-gui",
+    "crates/dotfieldd",
 ]
 resolver = "2"
 

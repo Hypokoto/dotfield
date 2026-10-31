@@ -123,9 +123,9 @@ flowchart LR
 ## Phase 7: Custom GUI Utilities (Rust + Slint)
 *Goal: Deliver smooth, native Wayland graphical interfaces for profile management and system interaction.*
 
-- [ ] **Slint GUI Utilities (`crates/dotfield-gui/`)**:
+- [x] **Slint GUI Utilities (`crates/dotfield-gui/`)**:
   - **Rice Menu (`rice-menu`)**: Quick Wayland popover for toggling profiles, themes, and screen scale.
   - **Profile Switcher (`profile-switcher`)**: Graphical card viewer displaying rice presets with live screenshots/previews.
   - **Keybind HUD (`keybind-hud`)**: Instant searchable cheat-sheet showing current active keybindings compiled by Dotfield.
-- [ ] **Daemon (`dotfieldd`)**:
+- [x] **Daemon (`dotfieldd`)**:
   - Background event subscriber for automatic profile switching (AC/Battery, display dock/undock).

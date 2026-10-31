@@ -1,0 +1,16 @@
+[package]
+name = "dotfieldd"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+dotfield-core = { path = "../dotfield-core" }
+clap = { workspace = true }
+anyhow = { workspace = true }
+colored = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

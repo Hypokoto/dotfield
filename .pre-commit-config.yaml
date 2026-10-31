@@ -40,3 +40,10 @@ repos:
         language: system
         files: '\.rs$'
         pass_filenames: false
+
+      - id: cargo-clippy
+        name: Cargo Clippy Linter
+        entry: cargo clippy -- -D warnings
+        language: system
+        files: '\.rs$'
+        pass_filenames: false

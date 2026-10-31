@@ -1,0 +1,36 @@
+{
+    "label" : "lock",
+    "action" : "~/.config/dotfield/scripts/lock.sh",
+    "text" : "󰌾 Lock (l)",
+    "keybind" : "l"
+}
+{
+    "label" : "logout",
+    "action" : "swaymsg exit 2>/dev/null || niri msg action quit",
+    "text" : "󰍃 Logout (e)",
+    "keybind" : "e"
+}
+{
+    "label" : "suspend",
+    "action" : "systemctl suspend",
+    "text" : "󰤄 Suspend (u)",
+    "keybind" : "u"
+}
+{
+    "label" : "hibernate",
+    "action" : "systemctl hibernate",
+    "text" : "󰋊 Hibernate (h)",
+    "keybind" : "h"
+}
+{
+    "label" : "reboot",
+    "action" : "systemctl reboot",
+    "text" : "󰜉 Reboot (r)",
+    "keybind" : "r"
+}
+{
+    "label" : "shutdown",
+    "action" : "systemctl poweroff",
+    "text" : "󰐥 Shutdown (s)",
+    "keybind" : "s"
+}

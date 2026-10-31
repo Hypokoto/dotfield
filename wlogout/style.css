@@ -1,0 +1,61 @@
+/* Controlled Chaos styling for wlogout
+ * Void Black · Crimson · Industrial Amber · Steel
+ */
+
+* {
+    background-image: none;
+    box-shadow: none;
+    font-family: "JetBrainsMono Nerd Font", monospace;
+}
+
+window {
+    background-color: rgba(10, 10, 12, 0.92);
+}
+
+button {
+    font-size: 15px;
+    font-weight: bold;
+    color: #E8E6E3;
+    background-color: #1C1C23;
+    border: 2px solid #34343D;
+    border-radius: 8px;
+    margin: 16px;
+    padding: 24px;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+button:focus, button:active, button:hover {
+    background-color: #121216;
+    border-color: #FFB000;
+    color: #FFB000;
+}
+
+#lock:hover, #lock:focus {
+    border-color: #FFB000;
+    color: #FFB000;
+}
+
+#logout:hover, #logout:focus {
+    border-color: #FFD166;
+    color: #FFD166;
+}
+
+#suspend:hover, #suspend:focus {
+    border-color: #82AAFF;
+    color: #82AAFF;
+}
+
+#hibernate:hover, #hibernate:focus {
+    border-color: #8B949E;
+    color: #8B949E;
+}
+
+#reboot:hover, #reboot:focus {
+    border-color: #FFD166;
+    color: #FFD166;
+}
+
+#shutdown:hover, #shutdown:focus {
+    border-color: #E63946;
+    color: #E63946;
+}

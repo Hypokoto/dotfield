@@ -52,7 +52,7 @@ binds {
     Mod+Space { spawn "fuzzel"; }
     Mod+Shift+Space { spawn "rofi" "-show" "drun"; }
     Mod+Q { close-window; }
-    Mod+Shift+E { quit; }
+    Mod+Shift+E { spawn "sh" "-c" "command -v wlogout >/dev/null 2>&1 && wlogout || niri msg action quit"; }
 
     // Column & Window Navigation
     Mod+H     { focus-column-left; }

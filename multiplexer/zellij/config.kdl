@@ -1,9 +1,41 @@
 // Zellij configuration managed by Dotfield
+// Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
 
 theme "dotfield"
-default_layout "compact"
+default_layout "default"
 mouse_mode true
 copy_on_select true
 copy_command "wl-copy"
+copy_clipboard "system"
 pane_frames true
 simplified_ui false
+auto_layout true
+scroll_buffer_size 10000
+
+// UI Presentation
+ui {
+    pane_frames {
+        rounded_corners true
+        hide_session_name false
+    }
+}
+
+// Keybindings configuration
+keybinds {
+    normal {
+        bind "Ctrl g" { SwitchToMode "Locked"; }
+        bind "Ctrl p" { SwitchToMode "Pane"; }
+        bind "Ctrl t" { SwitchToMode "Tab"; }
+        bind "Ctrl n" { SwitchToMode "Resize"; }
+        bind "Ctrl s" { SwitchToMode "Scroll"; }
+        bind "Ctrl o" { SwitchToMode "Session"; }
+        bind "Ctrl q" { Quit; }
+        bind "Alt n" { NewPane; }
+        bind "Alt h" { MoveFocusOrTab "Left"; }
+        bind "Alt l" { MoveFocusOrTab "Right"; }
+        bind "Alt j" { MoveFocus "Down"; }
+        bind "Alt k" { MoveFocus "Up"; }
+        bind "Alt =" { Resize "Increase"; }
+        bind "Alt -" { Resize "Decrease"; }
+    }
+}

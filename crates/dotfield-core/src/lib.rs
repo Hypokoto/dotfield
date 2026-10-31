@@ -363,6 +363,75 @@ lock = "Super+Escape"
     }
 
     #[test]
+    fn test_tmux_colors_fragment() {
+        let toml_data = r#"
+[meta]
+name = "test-tmux"
+
+[compositor]
+engine = "sway"
+
+[apps]
+terminal = "foot"
+launcher = "fuzzel"
+multiplexer = "tmux"
+
+[theme]
+palette = "controlled-chaos"
+
+[bindings]
+terminal = "Super+Return"
+"#;
+        let profile: Profile = toml_data.parse().expect("Must parse");
+        let fragments = Compiler::compile(&profile).expect("Must compile");
+        let tmux = fragments
+            .iter()
+            .find(|f| f.target_path == "tmux/colors.conf")
+            .expect("Must have tmux fragment");
+        assert!(tmux
+            .content
+            .contains("set -g status-style \"bg=#121216,fg=#A1A1AA\""));
+        assert!(tmux
+            .content
+            .contains("set -g pane-active-border-style \"fg=#FFB000\""));
+        assert!(tmux
+            .content
+            .contains("set -g pane-border-style \"fg=#34343D\""));
+    }
+
+    #[test]
+    fn test_zellij_theme_fragment() {
+        let toml_data = r#"
+[meta]
+name = "test-zellij"
+
+[compositor]
+engine = "sway"
+
+[apps]
+terminal = "foot"
+launcher = "fuzzel"
+multiplexer = "zellij"
+
+[theme]
+palette = "controlled-chaos"
+
+[bindings]
+terminal = "Super+Return"
+"#;
+        let profile: Profile = toml_data.parse().expect("Must parse");
+        let fragments = Compiler::compile(&profile).expect("Must compile");
+        let zellij = fragments
+            .iter()
+            .find(|f| f.target_path == "zellij/themes/dotfield.kdl")
+            .expect("Must have zellij fragment");
+        assert!(zellij.content.contains("fg \"#E8E6E3\""));
+        assert!(zellij.content.contains("bg \"#0A0A0C\""));
+        assert!(zellij.content.contains("yellow \"#FFB000\""));
+        assert!(zellij.content.contains("red \"#E63946\""));
+    }
+
+    #[test]
     fn test_niri_quoted_exec_action() {
         let toml_data = r#"
 [meta]

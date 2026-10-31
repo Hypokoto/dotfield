@@ -9,8 +9,12 @@ $git_branch\
 $git_state\
 $git_status\
 $rust\
-$package\
+$python\
+$nodejs\
+$golang\
+$docker_context\
 $cmd_duration\
+$jobs\
 $line_break\
 $character"""
 
@@ -31,6 +35,7 @@ amber = "#FFB000"
 pale_amber = "#FFD166"
 steel = "#8B949E"
 green = "#7BC47F"
+blue = "#82AAFF"
 
 [character]
 success_symbol = "[❯](bold amber)"
@@ -68,10 +73,35 @@ symbol = "󱘗 "
 style = "bold crimson"
 format = "[$symbol($version )]($style)"
 
+[python]
+symbol = "󰌠 "
+style = "bold amber"
+format = "[$symbol($version )]($style)"
+
+[nodejs]
+symbol = "󰌞 "
+style = "bold green"
+format = "[$symbol($version )]($style)"
+
+[golang]
+symbol = "󰟓 "
+style = "bold blue"
+format = "[$symbol($version )]($style)"
+
+[docker_context]
+symbol = "󰡨 "
+style = "bold steel"
+format = "[$symbol$context]($style) "
+
 [cmd_duration]
 min_time = 2_000
 style = "bold steel"
 format = "[$duration]($style) "
+
+[jobs]
+symbol = "󰔚 "
+style = "bold pale_amber"
+format = "[$symbol$number]($style) "
 
 [line_break]
 disabled = false

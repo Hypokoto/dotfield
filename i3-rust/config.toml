@@ -1,5 +1,5 @@
 # i3status-rust configuration managed by Dotfield
-# Tokens derived from Controlled Chaos palette
+# Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
 
 [theme]
 theme = "plain"
@@ -8,45 +8,69 @@ theme = "plain"
 idle_bg = "#121216"
 idle_fg = "#E8E6E3"
 info_bg = "#121216"
-info_fg = "#8B949E"
+info_fg = "#82AAFF"
 good_bg = "#121216"
-good_fg = "#8B949E"
+good_fg = "#7BC47F"
 warning_bg = "#121216"
 warning_fg = "#FFB000"
 critical_bg = "#E63946"
-critical_fg = "#E8E6E3"
+critical_fg = "#FFFFFF"
 separator = " │ "
 separator_fg = "#34343D"
 separator_bg = "#121216"
 
 [icons]
-icons = "none"
+icons = "material-nf"
 
+# 1. Active Dotfield Profile Indicator
+[[block]]
+block = "custom"
+command = "cat ~/.dotfield/state.json 2>/dev/null | grep -o '\"active_profile\": *\"[^\"]*\"' | cut -d'\"' -f4 || echo 'default'"
+interval = 5
+format = " 󰄛 $output "
+
+# 2. CPU Utilization & Frequency
 [[block]]
 block = "cpu"
 interval = 2
-format = "CPU: $utilization"
+format = " $icon $utilization $frequency "
 
+# 3. Memory Usage
 [[block]]
 block = "memory"
-format = "MEM: $mem_used_percents"
+format = " $icon $mem_used_percents "
+format_alt = " $icon $mem_used / $mem_total "
 interval = 5
 
+# 4. Root Disk Storage
 [[block]]
 block = "disk_space"
 path = "/"
 info_type = "available"
-interval = 60
-format = "DISK: $available"
+interval = 30
+format = " $icon $available "
 
+# 5. Network Interface & Throughput
+[[block]]
+block = "net"
+format = " $icon {$signal_strength $ssid |$device} "
+interval = 5
+
+# 6. Audio Volume Output
+[[block]]
+block = "sound"
+format = " $icon $output_name {$volume%|} "
+
+# 7. Battery & Power State
 [[block]]
 block = "battery"
 interval = 10
-format = "BAT: $percentage"
-full_format = "BAT: $percentage"
-not_charging_format = "BAT: $percentage"
+format = " $icon $percentage "
+full_format = " $icon $percentage "
+not_charging_format = " $icon $percentage "
 
+# 8. Date & Low-Latency Clock
 [[block]]
 block = "time"
-interval = 5
-format = " $timestamp.datetime(f:'%a %d-%b %H:%M') "
+interval = 1
+format = " $icon $timestamp.datetime(f:'%a %d-%b %H:%M:%S') "

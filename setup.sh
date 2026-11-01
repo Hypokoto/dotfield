@@ -39,6 +39,7 @@ cd "${SCRIPT_DIR}"
 
 # Default parameters
 PREFIX="${HOME}/.local/bin"
+export PATH="${PREFIX}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:${PATH:-}"
 PROFILE=""
 DO_BUILD=true
 DO_SYSTEMD=false
@@ -146,7 +147,7 @@ success "Rust toolchain: $(cargo --version)"
 check_companion() {
     local cmd="$1"
     local desc="$2"
-    if command -v "$cmd" >/dev/null 2>&1; then
+    if command -v "$cmd" >/dev/null 2>&1 || [[ -x "/usr/bin/$cmd" ]] || [[ -x "/usr/sbin/$cmd" ]] || [[ -x "/bin/$cmd" ]] || [[ -x "${PREFIX}/$cmd" ]]; then
         echo -e "  ${GREEN}✔${NC} ${cmd} (${desc}) found"
     else
         echo -e "  ${STEEL}○${NC} ${cmd} (${desc}) not found (optional/runtime companion)"

@@ -17,10 +17,10 @@ has_cmd() {
 
 # 1. Volume Up
 handle_volume_up() {
-    if has_cmd swayosd-client; then
-        swayosd-client --output-volume raise
-    elif has_cmd volumectl; then
-        volumectl -u up
+    if has_cmd swayosd-client && swayosd-client --output-volume raise 2>/dev/null; then
+        return 0
+    elif has_cmd volumectl && volumectl -u up 2>/dev/null; then
+        return 0
     elif has_cmd wpctl; then
         wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+
         show_volume_notify
@@ -35,10 +35,10 @@ handle_volume_up() {
 
 # 2. Volume Down
 handle_volume_down() {
-    if has_cmd swayosd-client; then
-        swayosd-client --output-volume lower
-    elif has_cmd volumectl; then
-        volumectl -u down
+    if has_cmd swayosd-client && swayosd-client --output-volume lower 2>/dev/null; then
+        return 0
+    elif has_cmd volumectl && volumectl -u down 2>/dev/null; then
+        return 0
     elif has_cmd wpctl; then
         wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
         show_volume_notify
@@ -53,10 +53,10 @@ handle_volume_down() {
 
 # 3. Output Mute Toggle
 handle_volume_mute() {
-    if has_cmd swayosd-client; then
-        swayosd-client --output-volume mute-toggle
-    elif has_cmd volumectl; then
-        volumectl toggle-mute
+    if has_cmd swayosd-client && swayosd-client --output-volume mute-toggle 2>/dev/null; then
+        return 0
+    elif has_cmd volumectl && volumectl toggle-mute 2>/dev/null; then
+        return 0
     elif has_cmd wpctl; then
         wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
         show_volume_notify
@@ -71,10 +71,10 @@ handle_volume_mute() {
 
 # 4. Input Mic Mute Toggle
 handle_mic_mute() {
-    if has_cmd swayosd-client; then
-        swayosd-client --input-volume mute-toggle
-    elif has_cmd volumectl; then
-        volumectl -m toggle-mute
+    if has_cmd swayosd-client && swayosd-client --input-volume mute-toggle 2>/dev/null; then
+        return 0
+    elif has_cmd volumectl && volumectl -m toggle-mute 2>/dev/null; then
+        return 0
     elif has_cmd wpctl; then
         wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
         if has_cmd notify-send; then
@@ -90,10 +90,10 @@ handle_mic_mute() {
 
 # 5. Brightness Up
 handle_brightness_up() {
-    if has_cmd swayosd-client; then
-        swayosd-client --brightness raise
-    elif has_cmd lightctl; then
-        lightctl up
+    if has_cmd swayosd-client && swayosd-client --brightness raise 2>/dev/null; then
+        return 0
+    elif has_cmd lightctl && lightctl up 2>/dev/null; then
+        return 0
     elif has_cmd brightnessctl; then
         brightnessctl set +5% >/dev/null
         show_brightness_notify
@@ -102,10 +102,10 @@ handle_brightness_up() {
 
 # 6. Brightness Down
 handle_brightness_down() {
-    if has_cmd swayosd-client; then
-        swayosd-client --brightness lower
-    elif has_cmd lightctl; then
-        lightctl down
+    if has_cmd swayosd-client && swayosd-client --brightness lower 2>/dev/null; then
+        return 0
+    elif has_cmd lightctl && lightctl down 2>/dev/null; then
+        return 0
     elif has_cmd brightnessctl; then
         brightnessctl set 5%- >/dev/null
         show_brightness_notify

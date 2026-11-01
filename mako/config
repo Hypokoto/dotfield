@@ -50,15 +50,18 @@ ignore-timeout=1
 # OSD & Ephemeral Notifications (No Notification History Pollution)
 [category=volume]
 history=0
-default-timeout=2000
+default-timeout=1200
+group-by=category
 
 [category=brightness]
 history=0
-default-timeout=2000
+default-timeout=1200
+group-by=category
 
 [category=osd]
 history=0
-default-timeout=2000
+default-timeout=1200
+group-by=category
 
 # Dotfield Engine Notifications
 [app-name=dotfield]

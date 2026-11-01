@@ -28,24 +28,19 @@ Running `dotfield apply` parses this semantic model and compiles target-specific
 ## Architectural Invariants
 
 1. **Logical Separation of Concerns**:
-   - `dotfield-core`: Pure library for TOML parsing, schema validation, AST compilation, diff calculation, atomic deployment, and rollback state management.
-   - `dotfield-cli`: Native terminal interface (`status`, `check`, `diff`, `apply`, `rollback`, `list`).
-   - `dotfield-gui`: Fast, lightweight Wayland-native graphical tools built with **Rust + Slint** (`rice-menu`, `profile-switcher`, keybind cheat-sheet HUD).
-   - `dotfieldd`: Optional event listener daemon for dynamic profile switching on hardware events (battery, AC, display connect).
+   - `dotfield-shell`: High-performance Wayland desktop shell built with **Rust + Amane**. Integrates status bar, application launcher, terminal manager, interactive display configurator, quick settings control center, and notification HUD natively.
+   - Modular Compositor Configs: Declarative modular configurations (`compositor/niri/conf.d/*.kdl`, `compositor/sway/conf.d/*.conf`).
+   - Helper Scripts: Portable helper scripts (`scripts/terminal-select.sh`, `scripts/display-config.sh`, etc.) with fallback support.
 
-2. **Atomic & Idempotent Deployments**:
-   - Never write directly to live config paths while compiling.
-   - Compile target fragments to a `.dotfield/staging` directory first.
-   - Verify integrity and syntax before atomically moving/symlinking into place (`~/.config/sway/config.d/00-generated.conf`, etc.).
-   - Persist generational state in `.dotfield/state.json` to enable instant one-command rollback (`dotfield rollback`).
+2. **Instant IPC & Zero-Lag Overlays**:
+   - Background daemon communicates via Unix domain socket (`$XDG_RUNTIME_DIR/amane.sock`).
+   - Runs silently in the background; compositor keybindings trigger overlays with sub-millisecond response.
 
-3. **Selective Reload Engine**:
-   - Do not restart the entire Wayland compositor session or reload every process.
-   - Compare the diff between the previous generation and the newly compiled generation.
-   - Reload *only* the specific tools whose configurations changed (e.g. `swaymsg reload` for Sway, `niri msg action reload-config` for Niri, `makoctl reload` for Mako).
+3. **Pure Rust + Vulkan Desktop UI (Amane)**:
+   - GPU-accelerated immediate-mode visual rendering via `amane` with Vulkan and Vello backends.
+   - Zero WebKit / Electron / Slint bloat; ultra-low CPU and memory footprints.
 
 4. **Security & Sandboxing by Default**:
-   - Integrate Linux security mechanisms into profile generation (`profiles/hardening.toml`).
    - Support Firejail profiles, AppArmor abstraction drop-ins, Flatpak permission overrides, and NFTables network isolation.
 
 ---
@@ -54,11 +49,10 @@ Running `dotfield apply` parses this semantic model and compiles target-specific
 
 ```
 dotfield/
-├── profiles/               # Logical profiles (minimal.toml, hardening.toml, default.toml)
-├── compositor/             # Modular templates & base configs for Sway, Niri
-│   ├── sway/
+├── compositor/             # Modular configs for Niri and Sway
+│   ├── niri/
 │   │   └── conf.d/
-│   └── niri/
+│   └── sway/
 │       └── conf.d/
 ├── launcher/               # Base configs & themes for Fuzzel
 │   └── fuzzel/
@@ -70,6 +64,7 @@ dotfield/
 ├── multiplexer/            # Terminal multiplexers (Zellij, Tmux)
 ├── nvim/                   # Neovim configurations
 ├── i3-rust/                # i3status-rust and bar configurations
+├── i3bar-river/            # i3bar-river integration
 ├── mako/                   # Notification daemon templates
 ├── osd/                    # On-screen display configs (SwayOSD / Avizo)
 ├── security/               # Hardening rules (Firejail, AppArmor, Flatpak, NFTables)
@@ -77,9 +72,9 @@ dotfield/
 │   ├── firejail/
 │   ├── flatpak/
 │   └── nft/
-├── docs/                   # Architectural blueprints, roadmap, profile specs
-├── tests/                  # Integration tests and fixture profiles
-├── crates/ (or src/)       # Rust implementations (core, cli, gui)
+├── docs/                   # Architectural blueprints and roadmap
+├── crates/
+│   └── dotfield-shell/     # Native Rust + Amane Wayland desktop shell
 ├── .gitleaks.toml          # Secret scanner rules
 ├── .semgrep.yml            # Static security analysis rules
 └── .pre-commit-config.yaml # Pre-commit hook definitions

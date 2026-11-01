@@ -53,14 +53,25 @@ if is_niri; then
         exit 1
     fi
 
-    # Ensure awww-daemon is active
+    # Ensure awww-daemon is active with ultra-low latency socket check
+    runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+    wayland_disp="${WAYLAND_DISPLAY:-wayland-1}"
+    sock="${runtime_dir}/${wayland_disp}-awww-daemon.sock"
+
     if ! pgrep -x awww-daemon >/dev/null 2>&1; then
         setsid awww-daemon </dev/null >/dev/null 2>&1 &
-        for _ in {1..20}; do
-            if awww query >/dev/null 2>&1; then
+        for _ in {1..50}; do
+            if [[ -S "${sock}" ]] || awww query >/dev/null 2>&1; then
                 break
             fi
-            sleep 0.1
+            sleep 0.01
+        done
+    elif [[ ! -S "${sock}" ]]; then
+        for _ in {1..30}; do
+            if [[ -S "${sock}" ]] || awww query >/dev/null 2>&1; then
+                break
+            fi
+            sleep 0.01
         done
     fi
 
@@ -72,11 +83,11 @@ if is_niri; then
     fi
 
     if [[ -z "${NIRI_WALLPAPER}" ]]; then
-        NIRI_WALLPAPER=$(find_gif "L12.gif" || true)
+        NIRI_WALLPAPER=$(find_gif "L8.gif" || true)
     fi
 
     if [[ -n "${NIRI_WALLPAPER}" && -f "${NIRI_WALLPAPER}" ]]; then
-        setsid awww img "${NIRI_WALLPAPER}" --resize crop --transition-type none </dev/null >/dev/null 2>&1 &
+        setsid awww img "${NIRI_WALLPAPER}" --resize crop --filter Bilinear --transition-type none </dev/null >/dev/null 2>&1 &
     else
         setsid awww clear 0A0A0C </dev/null >/dev/null 2>&1 &
     fi

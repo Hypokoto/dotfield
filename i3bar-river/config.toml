@@ -1,0 +1,43 @@
+# i3bar-river configuration for Dotfield
+# Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
+# Status engine bridge to i3status-rs
+
+# Status generator command (i3status-rs auto-discovers ~/.config/i3status-rust/config.toml)
+command = "i3status-rs config.toml"
+
+# Colors (RGBA / Hex)
+background = "#0A0A0Cff"
+color = "#E8E6E3ff"
+separator = "#34343Dff"
+tag_fg = "#8B949Eff"
+tag_bg = "#0A0A0Cff"
+tag_focused_fg = "#FFB000ff"
+tag_focused_bg = "#1C1C23ff"
+tag_urgent_fg = "#FFFFFFff"
+tag_urgent_bg = "#E63946ff"
+tag_inactive_fg = "#8B949Eff"
+tag_inactive_bg = "#0A0A0Cff"
+
+# Font and layout geometry
+font = "JetBrainsMono Nerd Font 10"
+height = 24
+margin_top = 0
+margin_bottom = 0
+margin_left = 0
+margin_right = 0
+separator_width = 2.0
+tags_r = 0.0
+tags_padding = 12.0
+tags_margin = 0.0
+blocks_r = 0.0
+blocks_overlap = 0.0
+
+# Layer-shell and placement
+position = "top"
+layer = "top"
+hide_inactive_tags = false
+invert_touchpad_scrolling = true
+show_tags = true
+show_layout_name = false
+blend = true
+show_mode = true

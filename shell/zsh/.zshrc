@@ -97,16 +97,6 @@ export LESS_TERMCAP_se=$'\e[0m'
 export LESS_TERMCAP_us=$'\e[1;32m'     # Green underline
 export LESS_TERMCAP_ue=$'\e[0m'
 
-### Dotfield Aliases & Shortcuts
-alias df="dotfield"
-alias dfs="dotfield status"
-alias dfa="dotfield apply"
-alias dfd="dotfield diff"
-alias dfc="dotfield check"
-alias dfl="dotfield list"
-alias dfr="dotfield rollback"
-alias df-hud="dotfield-gui --hud"
-alias df-switch="dotfield-gui --switcher"
 
 ### Navigation & General Productivity Aliases
 alias ..="cd .."

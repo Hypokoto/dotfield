@@ -5,14 +5,15 @@ binds {
     // Core Application Launchers
     // Super + Return summons interactive Fuzzel terminal selector
     Mod+Return { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
-    Mod+Space { spawn "fuzzel"; }
+    Mod+Shift+Return { spawn "dotfield-shell" "--terminal-manager"; }
+    Mod+Space { spawn "dotfield-shell" "--launcher"; }
+    Mod+Shift+Space { spawn "dotfield-shell" "--control-center"; }
+    Mod+W { spawn "dotfield-shell" "--control-center"; }
     Mod+Q { close-window; }
     Mod+Shift+E { spawn "sh" "-c" "command -v wlogout >/dev/null 2>&1 && wlogout || niri msg action quit"; }
 
     // Dotfield System Utilities & Display Configurator
-    Mod+Slash { spawn "dotfield-gui" "--hud"; }
-    Mod+P { spawn "dotfield-gui" "--switcher"; }
-    Mod+Shift+D { spawn "sh" "-c" "~/.config/dotfield/scripts/display-config.sh"; }
+    Mod+Shift+D { spawn "dotfield-shell" "--display-config"; }
     Mod+Escape { spawn "sh" "-c" "~/.config/dotfield/scripts/lock.sh"; }
 
     // Screen Capturing

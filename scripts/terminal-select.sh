@@ -5,6 +5,18 @@
 
 set -euo pipefail
 
+# If dotfield-shell is active under Niri/Wayland, summon the native Terminal Manager overlay
+SHELL_BIN=$(command -v dotfield-shell 2>/dev/null || {
+    [[ -x "${HOME}/.local/bin/dotfield-shell" ]] && echo "${HOME}/.local/bin/dotfield-shell"
+} || {
+    [[ -x "${HOME}/.cargo/bin/dotfield-shell" ]] && echo "${HOME}/.cargo/bin/dotfield-shell"
+} || true)
+
+if [[ -n "${SHELL_BIN}" ]] && pgrep -x dotfield-shell >/dev/null 2>&1; then
+    "${SHELL_BIN}" --terminal-manager
+    exit 0
+fi
+
 # Available terminal definitions (Glyph, Label, Executable)
 OPTIONS=(
     "󰞷  Foot       (Fast Wayland Client):foot"

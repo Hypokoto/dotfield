@@ -15,6 +15,38 @@ has_cmd() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# If dotfield-shell is active, forward directly to its IPC to prevent duplicate notifications
+SHELL_BIN=$(command -v dotfield-shell 2>/dev/null || {
+    [[ -x "${HOME}/.local/bin/dotfield-shell" ]] && echo "${HOME}/.local/bin/dotfield-shell"
+} || {
+    [[ -x "${HOME}/.cargo/bin/dotfield-shell" ]] && echo "${HOME}/.cargo/bin/dotfield-shell"
+} || true)
+
+if [[ -n "${SHELL_BIN}" ]] && pgrep -x dotfield-shell >/dev/null 2>&1; then
+    case "${ACTION}" in
+        volume_up)
+            "${SHELL_BIN}" --osd volume-up 5
+            exit 0
+            ;;
+        volume_down)
+            "${SHELL_BIN}" --osd volume-down 5
+            exit 0
+            ;;
+        volume_mute)
+            "${SHELL_BIN}" --osd volume-mute
+            exit 0
+            ;;
+        brightness_up)
+            "${SHELL_BIN}" --osd brightness-up 5
+            exit 0
+            ;;
+        brightness_down)
+            "${SHELL_BIN}" --osd brightness-down 5
+            exit 0
+            ;;
+    esac
+fi
+
 # 1. Volume Up
 handle_volume_up() {
     if has_cmd swayosd-client && swayosd-client --output-volume raise 2>/dev/null; then
@@ -78,12 +110,12 @@ handle_mic_mute() {
     elif has_cmd wpctl; then
         wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
         if has_cmd notify-send; then
-            notify-send -a dotfield -c osd -t 1500 "Microphone" "Toggled Mute"
+            notify-send -a dotfield -c osd -r 9993 -h "string:x-canonical-private-synchronous:mic" -t 1200 "Microphone" "Toggled Mute"
         fi
     elif has_cmd pamixer; then
         pamixer --default-source -t
         if has_cmd notify-send; then
-            notify-send -a dotfield -c osd -t 1500 "Microphone" "Toggled Mute"
+            notify-send -a dotfield -c osd -r 9993 -h "string:x-canonical-private-synchronous:mic" -t 1200 "Microphone" "Toggled Mute"
         fi
     fi
 }
@@ -120,7 +152,7 @@ handle_media() {
     fi
 }
 
-# Fallback visual notifications via notify-send / mako
+# Fallback visual notifications via notify-send / mako (synchronous in-place replacement)
 show_volume_notify() {
     if ! has_cmd notify-send; then
         return 0
@@ -145,9 +177,9 @@ show_volume_notify() {
 
     if [[ -n "${vol}" ]]; then
         if [[ "${muted}" == "true" ]]; then
-            notify-send -a dotfield -c volume -h "int:value:${vol}" -t 1500 "Volume Muted" "Current level: ${vol}%"
+            notify-send -a dotfield -c volume -r 9991 -h "int:value:${vol}" -h "string:x-canonical-private-synchronous:volume" -t 1200 "Volume Muted" "Current level: ${vol}%"
         else
-            notify-send -a dotfield -c volume -h "int:value:${vol}" -t 1500 "Volume: ${vol}%" ""
+            notify-send -a dotfield -c volume -r 9991 -h "int:value:${vol}" -h "string:x-canonical-private-synchronous:volume" -t 1200 "Volume: ${vol}%" ""
         fi
     fi
 }
@@ -162,7 +194,7 @@ show_brightness_notify() {
     curr=$(brightnessctl get 2>/dev/null || echo "50")
     local pct
     pct=$(awk "BEGIN {print int((${curr} / ${max}) * 100)}")
-    notify-send -a dotfield -c brightness -h "int:value:${pct}" -t 1500 "Brightness: ${pct}%" ""
+    notify-send -a dotfield -c brightness -r 9992 -h "int:value:${pct}" -h "string:x-canonical-private-synchronous:brightness" -t 1200 "Brightness: ${pct}%" ""
 }
 
 case "${ACTION}" in

@@ -1,0 +1,9 @@
+// Niri Environment Configuration
+// Declares standard Wayland session environment variables for child processes
+
+environment {
+    QT_QPA_PLATFORM "wayland"
+    ELECTRON_OZONE_PLATFORM_HINT "auto"
+    MOZ_ENABLE_WAYLAND "1"
+    _JAVA_AWT_WM_NONREPARENTING "1"
+}

@@ -18,8 +18,8 @@ $jobs\
 $line_break\
 $character"""
 
-scan_timeout = 10
-command_timeout = 150
+scan_timeout = 250
+command_timeout = 500
 
 palette = "controlled_chaos"
 

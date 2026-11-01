@@ -2,6 +2,7 @@
 // Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
 // Modular system split across conf.d/*.kdl
 
+include "conf.d/00-env.kdl"
 include "conf.d/01-input.kdl"
 include "conf.d/02-outputs.kdl"
 include "conf.d/03-layout.kdl"
@@ -10,6 +11,3 @@ include "conf.d/05-startup.kdl"
 include "conf.d/06-window-tiling.kdl"
 include "conf.d/07-floating.kdl"
 include "conf.d/08-binds.kdl"
-
-// Modular Drop-ins (Dotfield Managed Overrides)
-include "config.kdl.d/00-generated-bindings.kdl"

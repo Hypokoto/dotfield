@@ -1,9 +1,6 @@
 [workspace]
 members = [
-    "crates/dotfield-core",
-    "crates/dotfield-cli",
-    "crates/dotfield-gui",
-    "crates/dotfieldd",
+    "crates/dotfield-shell",
 ]
 resolver = "2"
 
@@ -25,3 +22,4 @@ colored = "2.1"
 similar = "2.4"
 walkdir = "2.4"
 tempfile = "3.10"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }

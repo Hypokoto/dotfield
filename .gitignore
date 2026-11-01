@@ -4,6 +4,7 @@ Cargo.lock
 
 # Dotfield runtime state and backups
 .dotfield/
+.planning/
 *.backup
 *.bak
 *.tmp

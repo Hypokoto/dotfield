@@ -203,3 +203,25 @@ flowchart LR
 - [x] **Prompts & Bars**:
   - **Starship (`shell/starship/starship.toml`)**: Mode-specific visual indicators and crisp symbol delimiters.
   - **i3status-rust (`i3-rust/config.toml`)**: Clean status spacing and urgency accent tokens.
+
+---
+
+## Phase 10: Native Niri Desktop Shell Engine via Amane (Pure Rust Wayland Shell Suite)
+*Goal: Consolidate Niri desktop surfaces into a single, unified, GPU-accelerated Wayland desktop shell suite (`crates/dotfield-shell`) using Amane (`MystiaFin/amane`), replacing i3bar-river, i3status-rs, mako, and swayosd with native status bar, workspace radar, OSD, notifications, launcher, and control center.*
+
+- [x] **Unified Shell Crate (`crates/dotfield-shell`)**:
+  - Implement workspace crate with `amane`, `wgpu`, `tokio`, `zbus`, `niri-ipc`.
+  - Subsystem 1: Status Bar with Niri spatial workspace radar & system pills.
+  - Subsystem 2: Ephemeral OSD sliders for volume & brightness (fixing duplicate notification race).
+  - Subsystem 3: Native `org.freedesktop.Notifications` D-Bus daemon.
+  - Subsystem 4: Application launcher modal overlay with fuzzy `.desktop` search.
+  - Subsystem 5: Control center & modular widgets (Wi-Fi, Bluetooth, Audio, Power, Notification drawer).
+- [x] **Dotfield Core & CLI Integration**:
+  - Add `ShellConfig` schema to `dotfield-core` profile AST.
+  - Compiler generation of `~/.config/dotfield/shell.toml` with Controlled Chaos palette tokens.
+  - Update `dotfield apply` and reloader for atomic symlink rollout and IPC/SIGHUP reload.
+- [x] **Niri Compositor Wiring**:
+  - Update `compositor/niri/conf.d/` to autostart `dotfield-shell`.
+  - Bind hotkeys for launcher, control center, and OSD volume/brightness keys.
+- [x] **Quality & CI Verification**:
+  - Unit tests, `cargo test --workspace`, `cargo clippy -- -D warnings`, and live validation.

@@ -5,6 +5,18 @@
 
 set -euo pipefail
 
+# If dotfield-shell is active under Niri, summon the native Wayland Display Configurator
+SHELL_BIN=$(command -v dotfield-shell 2>/dev/null || {
+    [[ -x "${HOME}/.local/bin/dotfield-shell" ]] && echo "${HOME}/.local/bin/dotfield-shell"
+} || {
+    [[ -x "${HOME}/.cargo/bin/dotfield-shell" ]] && echo "${HOME}/.cargo/bin/dotfield-shell"
+} || true)
+
+if [[ -n "${SHELL_BIN}" ]] && pgrep -x dotfield-shell >/dev/null 2>&1; then
+    "${SHELL_BIN}" --display-config
+    exit 0
+fi
+
 MENU=$(cat << 'EOF'
 󰍹  eDP-1: 1920x1080 @ 144Hz (High Performance)
 󰌢  eDP-1: 1920x1080 @ 60Hz (Battery Saver)

@@ -11,12 +11,12 @@ engine = "niri"
 scaling = 1.0
 
 [apps]
-terminal = "foot"
+terminal = "~/.config/dotfield/scripts/terminal-select.sh"
 launcher = "fuzzel"
 editor = "nvim"
 multiplexer = "tmux"
 notifications = "mako"
-bar = "none"
+bar = "i3status-rs"
 
 [theme]
 palette = "controlled-chaos"

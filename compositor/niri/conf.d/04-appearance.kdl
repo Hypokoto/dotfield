@@ -1,0 +1,8 @@
+// Niri Appearance & Low-Latency Rendering
+// Zero animations and client-side decoration removal
+
+prefer-no-csd
+
+animations {
+    off
+}

@@ -11,7 +11,7 @@ engine = "sway"
 scaling = 1.0
 
 [apps]
-terminal = "foot"
+terminal = "~/.config/dotfield/scripts/terminal-select.sh"
 launcher = "fuzzel"
 editor = "nvim"
 multiplexer = "zellij"

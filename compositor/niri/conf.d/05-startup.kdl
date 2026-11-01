@@ -1,0 +1,7 @@
+// Niri Startup Processes
+// Background daemons and visual engine autostart
+
+spawn-at-startup "sh" "-c" "~/.config/dotfield/scripts/wallpaper.sh"
+spawn-at-startup "mako"
+spawn-at-startup "kanshi"
+spawn-at-startup "sh" "-c" "i3status-rs ~/.config/i3status-rust/config.toml"

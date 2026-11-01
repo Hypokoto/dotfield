@@ -187,9 +187,17 @@ impl Validator {
 
     fn binary_exists(binary: &str) -> bool {
         let bin_name = binary.split_whitespace().next().unwrap_or(binary);
-        let path = Path::new(bin_name);
-        if path.is_absolute() || path.components().count() > 1 {
-            return Self::is_executable(path);
+        let expanded = if let Some(stripped) = bin_name.strip_prefix("~/") {
+            if let Ok(home) = std::env::var("HOME") {
+                std::path::PathBuf::from(home).join(stripped)
+            } else {
+                std::path::PathBuf::from(bin_name)
+            }
+        } else {
+            std::path::PathBuf::from(bin_name)
+        };
+        if expanded.is_absolute() || expanded.components().count() > 1 {
+            return Self::is_executable(&expanded);
         }
         if let Some(paths) = std::env::var_os("PATH") {
             for dir in std::env::split_paths(&paths) {

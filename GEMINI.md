@@ -6,7 +6,7 @@
 The governing principle of Dotfield is:
 > **"Store logical choices, not duplicated config."**
 
-In traditional ricing, changing a default terminal from `foot` to `kitty` or launcher from `fuzzel` to `rofi` requires manually editing multiple configuration files across compositors (Sway, Niri), hotkey daemons, and window rules. Dotfield replaces this friction with an abstract profile model:
+In traditional ricing, changing a default terminal from `foot` to `kitty` or switching hotkeys requires manually editing multiple configuration files across compositors (Sway, Niri), hotkey daemons, and window rules. Dotfield replaces this friction with an abstract profile model:
 
 ```toml
 [apps]
@@ -57,10 +57,12 @@ dotfield/
 ├── profiles/               # Logical profiles (minimal.toml, hardening.toml, default.toml)
 ├── compositor/             # Modular templates & base configs for Sway, Niri
 │   ├── sway/
+│   │   └── conf.d/
 │   └── niri/
-├── launcher/               # Base configs & themes for Rofi, Fuzzel
-│   ├── fuzzel/
-│   └── rofi/
+│       └── conf.d/
+├── launcher/               # Base configs & themes for Fuzzel
+│   └── fuzzel/
+├── kanshi/                 # Multi-monitor dynamic display autoconfig
 ├── shell/                  # Shell configurations & prompts (Zsh, Starship)
 │   ├── zsh/
 │   └── starship/

@@ -1,0 +1,33 @@
+// Niri Core Keybindings & Utility Controls
+// Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
+
+binds {
+    // Core Application Launchers
+    // Super + Return summons interactive Fuzzel terminal selector
+    Mod+Return { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
+    Mod+Space { spawn "fuzzel"; }
+    Mod+Q { close-window; }
+    Mod+Shift+E { spawn "sh" "-c" "command -v wlogout >/dev/null 2>&1 && wlogout || niri msg action quit"; }
+
+    // Dotfield System Utilities & Display Configurator
+    Mod+Slash { spawn "dotfield-gui" "--hud"; }
+    Mod+P { spawn "dotfield-gui" "--switcher"; }
+    Mod+Shift+D { spawn "sh" "-c" "~/.config/dotfield/scripts/display-config.sh"; }
+    Mod+Escape { spawn "sh" "-c" "~/.config/dotfield/scripts/lock.sh"; }
+
+    // Screen Capturing
+    Print { spawn "sh" "-c" "~/.config/dotfield/scripts/screenshot.sh --full"; }
+    Shift+Print { spawn "sh" "-c" "~/.config/dotfield/scripts/screenshot.sh --area"; }
+    Mod+Shift+S { spawn "sh" "-c" "~/.config/dotfield/scripts/screenshot.sh --area"; }
+
+    // Media & Hardware Controls (OSD Integrated)
+    XF86AudioRaiseVolume allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh volume_up"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh volume_down"; }
+    XF86AudioMute        allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh volume_mute"; }
+    XF86AudioMicMute     allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh mic_mute"; }
+    XF86MonBrightnessUp   allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh brightness_up"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh brightness_down"; }
+    XF86AudioPlay        allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh media_play_pause"; }
+    XF86AudioNext        allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh media_next"; }
+    XF86AudioPrev        allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh media_prev"; }
+}

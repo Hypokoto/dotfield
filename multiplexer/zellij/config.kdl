@@ -2,6 +2,23 @@
 // Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
 
 theme "dotfield"
+
+themes {
+    dotfield {
+        fg "#E8E6E3"
+        bg "#0A0A0C"
+        black "#1C1C23"
+        red "#E63946"
+        green "#7BC47F"
+        yellow "#FFB000"
+        blue "#82AAFF"
+        magenta "#C792EA"
+        cyan "#8B949E"
+        white "#E8E6E3"
+        orange "#FFB000"
+    }
+}
+
 default_layout "default"
 mouse_mode true
 copy_on_select true

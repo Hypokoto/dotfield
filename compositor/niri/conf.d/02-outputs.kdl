@@ -1,0 +1,8 @@
+// Niri Output & Display Configuration
+// High-refresh rate, native scaling, and variable refresh rate
+
+output "eDP-1" {
+    mode "1920x1080@144.003"
+    scale 1.0
+    variable-refresh-rate
+}

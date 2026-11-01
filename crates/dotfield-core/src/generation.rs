@@ -481,6 +481,16 @@ impl GenerationManager {
                 "zellij/themes",
                 "dotfield.kdl",
             ),
+            (
+                "nvim/lua/palette_generated.lua",
+                "nvim/lua",
+                "palette_generated.lua",
+            ),
+            (
+                "nvim/lua/themes/dotfield.lua",
+                "nvim/lua/themes",
+                "dotfield.lua",
+            ),
         ];
 
         let mut renamed_backups: Vec<(PathBuf, PathBuf)> = Vec::new();

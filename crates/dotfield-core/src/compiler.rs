@@ -42,6 +42,10 @@ impl Compiler {
         fragments.push(Self::compile_tmux_colors(profile)?);
         fragments.push(Self::compile_zellij_theme(profile)?);
 
+        // Editor Palette Bridges
+        fragments.push(Self::compile_nvim_palette(profile)?);
+        fragments.push(Self::compile_nvim_theme(profile)?);
+
         Ok(fragments)
     }
 
@@ -54,7 +58,7 @@ impl Compiler {
             let cmd = match action.as_str() {
                 "terminal" => Self::sway_exec(&profile.apps.terminal),
                 "launcher" => Self::sway_exec(&profile.apps.launcher),
-                "app_menu" => Self::sway_exec("rofi -show drun"),
+                "app_menu" => Self::sway_exec(&profile.apps.launcher),
                 "hud" => Self::sway_exec("dotfield-gui --hud"),
                 "profile_switcher" => Self::sway_exec("dotfield-gui --switcher"),
                 "close_window" => "kill".to_string(),
@@ -107,7 +111,7 @@ impl Compiler {
             let statement = match action.as_str() {
                 "terminal" => Self::niri_spawn(&profile.apps.terminal),
                 "launcher" => Self::niri_spawn(&profile.apps.launcher),
-                "app_menu" => "spawn \"rofi\" \"-show\" \"drun\";".to_string(),
+                "app_menu" => Self::niri_spawn(&profile.apps.launcher),
                 "hud" => "spawn \"dotfield-gui\" \"--hud\";".to_string(),
                 "profile_switcher" => "spawn \"dotfield-gui\" \"--switcher\";".to_string(),
                 "close_window" => "close-window;".to_string(),
@@ -545,6 +549,98 @@ themes {
 "##;
         Ok(CompiledFragment {
             target_path: "zellij/themes/dotfield.kdl".to_string(),
+            content: content.to_string(),
+        })
+    }
+
+    fn compile_nvim_palette(_profile: &Profile) -> Result<CompiledFragment> {
+        let content = r##"-- Controlled Chaos raw color tokens
+-- Managed by Dotfield
+local M = {
+    void     = "#0A0A0C",
+    obsidian = "#121216",
+    graphite = "#1C1C23",
+    iron     = "#34343D",
+    ash      = "#A1A1AA",
+    bone     = "#E8E6E3",
+    crimson  = "#E63946",
+    amber    = "#FFB000",
+    steel    = "#8B949E",
+}
+
+return M
+"##;
+        Ok(CompiledFragment {
+            target_path: "nvim/lua/palette_generated.lua".to_string(),
+            content: content.to_string(),
+        })
+    }
+
+    fn compile_nvim_theme(_profile: &Profile) -> Result<CompiledFragment> {
+        let content = r##"---@type Base46Theme
+-- lua/themes/dotfield.lua — Base46 theme for NvChad
+-- Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
+
+local M = {}
+
+M.base_30 = {
+  white         = "#E8E6E3",
+  darker_black  = "#0A0A0C",
+  black         = "#0A0A0C",
+  black2        = "#121216",
+  one_bg        = "#121216",
+  one_bg2       = "#1C1C23",
+  one_bg3       = "#34343D",
+  grey          = "#34343D",
+  grey_fg       = "#8B949E",
+  grey_fg2      = "#A1A1AA",
+  light_grey    = "#A1A1AA",
+  red           = "#E63946",
+  baby_pink     = "#E63946",
+  pink          = "#E63946",
+  line          = "#34343D",
+  green         = "#7BC47F",
+  vibrant_green = "#7BC47F",
+  nord_blue     = "#82AAFF",
+  blue          = "#82AAFF",
+  yellow        = "#FFB000",
+  sun           = "#FFB000",
+  purple        = "#C792EA",
+  dark_purple   = "#C792EA",
+  teal          = "#2A9D8F",
+  orange        = "#F4A261",
+  cyan          = "#2A9D8F",
+  statusline_bg = "#121216",
+  lightbg       = "#1C1C23",
+  pmenu_bg      = "#121216",
+  folder_bg     = "#FFB000",
+}
+
+M.base_16 = {
+  base00 = "#0A0A0C",
+  base01 = "#121216",
+  base02 = "#1C1C23",
+  base03 = "#34343D",
+  base04 = "#8B949E",
+  base05 = "#E8E6E3",
+  base06 = "#F8F9FA",
+  base07 = "#FFFFFF",
+  base08 = "#E63946",
+  base09 = "#F4A261",
+  base0A = "#FFB000",
+  base0B = "#7BC47F",
+  base0C = "#2A9D8F",
+  base0D = "#82AAFF",
+  base0E = "#C792EA",
+  base0F = "#E76F51",
+}
+
+M.type = "dark"
+
+return M
+"##;
+        Ok(CompiledFragment {
+            target_path: "nvim/lua/themes/dotfield.lua".to_string(),
             content: content.to_string(),
         })
     }

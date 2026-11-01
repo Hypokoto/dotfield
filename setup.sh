@@ -161,7 +161,7 @@ check_companion "kitty" "GPU-accelerated terminal"
 check_companion "alacritty" "OpenGL terminal emulator"
 check_companion "ghostty" "Modern GPU-accelerated terminal"
 check_companion "fuzzel" "Wayland application launcher"
-check_companion "rofi" "Window switcher and launcher"
+check_companion "kanshi" "Wayland dynamic display auto-configurator"
 check_companion "tmux" "Terminal multiplexer"
 check_companion "zellij" "Modern terminal workspace multiplexer"
 check_companion "wlogout" "Wayland power and session logout menu"
@@ -216,10 +216,14 @@ if [[ "${DRY_RUN}" == true ]]; then
     info "[dry-run] install -m 0755 scripts/*.sh ${SCRIPTS_DEST}/"
 else
     mkdir -p "${SCRIPTS_DEST}"
-    install -m 0755 "${SCRIPT_DIR}/scripts/screenshot.sh" "${SCRIPTS_DEST}/screenshot.sh"
-    install -m 0755 "${SCRIPT_DIR}/scripts/wallpaper.sh" "${SCRIPTS_DEST}/wallpaper.sh"
-    install -m 0755 "${SCRIPT_DIR}/scripts/osd.sh" "${SCRIPTS_DEST}/osd.sh"
-    install -m 0755 "${SCRIPT_DIR}/scripts/lock.sh" "${SCRIPTS_DEST}/lock.sh"
+    for s in "${SCRIPT_DIR}/scripts"/*.sh; do
+        if [[ -f "${s}" ]]; then
+            install -m 0755 "${s}" "${SCRIPTS_DEST}/$(basename "${s}")"
+        fi
+    done
+    ln -sf "${SCRIPTS_DEST}/terminal-select.sh" "${PREFIX}/terminal-select"
+    ln -sf "${SCRIPTS_DEST}/display-config.sh" "${PREFIX}/display-config"
+    ln -sf "${SCRIPTS_DEST}/typecheck-terminals.sh" "${PREFIX}/typecheck-terminals"
     success "Helper scripts deployed to ${SCRIPTS_DEST}"
 fi
 
@@ -306,6 +310,10 @@ ensure_config_link_or_dir() {
             fi
         else
             info "Config already exists: ${dest} (preserving)"
+            # Sync newly added modular subdirectories (e.g. conf.d)
+            if [[ -d "${src}" ]]; then
+                cp -rn "${src}/." "${dest}/" 2>/dev/null || true
+            fi
         fi
     fi
 }
@@ -313,7 +321,7 @@ ensure_config_link_or_dir() {
 ensure_config_link_or_dir "${SCRIPT_DIR}/compositor/sway" "${HOME}/.config/sway"
 ensure_config_link_or_dir "${SCRIPT_DIR}/compositor/niri" "${HOME}/.config/niri"
 ensure_config_link_or_dir "${SCRIPT_DIR}/launcher/fuzzel" "${HOME}/.config/fuzzel"
-ensure_config_link_or_dir "${SCRIPT_DIR}/launcher/rofi" "${HOME}/.config/rofi"
+ensure_config_link_or_dir "${SCRIPT_DIR}/kanshi" "${HOME}/.config/kanshi"
 ensure_config_link_or_dir "${SCRIPT_DIR}/terminals/foot" "${HOME}/.config/foot"
 ensure_config_link_or_dir "${SCRIPT_DIR}/terminals/kitty" "${HOME}/.config/kitty"
 ensure_config_link_or_dir "${SCRIPT_DIR}/terminals/alacritty" "${HOME}/.config/alacritty"
@@ -325,14 +333,19 @@ ensure_config_link_or_dir "${SCRIPT_DIR}/osd/swaylock" "${HOME}/.config/swaylock
 ensure_config_link_or_dir "${SCRIPT_DIR}/osd/swayidle" "${HOME}/.config/swayidle"
 ensure_config_link_or_dir "${SCRIPT_DIR}/i3-rust" "${HOME}/.config/i3status-rust"
 ensure_config_link_or_dir "${SCRIPT_DIR}/i3-rust" "${HOME}/.config/i3status-rs"
+ensure_config_link_or_dir "${SCRIPT_DIR}/nvim" "${HOME}/.config/nvim"
 ensure_config_link_or_dir "${SCRIPT_DIR}/multiplexer/tmux" "${HOME}/.config/tmux"
 ensure_config_link_or_dir "${SCRIPT_DIR}/multiplexer/zellij" "${HOME}/.config/zellij"
 ensure_config_link_or_dir "${SCRIPT_DIR}/wlogout" "${HOME}/.config/wlogout"
 ensure_config_link_or_dir "${SCRIPT_DIR}/shell/starship/starship.toml" "${HOME}/.config/starship.toml"
 ensure_config_link_or_dir "${SCRIPT_DIR}/shell/zsh/.zshrc" "${HOME}/.zshrc"
 ensure_config_link_or_dir "${SCRIPT_DIR}/profiles" "${HOME}/.config/dotfield/profiles"
-ensure_config_link_or_dir "${SCRIPT_DIR}/background/Wallpapers" "${HOME}/.config/dotfield/background/Wallpapers"
-ensure_config_link_or_dir "${SCRIPT_DIR}/background/Gifs" "${HOME}/.config/dotfield/background/Gifs"
+if [[ -d "${SCRIPT_DIR}/Wallpapers" ]]; then
+    ensure_config_link_or_dir "${SCRIPT_DIR}/Wallpapers" "${HOME}/.config/dotfield/background/Wallpapers"
+fi
+if [[ -d "${SCRIPT_DIR}/Wallpapers/Gifs" ]]; then
+    ensure_config_link_or_dir "${SCRIPT_DIR}/Wallpapers/Gifs" "${HOME}/.config/dotfield/background/Gifs"
+fi
 
 # Ensure modular drop-in directories exist
 if [[ "${DRY_RUN}" != true ]]; then
@@ -434,8 +447,10 @@ echo -e "  ${AMBER}dotfield-gui --hud${NC}        Open keybind cheat-sheet HUD"
 echo -e "  ${AMBER}dotfield-gui --switcher${NC}   Open visual profile switcher"
 echo ""
 echo -e "${BOLD}Wayland Keybindings (when compositor is running):${NC}"
-echo -e "  ${STEEL}Mod4+Return${NC}   Terminal (Foot)"
+echo -e "  ${STEEL}Mod4+Return${NC}   Terminal Selector (Foot / Kitty / Alacritty / Ghostty)"
 echo -e "  ${STEEL}Mod4+Space${NC}    Application Launcher (Fuzzel)"
+echo -e "  ${STEEL}Mod4+Shift+D${NC}  Interactive Display Configurator (144Hz / Dual Monitor)"
 echo -e "  ${STEEL}Mod4+/${NC}        Keybind Cheat-Sheet HUD"
+echo -e "  ${STEEL}Mod4+P${NC}        Profile Switcher"
 echo -e "  ${STEEL}Print${NC}         Area Screenshot"
 echo ""

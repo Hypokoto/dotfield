@@ -432,6 +432,43 @@ terminal = "Super+Return"
     }
 
     #[test]
+    fn test_nvim_palette_fragment() {
+        let toml_data = r#"
+[meta]
+name = "test-nvim"
+
+[compositor]
+engine = "sway"
+
+[apps]
+terminal = "foot"
+launcher = "fuzzel"
+editor = "nvim"
+
+[theme]
+palette = "controlled-chaos"
+
+[bindings]
+terminal = "Super+Return"
+"#;
+        let profile: Profile = toml_data.parse().expect("Must parse");
+        let fragments = Compiler::compile(&profile).expect("Must compile");
+        let nvim_pal = fragments
+            .iter()
+            .find(|f| f.target_path == "nvim/lua/palette_generated.lua")
+            .expect("Must have nvim palette fragment");
+        assert!(nvim_pal.content.contains("void     = \"#0A0A0C\""));
+        assert!(nvim_pal.content.contains("amber    = \"#FFB000\""));
+
+        let nvim_theme = fragments
+            .iter()
+            .find(|f| f.target_path == "nvim/lua/themes/dotfield.lua")
+            .expect("Must have nvim base46 theme fragment");
+        assert!(nvim_theme.content.contains("white         = \"#E8E6E3\""));
+        assert!(nvim_theme.content.contains("red           = \"#E63946\""));
+    }
+
+    #[test]
     fn test_niri_quoted_exec_action() {
         let toml_data = r#"
 [meta]

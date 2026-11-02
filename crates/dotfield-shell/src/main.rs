@@ -40,6 +40,34 @@ struct Cli {
     #[arg(long)]
     control_center: bool,
 
+    /// Open NetworkManager interactive widget
+    #[arg(long)]
+    network: bool,
+
+    /// Open PipeWire audio interactive widget
+    #[arg(long)]
+    audio: bool,
+
+    /// Open BlueZ bluetooth interactive widget
+    #[arg(long)]
+    bluetooth: bool,
+
+    /// Open System Tray & background applications widget
+    #[arg(long)]
+    tray: bool,
+
+    /// Toggle session & power control menu
+    #[arg(long)]
+    powermenu: bool,
+
+    /// Toggle interactive calendar overlay
+    #[arg(long)]
+    calendar: bool,
+
+    /// Toggle screen recorder overlay
+    #[arg(long)]
+    screen_recorder: bool,
+
     /// Reload shell configuration
     #[arg(long)]
     reload: bool,
@@ -134,7 +162,10 @@ fn ipc_reload_handler(_args: &[String]) -> String {
             ui::launcher::set_config(manifest.clone());
             ui::control_center::set_config(manifest.clone());
             ui::display_config::set_config(manifest.clone());
-            ui::terminal_manager::set_config(manifest);
+            ui::terminal_manager::set_config(manifest.clone());
+            ui::powermenu::set_config(manifest.clone());
+            ui::calendar::set_config(manifest.clone());
+            ui::screen_record::set_config(manifest);
             "reloaded".to_string()
         }
         Err(e) => format!("reload failed: {e}"),
@@ -151,6 +182,26 @@ fn ipc_control_center_handler(_args: &[String]) -> String {
     "control-center toggled".to_string()
 }
 
+fn ipc_network_handler(_args: &[String]) -> String {
+    ui::control_center::open_view(ui::control_center::ActiveView::Network);
+    "network widget opened".to_string()
+}
+
+fn ipc_audio_handler(_args: &[String]) -> String {
+    ui::control_center::open_view(ui::control_center::ActiveView::Audio);
+    "audio widget opened".to_string()
+}
+
+fn ipc_bluetooth_handler(_args: &[String]) -> String {
+    ui::control_center::open_view(ui::control_center::ActiveView::Bluetooth);
+    "bluetooth widget opened".to_string()
+}
+
+fn ipc_tray_handler(_args: &[String]) -> String {
+    ui::control_center::open_view(ui::control_center::ActiveView::Tray);
+    "tray widget opened".to_string()
+}
+
 fn ipc_display_config_handler(_args: &[String]) -> String {
     ui::display_config::toggle();
     "display-config toggled".to_string()
@@ -159,6 +210,21 @@ fn ipc_display_config_handler(_args: &[String]) -> String {
 fn ipc_terminal_manager_handler(_args: &[String]) -> String {
     ui::terminal_manager::toggle();
     "terminal-manager toggled".to_string()
+}
+
+fn ipc_powermenu_handler(_args: &[String]) -> String {
+    ui::powermenu::toggle();
+    "powermenu toggled".to_string()
+}
+
+fn ipc_calendar_handler(_args: &[String]) -> String {
+    ui::calendar::toggle();
+    "calendar toggled".to_string()
+}
+
+fn ipc_screen_record_handler(_args: &[String]) -> String {
+    ui::screen_record::toggle();
+    "screen-recorder toggled".to_string()
 }
 
 fn run_shell(config_path: Option<PathBuf>) -> anyhow::Result<()> {
@@ -170,19 +236,39 @@ fn run_shell(config_path: Option<PathBuf>) -> anyhow::Result<()> {
     ui::launcher::set_config(manifest.clone());
     ui::control_center::set_config(manifest.clone());
     ui::display_config::set_config(manifest.clone());
-    ui::terminal_manager::set_config(manifest);
+    ui::terminal_manager::set_config(manifest.clone());
+    ui::powermenu::set_config(manifest.clone());
+    ui::calendar::set_config(manifest.clone());
+    ui::screen_record::set_config(manifest);
 
-    // Start background event watchers (e.g. Niri socket)
+    // Clean up stale IPC socket if no running daemon is actively listening
+    let sock = amane::ipc_socket();
+    if sock.exists() && UnixStream::connect(&sock).is_err() {
+        let _ = std::fs::remove_file(&sock);
+    }
+
+    // Start background event watchers (e.g. Niri socket, StatusNotifierWatcher tray)
     services::niri::NiriService::start();
+    services::tray::TrayService::start();
 
-    // Run Amane application with bar, osd, notifications, launcher, control-center, display-config, and terminal-manager
+    // Start notification auto-dismiss timer worker
+    ui::notifications::start_expiry_worker();
+
+    // Run Amane application with bar, osd, notifications, launcher, control-center, display-config, terminal-manager, powermenu, calendar, and screen-recorder
     amane::App::new()
         .ipc("osd", ipc_osd_handler)
         .ipc("reload", ipc_reload_handler)
         .ipc("launcher", ipc_launcher_handler)
         .ipc("control-center", ipc_control_center_handler)
+        .ipc("network", ipc_network_handler)
+        .ipc("audio", ipc_audio_handler)
+        .ipc("bluetooth", ipc_bluetooth_handler)
+        .ipc("tray", ipc_tray_handler)
         .ipc("display-config", ipc_display_config_handler)
         .ipc("terminal-manager", ipc_terminal_manager_handler)
+        .ipc("powermenu", ipc_powermenu_handler)
+        .ipc("calendar", ipc_calendar_handler)
+        .ipc("screen-recorder", ipc_screen_record_handler)
         .window(ui::bar::top_bar)
         .window(ui::osd::osd_overlay)
         .window(ui::notifications::notification_popups)
@@ -190,6 +276,9 @@ fn run_shell(config_path: Option<PathBuf>) -> anyhow::Result<()> {
         .window(ui::control_center::control_center_panel)
         .window(ui::display_config::display_config_overlay)
         .window(ui::terminal_manager::terminal_manager_overlay)
+        .window(ui::powermenu::powermenu_overlay)
+        .window(ui::calendar::calendar_overlay)
+        .window(ui::screen_record::screen_record_overlay)
         .run();
 
     Ok(())
@@ -210,6 +299,20 @@ fn main() -> anyhow::Result<()> {
         target_action = Some("display-config".to_string());
     } else if cli.control_center {
         target_action = Some("control-center".to_string());
+    } else if cli.network {
+        target_action = Some("network".to_string());
+    } else if cli.audio {
+        target_action = Some("audio".to_string());
+    } else if cli.bluetooth {
+        target_action = Some("bluetooth".to_string());
+    } else if cli.tray {
+        target_action = Some("tray".to_string());
+    } else if cli.powermenu {
+        target_action = Some("powermenu".to_string());
+    } else if cli.calendar {
+        target_action = Some("calendar".to_string());
+    } else if cli.screen_recorder {
+        target_action = Some("screen-recorder".to_string());
     } else if cli.reload {
         target_action = Some("reload".to_string());
     } else if let Some(osd_args) = cli.osd {
@@ -226,7 +329,9 @@ fn main() -> anyhow::Result<()> {
                     action_args = cli.extra_args[1..].to_vec();
                 }
             }
-            "launcher" | "terminal-manager" | "display-config" | "control-center" | "reload" => {
+            "launcher" | "terminal-manager" | "display-config" | "control-center" | "network"
+            | "audio" | "bluetooth" | "tray" | "reload" | "powermenu" | "calendar"
+            | "screen-recorder" => {
                 target_action = Some(act.to_string());
                 action_args = cli.extra_args;
             }

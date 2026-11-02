@@ -11,9 +11,20 @@ use amane::{
 use crate::config::ShellManifest;
 use crate::services::niri::NiriService;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ActiveView {
+    #[default]
+    Main,
+    Network,
+    Audio,
+    Bluetooth,
+    Tray,
+}
+
 pub struct ControlCenterService {
     pub open: bool,
     pub dnd: bool,
+    pub view: ActiveView,
 }
 
 impl Service for ControlCenterService {
@@ -21,6 +32,7 @@ impl Service for ControlCenterService {
         Self {
             open: false,
             dnd: false,
+            view: ActiveView::Main,
         }
     }
 
@@ -39,11 +51,21 @@ pub fn set_config(manifest: ShellManifest) {
 pub fn toggle() {
     let mut cc = ControlCenterService::write();
     cc.open = !cc.open;
+    if !cc.open {
+        cc.view = ActiveView::Main;
+    }
+}
+
+pub fn open_view(view: ActiveView) {
+    let mut cc = ControlCenterService::write();
+    cc.open = true;
+    cc.view = view;
 }
 
 pub fn close() {
     let mut cc = ControlCenterService::write();
     cc.open = false;
+    cc.view = ActiveView::Main;
 }
 
 pub fn control_center_panel() -> LayerWindow {
@@ -55,24 +77,87 @@ pub fn control_center_panel() -> LayerWindow {
     let bg_color = Color::from(manifest.palette.surface.as_str()); // Obsidian #121216
     let font = manifest.theme.font_family.clone();
 
-    let mut sections: Vec<Box<dyn Widget>> = vec![
-        Box::new(render_header(&manifest, &font)),
-        Box::new(render_system_overview(&manifest, &font)),
-        Box::new(render_quick_toggles(&manifest, cc.dnd, &font)),
-        Box::new(render_sliders(&manifest, &font)),
-        Box::new(render_appearance(&manifest, &font)),
-    ];
+    let content: Column = match cc.view {
+        ActiveView::Main => {
+            let mut sections: Vec<Box<dyn Widget>> = vec![
+                Box::new(render_header(&manifest, &font)),
+                Box::new(render_system_overview(&manifest, &font)),
+                Box::new(render_quick_toggles(&manifest, cc.dnd, &font)),
+                Box::new(render_widget_shortcuts(&manifest, &font)),
+                Box::new(render_sliders(&manifest, &font)),
+                Box::new(render_appearance(&manifest, &font)),
+            ];
 
-    if manifest.control_center.show_mpris {
-        sections.push(Box::new(render_media(&manifest, &font)));
-    }
+            if manifest.control_center.show_mpris {
+                sections.push(Box::new(render_media(&manifest, &font)));
+            }
 
-    sections.push(Box::new(render_notifications_drawer(&manifest, &font)));
-    sections.push(Box::new(render_power_actions(&manifest, &font)));
+            sections.push(Box::new(render_notifications_drawer(&manifest, &font)));
+            sections.push(Box::new(render_power_actions(&manifest, &font)));
+
+            Column::new(sections).width(Parent).gap(10.0)
+        }
+        ActiveView::Network => {
+            let sections: Vec<Box<dyn Widget>> = vec![
+                Box::new(render_subview_header(
+                    "NetworkManager",
+                    "󰤨",
+                    &manifest,
+                    &font,
+                )),
+                crate::ui::widgets::network::render_network_widget(&manifest, &font),
+            ];
+            Column::new(sections).width(Parent).gap(10.0)
+        }
+        ActiveView::Audio => {
+            let sections: Vec<Box<dyn Widget>> = vec![
+                Box::new(render_subview_header(
+                    "PipeWire Audio",
+                    "󰕾",
+                    &manifest,
+                    &font,
+                )),
+                crate::ui::widgets::audio::render_audio_widget(&manifest, &font),
+            ];
+            Column::new(sections).width(Parent).gap(10.0)
+        }
+        ActiveView::Bluetooth => {
+            let sections: Vec<Box<dyn Widget>> = vec![
+                Box::new(render_subview_header(
+                    "BlueZ Bluetooth",
+                    "󰂯",
+                    &manifest,
+                    &font,
+                )),
+                crate::ui::widgets::bluetooth::render_bluetooth_widget(&manifest, &font),
+            ];
+            Column::new(sections).width(Parent).gap(10.0)
+        }
+        ActiveView::Tray => {
+            let sections: Vec<Box<dyn Widget>> = vec![
+                Box::new(render_subview_header(
+                    "System Tray & Apps",
+                    "󰀻",
+                    &manifest,
+                    &font,
+                )),
+                crate::ui::tray::render_tray_drawer(&manifest, &font),
+            ];
+            Column::new(sections).width(Parent).gap(10.0)
+        }
+    };
+
+    let panel_height = match cc.view {
+        ActiveView::Main => 660.0,
+        ActiveView::Network => 480.0,
+        ActiveView::Audio => 380.0,
+        ActiveView::Bluetooth => 420.0,
+        ActiveView::Tray => 340.0,
+    };
 
     let panel = Rectangle::new()
         .width(380.0)
-        .height(660.0)
+        .height(panel_height)
         .radius(12.0)
         .fill(bg_color)
         .border(1.0, Color::from("#34343D"))
@@ -82,11 +167,11 @@ pub fn control_center_panel() -> LayerWindow {
             left: 14.0,
             right: 14.0,
         })
-        .child(Column::new(sections).width(Parent).gap(10.0));
+        .child(content);
 
     LayerWindow::new()
         .width(380.0)
-        .height(660.0)
+        .height(panel_height)
         .anchor_vertical(Vertical::Top)
         .anchor_horizontal(Horizontal::Right)
         .margin(Margin {
@@ -311,15 +396,7 @@ fn render_quick_toggles(manifest: &ShellManifest, dnd: bool, font: &str) -> Rect
         .align_child(Center, Center)
         .on_click(|_| {
             let net = Network::read();
-            if net.wifi_enabled() {
-                let _ = std::process::Command::new("nmcli")
-                    .args(["radio", "wifi", "off"])
-                    .status();
-            } else {
-                let _ = std::process::Command::new("nmcli")
-                    .args(["radio", "wifi", "on"])
-                    .status();
-            }
+            Network::set_wifi(!net.wifi_enabled());
         })
         .child(
             Text::new(if wifi_active {
@@ -402,6 +479,170 @@ fn render_quick_toggles(manifest: &ShellManifest, dnd: bool, font: &str) -> Rect
             .width(Parent)
             .justify(Justify::SpaceBetween)
             .align(Align::Center),
+    )
+}
+
+fn render_widget_shortcuts(manifest: &ShellManifest, font: &str) -> Rectangle {
+    let overlay_color = Color::from(manifest.palette.overlay.as_str());
+    let amber_color = Color::from(manifest.palette.highlight.as_str());
+    let fg_color = Color::from(manifest.palette.foreground.as_str());
+    let border_color = Color::from(manifest.palette.border.as_str());
+
+    let net_shortcut = Rectangle::new()
+        .width(82.0)
+        .height(30.0)
+        .radius(6.0)
+        .fill(overlay_color)
+        .border(1.0, border_color)
+        .cursor(Pointer)
+        .align_child(Center, Center)
+        .on_click(|_| {
+            open_view(ActiveView::Network);
+        })
+        .child(
+            Row::new(vec![
+                Box::new(Text::new("󰤨").size(12.0).color(amber_color).font(font)),
+                Box::new(Text::new("Net ❯").size(10.0).color(fg_color).font(font)),
+            ])
+            .gap(3.0)
+            .align(Align::Center),
+        );
+
+    let audio_shortcut = Rectangle::new()
+        .width(82.0)
+        .height(30.0)
+        .radius(6.0)
+        .fill(overlay_color)
+        .border(1.0, border_color)
+        .cursor(Pointer)
+        .align_child(Center, Center)
+        .on_click(|_| {
+            open_view(ActiveView::Audio);
+        })
+        .child(
+            Row::new(vec![
+                Box::new(Text::new("󰕾").size(12.0).color(amber_color).font(font)),
+                Box::new(Text::new("Audio ❯").size(10.0).color(fg_color).font(font)),
+            ])
+            .gap(3.0)
+            .align(Align::Center),
+        );
+
+    let bt_shortcut = Rectangle::new()
+        .width(82.0)
+        .height(30.0)
+        .radius(6.0)
+        .fill(overlay_color)
+        .border(1.0, border_color)
+        .cursor(Pointer)
+        .align_child(Center, Center)
+        .on_click(|_| {
+            open_view(ActiveView::Bluetooth);
+        })
+        .child(
+            Row::new(vec![
+                Box::new(Text::new("󰂯").size(12.0).color(amber_color).font(font)),
+                Box::new(Text::new("BlueZ ❯").size(10.0).color(fg_color).font(font)),
+            ])
+            .gap(3.0)
+            .align(Align::Center),
+        );
+
+    let tray_shortcut = Rectangle::new()
+        .width(82.0)
+        .height(30.0)
+        .radius(6.0)
+        .fill(overlay_color)
+        .border(1.0, border_color)
+        .cursor(Pointer)
+        .align_child(Center, Center)
+        .on_click(|_| {
+            open_view(ActiveView::Tray);
+        })
+        .child(
+            Row::new(vec![
+                Box::new(Text::new("󰀻").size(12.0).color(amber_color).font(font)),
+                Box::new(Text::new("Tray ❯").size(10.0).color(fg_color).font(font)),
+            ])
+            .gap(3.0)
+            .align(Align::Center),
+        );
+
+    Rectangle::new().width(Parent).height(30.0).child(
+        Row::new(vec![
+            Box::new(net_shortcut),
+            Box::new(audio_shortcut),
+            Box::new(bt_shortcut),
+            Box::new(tray_shortcut),
+        ])
+        .width(Parent)
+        .justify(Justify::SpaceBetween)
+        .align(Align::Center),
+    )
+}
+
+fn render_subview_header(
+    title: &str,
+    icon: &str,
+    manifest: &ShellManifest,
+    font: &str,
+) -> Rectangle {
+    let amber_color = Color::from(manifest.palette.highlight.as_str());
+    let fg_color = Color::from(manifest.palette.foreground.as_str());
+    let hover_color = Color::from(manifest.palette.hover.as_str());
+    let overlay_color = Color::from(manifest.palette.overlay.as_str());
+    let border_color = Color::from(manifest.palette.border.as_str());
+
+    let back_btn = Rectangle::new()
+        .width(82.0)
+        .height(28.0)
+        .radius(6.0)
+        .fill(overlay_color)
+        .border(1.0, border_color)
+        .cursor(Pointer)
+        .align_child(Center, Center)
+        .on_click(|_| {
+            let mut cc = ControlCenterService::write();
+            cc.view = ActiveView::Main;
+        })
+        .child(
+            Row::new(vec![
+                Box::new(Text::new("❮").size(11.0).color(amber_color).font(font)),
+                Box::new(Text::new("Overview").size(10.0).color(fg_color).font(font)),
+            ])
+            .gap(4.0)
+            .align(Align::Center),
+        );
+
+    let title_block = Row::new(vec![
+        Box::new(Text::new(icon).size(14.0).color(amber_color).font(font)),
+        Box::new(Text::new(title).size(12.0).color(fg_color).font(font)),
+    ])
+    .gap(6.0)
+    .align(Align::Center);
+
+    let close_btn = Rectangle::new()
+        .width(28.0)
+        .height(28.0)
+        .radius(6.0)
+        .fill(overlay_color)
+        .border(1.0, border_color)
+        .cursor(Pointer)
+        .align_child(Center, Center)
+        .on_click(|_| {
+            close();
+        })
+        .child(Text::new("󰅖").size(12.0).color(hover_color).font(font));
+
+    Rectangle::new().width(Parent).height(28.0).child(
+        Row::new(vec![
+            Box::new(back_btn),
+            Box::new(title_block),
+            Box::new(close_btn),
+        ])
+        .width(Parent)
+        .justify(Justify::SpaceBetween)
+        .align(Align::Center),
     )
 }
 
@@ -920,14 +1161,36 @@ mod tests {
     }
 
     #[test]
-    fn test_control_center_toggle_and_close() {
+    fn test_control_center_lifecycle_and_views() {
         close();
         assert!(!ControlCenterService::read().open);
+        assert_eq!(ControlCenterService::read().view, ActiveView::Main);
 
         toggle();
         assert!(ControlCenterService::read().open);
 
         close();
         assert!(!ControlCenterService::read().open);
+        assert_eq!(ControlCenterService::read().view, ActiveView::Main);
+
+        open_view(ActiveView::Network);
+        assert!(ControlCenterService::read().open);
+        assert_eq!(ControlCenterService::read().view, ActiveView::Network);
+
+        open_view(ActiveView::Audio);
+        assert!(ControlCenterService::read().open);
+        assert_eq!(ControlCenterService::read().view, ActiveView::Audio);
+
+        open_view(ActiveView::Bluetooth);
+        assert!(ControlCenterService::read().open);
+        assert_eq!(ControlCenterService::read().view, ActiveView::Bluetooth);
+
+        open_view(ActiveView::Tray);
+        assert!(ControlCenterService::read().open);
+        assert_eq!(ControlCenterService::read().view, ActiveView::Tray);
+
+        close();
+        assert!(!ControlCenterService::read().open);
+        assert_eq!(ControlCenterService::read().view, ActiveView::Main);
     }
 }

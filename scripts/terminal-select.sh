@@ -1,67 +1,93 @@
 #!/usr/bin/env bash
-# Dotfield Terminal Selector
-# Presents an instantaneous Fuzzel menu to pick active terminal
+# Dotfield Terminal Selector & Dispatcher
+# Launches configured default terminal directly or presents selector menu
 # Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
 
 set -euo pipefail
 
-# If dotfield-shell is active under Niri/Wayland, summon the native Terminal Manager overlay
-SHELL_BIN=$(command -v dotfield-shell 2>/dev/null || {
-    [[ -x "${HOME}/.local/bin/dotfield-shell" ]] && echo "${HOME}/.local/bin/dotfield-shell"
-} || {
-    [[ -x "${HOME}/.cargo/bin/dotfield-shell" ]] && echo "${HOME}/.cargo/bin/dotfield-shell"
-} || true)
+MODE="${1:-default}"
 
-if [[ -n "${SHELL_BIN}" ]] && pgrep -x dotfield-shell >/dev/null 2>&1; then
-    "${SHELL_BIN}" --terminal-manager
-    exit 0
-fi
+# 1. If explicit menu requested (--select, --menu, -m), summon Terminal Manager
+if [[ "$MODE" == "--select" || "$MODE" == "--menu" || "$MODE" == "-m" ]]; then
+    SHELL_BIN=$(command -v dotfield-shell 2>/dev/null || {
+        [[ -x "${HOME}/.local/bin/dotfield-shell" ]] && echo "${HOME}/.local/bin/dotfield-shell"
+    } || {
+        [[ -x "${HOME}/.cargo/bin/dotfield-shell" ]] && echo "${HOME}/.cargo/bin/dotfield-shell"
+    } || true)
 
-# Available terminal definitions (Glyph, Label, Executable)
-OPTIONS=(
-    "󰞷  Foot       (Fast Wayland Client):foot"
-    "󰄛  Kitty      (GPU Accelerated):kitty"
-    "󰆍  Alacritty  (OpenGL Fast Terminal):alacritty"
-    "󰊠  Ghostty    (Modern GPU Terminal):ghostty"
-)
+    if [[ -n "${SHELL_BIN}" ]] && pgrep -x dotfield-shell >/dev/null 2>&1; then
+        exec "${SHELL_BIN}" --terminal-manager
+    fi
 
-# Filter options to only those installed on the system
-MENU=""
-for item in "${OPTIONS[@]}"; do
-    label="${item%%:*}"
-    bin="${item##*:}"
-    if command -v "$bin" >/dev/null 2>&1; then
-        if [[ -n "$MENU" ]]; then
-            MENU+=$'\n'
+    # Fallback to Fuzzel if shell daemon is offline
+    OPTIONS=(
+        "󰞷  Foot       (Fast Wayland Client):foot"
+        "󰄛  Kitty      (GPU Accelerated):kitty"
+        "󰆍  Alacritty  (OpenGL Fast Terminal):alacritty"
+        "󰊠  Ghostty    (Modern GPU Terminal):ghostty"
+    )
+
+    MENU=""
+    for item in "${OPTIONS[@]}"; do
+        label="${item%%:*}"
+        bin="${item##*:}"
+        if command -v "$bin" >/dev/null 2>&1; then
+            if [[ -n "$MENU" ]]; then
+                MENU+=$'\n'
+            fi
+            MENU+="$label"
         fi
-        MENU+="$label"
+    done
+
+    if [[ -n "$MENU" ]]; then
+        CHOICE=$(echo "$MENU" | fuzzel --dmenu --prompt "Terminal ❯ " --lines 4 --width 40 || true)
+        if [[ -n "$CHOICE" ]]; then
+            for item in "${OPTIONS[@]}"; do
+                label="${item%%:*}"
+                bin="${item##*:}"
+                if [[ "$CHOICE" == "$label"* ]]; then
+                    setsid "$bin" </dev/null >/dev/null 2>&1 &
+                    exit 0
+                fi
+            done
+        fi
     fi
-done
-
-if [[ -z "$MENU" ]]; then
-    # Fallback to foot or sh if none found
-    if command -v foot >/dev/null 2>&1; then
-        exec foot
-    elif command -v kitty >/dev/null 2>&1; then
-        exec kitty
-    else
-        exit 0
-    fi
-fi
-
-# Show menu via Fuzzel dmenu mode with Controlled Chaos prompt
-CHOICE=$(echo "$MENU" | fuzzel --dmenu --prompt "Terminal ❯ " --lines 4 --width 40 || true)
-
-if [[ -z "$CHOICE" ]]; then
     exit 0
 fi
 
-# Match choice to binary and spawn detached
-for item in "${OPTIONS[@]}"; do
-    label="${item%%:*}"
-    bin="${item##*:}"
-    if [[ "$CHOICE" == "$label"* ]]; then
-        setsid "$bin" </dev/null >/dev/null 2>&1 &
-        exit 0
+# 2. Default behavior for Super+Return: Launch default terminal directly
+TARGET_BIN=""
+
+# Check dotfield shell manifest
+SHELL_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/dotfield/shell.toml"
+if [[ -f "${SHELL_CONFIG}" ]]; then
+    CONF_DEFAULT=$(awk -F'=' '/\[terminal\]/{flag=1; next} /^\[/{flag=0} flag && /default/ {gsub(/[ "]/, "", $2); print $2}' "${SHELL_CONFIG}" 2>/dev/null || true)
+    if [[ -n "${CONF_DEFAULT}" ]] && command -v "${CONF_DEFAULT}" >/dev/null 2>&1; then
+        TARGET_BIN="${CONF_DEFAULT}"
     fi
-done
+fi
+
+# Fallback to $TERMINAL
+if [[ -z "${TARGET_BIN}" && -n "${TERMINAL:-}" ]] && command -v "${TERMINAL}" >/dev/null 2>&1; then
+    TARGET_BIN="${TERMINAL}"
+fi
+
+# Fallback to preferred installed terminal
+if [[ -z "${TARGET_BIN}" ]]; then
+    for cand in alacritty foot kitty ghostty; do
+        if command -v "$cand" >/dev/null 2>&1; then
+            TARGET_BIN="$cand"
+            break
+        fi
+    done
+fi
+
+if [[ -n "${TARGET_BIN}" ]]; then
+    setsid "${TARGET_BIN}" </dev/null >/dev/null 2>&1 &
+    exit 0
+fi
+
+# Ultimate fallback
+if command -v xterm >/dev/null 2>&1; then
+    setsid xterm </dev/null >/dev/null 2>&1 &
+fi

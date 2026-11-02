@@ -3,9 +3,9 @@ use parking_lot::RwLock;
 use std::sync::LazyLock;
 
 use amane::{
-    Align, Audio, Battery, Center, Color, Cpu, Full, Justify, Layer, LayerWindow, Memory, Network,
-    Notifications, Padding, Parent, Pointer, Rectangle, Row, Scroll, Service, Text, Vertical,
-    Widget, Workspaces, Zone,
+    Align, Audio, Battery, Bluetooth, Center, Color, Cpu, Full, Justify, Layer, LayerWindow,
+    Memory, Network, Notifications, Padding, Parent, Pointer, Rectangle, Row, Scroll, Service,
+    Text, Vertical, Widget, Workspaces, Zone,
 };
 
 use crate::config::ShellManifest;
@@ -27,17 +27,21 @@ pub fn top_bar() -> LayerWindow {
 
     let mut sections: Vec<Box<dyn Widget>> = Vec::new();
 
-    // 1. Left section: Workspace Radar
+    // 1. Left section: Workspace Radar & Active Window Title grouped together
+    let mut left_items: Vec<Box<dyn Widget>> = Vec::new();
     if bar_cfg.show_workspaces {
-        sections.push(Box::new(render_workspaces(&manifest)));
+        left_items.push(Box::new(render_workspaces(&manifest)));
     }
-
-    // 2. Center section: Active Window Title
     if bar_cfg.show_title {
-        sections.push(Box::new(render_title(&manifest)));
+        left_items.push(Box::new(render_title(&manifest)));
+    }
+    if !left_items.is_empty() {
+        sections.push(Box::new(
+            Row::new(left_items).gap(10.0).align(Align::Center),
+        ));
     }
 
-    // 3. Right section: System Telemetry (CPU, Mem, Audio, Battery, Network, Clock, Control Center)
+    // 2. Right section: System Telemetry (CPU, Mem, Audio, Battery, Network, Bluetooth, Tray, Clock, Powermenu)
     if bar_cfg.show_telemetry {
         sections.push(Box::new(render_telemetry(&manifest)));
     }
@@ -121,8 +125,14 @@ fn render_workspaces(manifest: &ShellManifest) -> Rectangle {
         buttons.push(Box::new(tile));
     }
 
+    let ws_width = if buttons.is_empty() {
+        28.0
+    } else {
+        (buttons.len() as f32 * 28.0) + ((buttons.len().saturating_sub(1)) as f32 * 6.0)
+    };
+
     Rectangle::new()
-        .width(Parent)
+        .width(ws_width)
         .height(Parent)
         .child(Row::new(buttons).gap(6.0).align(Align::Center))
 }
@@ -140,24 +150,45 @@ fn render_title(manifest: &ShellManifest) -> Rectangle {
     };
 
     // Truncate long title cleanly
-    let display_text = if text.chars().count() > 60 {
-        format!("{}...", text.chars().take(57).collect::<String>())
+    let display_text = if text.chars().count() > 28 {
+        format!("{}...", text.chars().take(25).collect::<String>())
     } else {
         text
     };
 
     let fg_color = Color::from(manifest.palette.foreground.as_str());
+    let border_color = Color::from(manifest.palette.border.as_str());
+    let surface_color = Color::from(manifest.palette.surface.as_str());
+    let amber_color = Color::from(manifest.palette.highlight.as_str());
     let font = &manifest.theme.font_family;
 
+    let title_w = (display_text.chars().count() as f32 * 7.2 + 34.0).clamp(64.0, 240.0);
+
     Rectangle::new()
-        .width(Parent)
-        .height(Parent)
+        .width(title_w)
+        .height(26.0)
+        .radius(6.0)
+        .fill(surface_color)
+        .border(1.0, border_color)
+        .padding(Padding {
+            top: 2.0,
+            bottom: 2.0,
+            left: 8.0,
+            right: 8.0,
+        })
         .align_child(Center, Center)
         .child(
-            Text::new(display_text)
-                .size(11.0)
-                .color(fg_color)
-                .font(font),
+            Row::new(vec![
+                Box::new(Text::new("󰣆").size(12.0).color(amber_color).font(font)),
+                Box::new(
+                    Text::new(display_text)
+                        .size(11.0)
+                        .color(fg_color)
+                        .font(font),
+                ),
+            ])
+            .gap(6.0)
+            .align(Align::Center),
         )
 }
 
@@ -231,15 +262,18 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
         );
     pills.push(Box::new(mem_pill));
 
-    // Audio status (interactive click to mute, scroll to adjust)
+    // Audio status (PipeWire: interactive click to open PipeWire widget, scroll to adjust volume)
     let audio = Audio::read();
+    let mic_muted = audio.microphone_muted();
     let vol_text = if audio.muted() {
         "󰖁 MUTED".to_string()
+    } else if mic_muted {
+        format!("󰕾 {}% 󰍭", audio.volume())
     } else {
         format!("󰕾 {}%", audio.volume())
     };
     let vol_pill = Rectangle::new()
-        .width(82.0)
+        .width(88.0)
         .height(26.0)
         .radius(6.0)
         .fill(surface_color)
@@ -259,7 +293,7 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
             right: 8.0,
         })
         .on_click(|_| {
-            Audio::toggle_mute();
+            crate::ui::control_center::open_view(crate::ui::control_center::ActiveView::Audio);
         })
         .on_scroll(|scroll: Scroll| {
             let step = if scroll.y < 0.0 { 5 } else { -5 };
@@ -280,7 +314,6 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
         );
     pills.push(Box::new(vol_pill));
 
-    // Battery status
     let battery = Battery::read();
     if battery.present() {
         let bat_icon = if battery.charging() {
@@ -319,7 +352,7 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
         pills.push(Box::new(bat_pill));
     }
 
-    // Network status
+    // Network status (NetworkManager: interactive click to open Network widget)
     let network = Network::read();
     let net_text = if network.connected() {
         if network.ssid().is_empty() {
@@ -336,6 +369,7 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
         .radius(6.0)
         .fill(surface_color)
         .border(1.0, border_color)
+        .cursor(Pointer)
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,
@@ -343,6 +377,9 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
             right: 8.0,
         })
         .align_child(Center, Center)
+        .on_click(|_| {
+            crate::ui::control_center::open_view(crate::ui::control_center::ActiveView::Network);
+        })
         .child(
             Text::new(net_text)
                 .size(11.0)
@@ -354,6 +391,59 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
                 .font(font),
         );
     pills.push(Box::new(net_pill));
+
+    // Bluetooth status (BlueZ: interactive click to open Bluetooth widget)
+    let bluetooth = Bluetooth::read();
+    if bluetooth.available() {
+        let bt_powered = bluetooth.powered();
+        let connected_count = bluetooth.devices().iter().filter(|d| d.connected()).count();
+        let bt_text = if !bt_powered {
+            "󰂲 Off".to_string()
+        } else if connected_count > 0 {
+            format!("󰂱 {connected_count}")
+        } else {
+            "󰂯 On".to_string()
+        };
+        let bt_pill = Rectangle::new()
+            .width(62.0)
+            .height(26.0)
+            .radius(6.0)
+            .fill(surface_color)
+            .border(
+                1.0,
+                if connected_count > 0 {
+                    amber_color
+                } else {
+                    border_color
+                },
+            )
+            .cursor(Pointer)
+            .padding(Padding {
+                top: 2.0,
+                bottom: 2.0,
+                left: 6.0,
+                right: 6.0,
+            })
+            .align_child(Center, Center)
+            .on_click(|_| {
+                crate::ui::control_center::open_view(
+                    crate::ui::control_center::ActiveView::Bluetooth,
+                );
+            })
+            .child(
+                Text::new(bt_text)
+                    .size(11.0)
+                    .color(if connected_count > 0 {
+                        amber_color
+                    } else if bt_powered {
+                        fg_color
+                    } else {
+                        Color::from(manifest.palette.steel.as_str())
+                    })
+                    .font(font),
+            );
+        pills.push(Box::new(bt_pill));
+    }
 
     // Notifications status badge (if any active)
     let notifs = Notifications::read();
@@ -385,10 +475,49 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
         pills.push(Box::new(notif_pill));
     }
 
-    // Clock (clickable: toggles Control Center)
+    // System Tray (StatusNotifierItem applications & status cluster)
+    pills.push(crate::ui::tray::render_tray_pill(manifest, font));
+
+    // Active Screen Recording indicator (Crimson with timer, click to open recorder overlay)
+    let is_recording = crate::ui::screen_record::ScreenRecordService::read().is_recording;
+    let rec_elapsed = crate::ui::screen_record::ScreenRecordService::read()
+        .started_at
+        .map(|t| t.elapsed().as_secs())
+        .unwrap_or(0);
+    if is_recording {
+        let mins = rec_elapsed / 60;
+        let secs = rec_elapsed % 60;
+        let rec_text = format!("󰑋 REC {mins:02}:{secs:02}");
+        let rec_pill = Rectangle::new()
+            .width(108.0)
+            .height(26.0)
+            .radius(6.0)
+            .fill(crimson_color)
+            .border(1.0, Color::from("#FF6B76"))
+            .cursor(Pointer)
+            .padding(Padding {
+                top: 2.0,
+                bottom: 2.0,
+                left: 8.0,
+                right: 8.0,
+            })
+            .align_child(Center, Center)
+            .on_click(|_| {
+                crate::ui::screen_record::toggle();
+            })
+            .child(
+                Text::new(rec_text)
+                    .size(11.0)
+                    .color(Color::WHITE)
+                    .font(font),
+            );
+        pills.push(Box::new(rec_pill));
+    }
+
+    // Clock (clickable: toggles interactive monthly Calendar)
     let now = Local::now().format("%a %b %d  %H:%M").to_string();
     let clock_pill = Rectangle::new()
-        .width(136.0)
+        .width(162.0)
         .height(26.0)
         .radius(6.0)
         .fill(surface_color)
@@ -397,19 +526,19 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,
-            left: 10.0,
-            right: 10.0,
+            left: 8.0,
+            right: 8.0,
         })
         .align_child(Center, Center)
         .on_click(|_| {
-            crate::ui::control_center::toggle();
+            crate::ui::calendar::toggle();
         })
         .child(Text::new(now).size(11.0).color(amber_color).font(font));
     pills.push(Box::new(clock_pill));
 
-    // Control Center icon button
-    let cc_pill = Rectangle::new()
-        .width(30.0)
+    // Powermenu icon button (Crimson #E63946)
+    let power_pill = Rectangle::new()
+        .width(28.0)
         .height(26.0)
         .radius(6.0)
         .fill(surface_color)
@@ -417,13 +546,38 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(|_| {
-            crate::ui::control_center::toggle();
+            crate::ui::powermenu::toggle();
         })
-        .child(Text::new("󰒓").size(12.0).color(amber_color).font(font));
-    pills.push(Box::new(cc_pill));
+        .child(Text::new("󰐥").size(12.0).color(crimson_color).font(font));
+    pills.push(Box::new(power_pill));
+
+    let pills_count = pills.len();
+    let mut telemetry_w: f32 = 66.0 + 66.0 + 88.0 + 96.0 + 162.0 + 28.0;
+    if battery.present() {
+        telemetry_w += 76.0;
+    }
+    if bluetooth.available() {
+        telemetry_w += 62.0;
+    }
+    if notifs_count > 0 {
+        telemetry_w += 52.0;
+    }
+    if is_recording {
+        telemetry_w += 108.0;
+    }
+    let tray_items_len = crate::services::tray::TrayService::read().items.len();
+    let tray_w = if tray_items_len == 0 {
+        32.0
+    } else {
+        (tray_items_len.min(6) as f32 * 26.0) + 12.0
+    };
+    telemetry_w += tray_w;
+    if pills_count > 1 {
+        telemetry_w += (pills_count - 1) as f32 * 6.0;
+    }
 
     Rectangle::new()
-        .width(Parent)
+        .width(telemetry_w)
         .height(Parent)
-        .child(Row::new(pills).gap(8.0).align(Align::Center))
+        .child(Row::new(pills).gap(6.0).align(Align::Center))
 }

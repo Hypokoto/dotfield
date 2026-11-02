@@ -37,11 +37,13 @@ pub fn notification_popups() -> LayerWindow {
         cards.push(render_notification_card(notif, &manifest, &font));
     }
 
-    let is_visible = !cards.is_empty();
+    let cc_open = crate::ui::control_center::ControlCenterService::read().open;
+    let is_visible = !cards.is_empty() && !cc_open;
+    let window_h = (cards.len() as f32 * 96.0).clamp(96.0, 520.0);
 
     LayerWindow::new()
         .width(360.0)
-        .height(600.0)
+        .height(window_h)
         .anchor_vertical(Vertical::Top)
         .anchor_horizontal(Horizontal::Right)
         .margin(Margin {
@@ -144,4 +146,59 @@ fn render_notification_card(
         .child(Column::new(elements).width(Parent).gap(4.0));
 
     Box::new(card)
+}
+
+/// Spawns a background thread that automatically dismisses non-critical
+/// notifications once their age exceeds the configured `timeout_ms`.
+pub fn start_expiry_worker() {
+    std::thread::spawn(move || {
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(250));
+
+            let manifest = CONFIG.read().clone();
+            if !manifest.notifications.enabled || manifest.notifications.timeout_ms == 0 {
+                continue;
+            }
+
+            let timeout = std::time::Duration::from_millis(manifest.notifications.timeout_ms);
+            let now = std::time::SystemTime::now();
+
+            let to_dismiss: Vec<u32> = {
+                let notifs = Notifications::read();
+                notifs
+                    .list()
+                    .iter()
+                    .filter(|n| {
+                        // Critical notifications remain until clicked
+                        if n.urgency() == Urgency::Critical {
+                            return false;
+                        }
+                        match now.duration_since(n.received()) {
+                            Ok(elapsed) => elapsed >= timeout,
+                            Err(_) => false,
+                        }
+                    })
+                    .map(|n| n.id())
+                    .collect()
+            };
+
+            for id in to_dismiss {
+                Notifications::dismiss(id);
+            }
+        }
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_notifications_config_defaults() {
+        let manifest = ShellManifest::default();
+        set_config(manifest.clone());
+        assert!(manifest.notifications.enabled);
+        assert_eq!(manifest.notifications.timeout_ms, 5000);
+        assert_eq!(manifest.notifications.max_visible, 5);
+    }
 }

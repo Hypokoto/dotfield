@@ -2,45 +2,39 @@
 
 ## Project Identity & Core Philosophy
 
-**Dotfield** is a declarative Linux ricing engine and dotfile compiler built in Rust.
+**Dotfield** is a declarative, modular Linux ricing ecosystem and dotfiles suite designed for modern Wayland desktop workflows.
+
 The governing principle of Dotfield is:
-> **"Store logical choices, not duplicated config."**
+> **"Declarative, modular configurations with zero unnecessary bloat."**
 
-In traditional ricing, changing a default terminal from `foot` to `kitty` or switching hotkeys requires manually editing multiple configuration files across compositors (Sway, Niri), hotkey daemons, and window rules. Dotfield replaces this friction with an abstract profile model:
+Dotfield provides a unified, production-grade Linux desktop experience tailored for two distinct compositor paradigms:
+- **Niri**: Infinite scrollable tiling driven by **Amane** (`amane`), a high-performance native Wayland desktop shell built in Rust with Vulkan/Vello GPU rendering.
+- **Sway**: Minimalist i3-compatible tiling focused on zero-daemon execution, suppressed status bars, and lightweight native Fuzzel menus.
 
-```toml
-[apps]
-terminal = "foot"
-launcher = "fuzzel"
-editor = "nvim"
-multiplexer = "zellij"
-
-[bindings]
-terminal = "Super+Return"
-launcher = "Super+space"
-editor = "Super+e"
-```
-
-Running `dotfield apply` parses this semantic model and compiles target-specific configuration fragments (e.g., Sway `bindsym Mod4+Return exec foot`, Niri `spawn "foot"`). Switching an app or keybind alters only the high-level profile, while the target config fragments are regenerated automatically.
+Dotfield uses drop-in modular configurations (`conf.d/*.kdl`, `conf.d/*.conf`), clean portable helper scripts, security sandboxing (Firejail, AppArmor, Flatpak, NFTables), and idempotent installation scripts (`install.sh`, `setup.sh`).
 
 ---
 
 ## Architectural Invariants
 
 1. **Logical Separation of Concerns**:
-   - `dotfield-shell`: High-performance Wayland desktop shell built with **Rust + Amane**. Integrates status bar, application launcher, terminal manager, interactive display configurator, quick settings control center, and notification HUD natively.
+   - `amane` (`crates/amane-shell`): High-performance Wayland desktop shell built with **Pure Rust + Amane** exclusively for **Niri**. Integrates status bar, horizontal workspace radar, application launcher, terminal manager, interactive display configurator, quick settings control center, notification HUD, calendar, and screen recorder natively.
+   - **Sway Minimalist Stack**: Strictly independent of `amane` — runs with zero daemons, suppressed bars, and native `fuzzel` overlays.
    - Modular Compositor Configs: Declarative modular configurations (`compositor/niri/conf.d/*.kdl`, `compositor/sway/conf.d/*.conf`).
-   - Helper Scripts: Portable helper scripts (`scripts/terminal-select.sh`, `scripts/display-config.sh`, etc.) with fallback support.
+   - Helper Scripts: Portable helper scripts (`scripts/terminal-select.sh`, `scripts/display-config.sh`, `scripts/osd.sh`, etc.) with fallback support.
 
-2. **Instant IPC & Zero-Lag Overlays**:
+2. **Instant IPC & Zero-Lag Overlays (Niri)**:
    - Background daemon communicates via Unix domain socket (`$XDG_RUNTIME_DIR/amane.sock`).
-   - Runs silently in the background; compositor keybindings trigger overlays with sub-millisecond response.
+   - Supervised under systemd (`~/.config/systemd/user/amane.service`) with auto-recreation across output DPMS/re-negotiation events and auto-healing CLI IPC.
 
 3. **Pure Rust + Vulkan Desktop UI (Amane)**:
    - GPU-accelerated immediate-mode visual rendering via `amane` with Vulkan and Vello backends.
-   - Zero WebKit / Electron / Slint bloat; ultra-low CPU and memory footprints.
+   - Zero WebKit / Electron / Slint bloat; ultra-low CPU and memory footprints (~60 MB RAM).
 
-4. **Security & Sandboxing by Default**:
+4. **Fastfetch Custom Setup**:
+   - Aesthetic system fetch configuration located in `fastfetch/` featuring custom braille emblem art and Controlled Chaos palette tokens.
+
+5. **Security & Sandboxing by Default**:
    - Support Firejail profiles, AppArmor abstraction drop-ins, Flatpak permission overrides, and NFTables network isolation.
 
 ---
@@ -49,11 +43,16 @@ Running `dotfield apply` parses this semantic model and compiles target-specific
 
 ```
 dotfield/
+├── install.sh              # System package & dependency installer
+├── setup.sh                # Configuration deployment & service activator
 ├── compositor/             # Modular configs for Niri and Sway
 │   ├── niri/
 │   │   └── conf.d/
 │   └── sway/
 │       └── conf.d/
+├── fastfetch/              # Custom fastfetch config & braille emblem art
+│   ├── config.jsonc
+│   └── logo.txt
 ├── launcher/               # Base configs & themes for Fuzzel
 │   └── fuzzel/
 ├── kanshi/                 # Multi-monitor dynamic display autoconfig
@@ -66,14 +65,18 @@ dotfield/
 ├── ly/                     # Ly TUI display manager configurations (config.ini, config.lua)
 ├── mako/                   # Notification daemon templates
 ├── osd/                    # On-screen display configs (SwayOSD / Avizo)
+├── systemd/                # User systemd service templates (amane.service)
+│   └── user/
 ├── security/               # Hardening rules (Firejail, AppArmor, Flatpak, NFTables)
 │   ├── apparmour/
 │   ├── firejail/
 │   ├── flatpak/
 │   └── nft/
+├── scripts/                # Standalone helper scripts
 ├── docs/                   # Architectural blueprints and roadmap
 ├── crates/
-│   └── dotfield-shell/     # Native Rust + Amane Wayland desktop shell
+│   ├── amane-shell/        # Native Rust + Amane Wayland desktop shell for Niri (binary: amane)
+│   └── amane/              # Immediate-mode GPU rendering engine (upstream library)
 ├── .gitleaks.toml          # Secret scanner rules
 ├── .semgrep.yml            # Static security analysis rules
 └── .pre-commit-config.yaml # Pre-commit hook definitions

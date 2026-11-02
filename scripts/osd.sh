@@ -15,15 +15,15 @@ has_cmd() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# If dotfield-shell is active, forward directly to its IPC to prevent duplicate notifications
-SHELL_BIN=$(command -v dotfield-shell 2>/dev/null || {
+# If amane (or legacy dotfield-shell) is active, forward directly to its IPC to prevent duplicate notifications
+SHELL_BIN=$(command -v amane 2>/dev/null || {
+    [[ -x "${HOME}/.local/bin/amane" ]] && echo "${HOME}/.local/bin/amane"
+} || command -v dotfield-shell 2>/dev/null || {
     [[ -x "${HOME}/.local/bin/dotfield-shell" ]] && echo "${HOME}/.local/bin/dotfield-shell"
-} || {
-    [[ -x "${HOME}/.cargo/bin/dotfield-shell" ]] && echo "${HOME}/.cargo/bin/dotfield-shell"
 } || true)
 
-# In Sway, strictly bypass dotfield-shell / amane and use swayosd/mako
-if [[ -z "${SWAYSOCK:-}" ]] && [[ -n "${SHELL_BIN}" ]] && pgrep -x dotfield-shell >/dev/null 2>&1; then
+# In Sway, strictly bypass amane and use swayosd/mako
+if [[ -z "${SWAYSOCK:-}" ]] && [[ -n "${SHELL_BIN}" ]] && { pgrep -x amane >/dev/null 2>&1 || pgrep -x dotfield-shell >/dev/null 2>&1; }; then
     case "${ACTION}" in
         volume_up)
             "${SHELL_BIN}" --osd volume-up 5

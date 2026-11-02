@@ -63,7 +63,7 @@ Options:
   --all                  Target both Sway and Niri (default)
   -f, --force            Force replacement of existing configs (backed up to .bak.<timestamp>)
   --prefix <dir>         Directory to install binaries into (default: ~/.local/bin)
-  --build                Force compilation of Rust crate (dotfield-shell)
+  --build                Force compilation of Rust crate (amane)
   --no-build             Skip compiling Rust crate with cargo
   -d, --dry-run          Preview installation steps without executing changes
   -h, --help             Display this help message and exit
@@ -136,7 +136,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # If DO_BUILD was not explicitly specified:
-# Build by default for 'niri' and 'all'; skip build for 'sway' since Sway does not use dotfield-shell
+# Build by default for 'niri' and 'all'; skip build for 'sway' since Sway does not use amane
 if [[ -z "${DO_BUILD}" ]]; then
     if [[ "${TARGET}" == "sway" ]]; then
         DO_BUILD=false
@@ -214,25 +214,27 @@ check_companion "zsh" "Z shell"
 check_companion "starship" "Cross-shell prompt"
 echo ""
 
-# 2. Build dotfield-shell binary (if enabled)
+# 2. Build amane binary (if enabled)
 if [[ "${DO_BUILD}" == true ]]; then
-    step "Building dotfield-shell binary in release mode..."
+    step "Building amane binary in release mode..."
     if [[ "${DRY_RUN}" == true ]]; then
-        info "[dry-run] cargo build --release -p dotfield-shell"
+        info "[dry-run] cargo build --release -p amane-shell"
     else
-        cargo build --release -p dotfield-shell
-        success "Built dotfield-shell (Amane Desktop Shell)"
+        cargo build --release -p amane-shell
+        success "Built amane (Amane Desktop Shell for Niri)"
     fi
 
     # 3. Install binary to PREFIX
     step "Installing binary to ${PREFIX}..."
     if [[ "${DRY_RUN}" == true ]]; then
         info "[dry-run] mkdir -p ${PREFIX}"
-        info "[dry-run] install -m 0755 target/release/dotfield-shell ${PREFIX}/"
+        info "[dry-run] install -m 0755 target/release/amane ${PREFIX}/"
+        info "[dry-run] ln -sf amane ${PREFIX}/dotfield-shell"
     else
         mkdir -p "${PREFIX}"
-        install -m 0755 "${SCRIPT_DIR}/target/release/dotfield-shell" "${PREFIX}/dotfield-shell"
-        success "Installed dotfield-shell to ${PREFIX}"
+        install -m 0755 "${SCRIPT_DIR}/target/release/amane" "${PREFIX}/amane"
+        ln -sf amane "${PREFIX}/dotfield-shell"
+        success "Installed amane (and dotfield-shell symlink) to ${PREFIX}"
     fi
 fi
 
@@ -333,8 +335,20 @@ ensure_config_link_or_dir "${SCRIPT_DIR}/nvim" "${HOME}/.config/nvim"
 ensure_config_link_or_dir "${SCRIPT_DIR}/multiplexer/tmux" "${HOME}/.config/tmux"
 ensure_config_link_or_dir "${SCRIPT_DIR}/multiplexer/zellij" "${HOME}/.config/zellij"
 ensure_config_link_or_dir "${SCRIPT_DIR}/wlogout" "${HOME}/.config/wlogout"
+ensure_config_link_or_dir "${SCRIPT_DIR}/fastfetch" "${HOME}/.config/fastfetch"
 ensure_config_link_or_dir "${SCRIPT_DIR}/shell/starship/starship.toml" "${HOME}/.config/starship.toml"
 ensure_config_link_or_dir "${SCRIPT_DIR}/shell/zsh/.zshrc" "${HOME}/.zshrc"
+
+# Deploy systemd user service for amane (Niri)
+if [[ "${TARGET}" == "all" || "${TARGET}" == "niri" ]]; then
+    mkdir -p "${HOME}/.config/systemd/user" 2>/dev/null || true
+    ensure_config_link_or_dir "${SCRIPT_DIR}/systemd/user/amane.service" "${HOME}/.config/systemd/user/amane.service"
+    if [[ ! -e "${HOME}/.config/systemd/user/dotfield-shell.service" || -L "${HOME}/.config/systemd/user/dotfield-shell.service" ]]; then
+        if [[ "${DRY_RUN}" != true ]]; then
+            ln -sf amane.service "${HOME}/.config/systemd/user/dotfield-shell.service" 2>/dev/null || true
+        fi
+    fi
+fi
 
 # Ensure ~/.tmux.conf points cleanly to ~/.config/tmux/tmux.conf
 if [[ ! -e "${HOME}/.tmux.conf" || -L "${HOME}/.tmux.conf" ]]; then
@@ -366,6 +380,10 @@ if [[ "${DRY_RUN}" != true ]]; then
         if command -v niri >/dev/null 2>&1 && pgrep -x niri >/dev/null 2>&1; then
             niri msg action load-config-file >/dev/null 2>&1 || true
             info "Reloaded Niri configuration"
+        fi
+        if systemctl --user is-active --quiet amane.service 2>/dev/null; then
+            systemctl --user restart amane.service 2>/dev/null || true
+            info "Restarted amane.service"
         fi
     fi
 

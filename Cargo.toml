@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "crates/dotfield-shell",
+    "crates/amane-shell",
 ]
 resolver = "2"
 

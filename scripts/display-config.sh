@@ -5,15 +5,15 @@
 
 set -euo pipefail
 
-# If dotfield-shell is active under Niri, summon the native Wayland Display Configurator
-SHELL_BIN=$(command -v dotfield-shell 2>/dev/null || {
+# If amane is active under Niri, summon the native Wayland Display Configurator
+SHELL_BIN=$(command -v amane 2>/dev/null || {
+    [[ -x "${HOME}/.local/bin/amane" ]] && echo "${HOME}/.local/bin/amane"
+} || command -v dotfield-shell 2>/dev/null || {
     [[ -x "${HOME}/.local/bin/dotfield-shell" ]] && echo "${HOME}/.local/bin/dotfield-shell"
-} || {
-    [[ -x "${HOME}/.cargo/bin/dotfield-shell" ]] && echo "${HOME}/.cargo/bin/dotfield-shell"
 } || true)
 
-# In Sway, strictly bypass dotfield-shell / amane and use Fuzzel
-if [[ -z "${SWAYSOCK:-}" ]] && [[ -n "${SHELL_BIN}" ]] && pgrep -x dotfield-shell >/dev/null 2>&1; then
+# In Sway, strictly bypass amane and use Fuzzel
+if [[ -z "${SWAYSOCK:-}" ]] && [[ -n "${SHELL_BIN}" ]] && { pgrep -x amane >/dev/null 2>&1 || pgrep -x dotfield-shell >/dev/null 2>&1; }; then
     "${SHELL_BIN}" --display-config
     exit 0
 fi

@@ -207,21 +207,20 @@ flowchart LR
 ---
 
 ## Phase 10: Native Niri Desktop Shell Engine via Amane (Pure Rust Wayland Shell Suite)
-*Goal: Consolidate Niri desktop surfaces into a single, unified, GPU-accelerated Wayland desktop shell suite (`crates/dotfield-shell`) using Amane (`MystiaFin/amane`), replacing i3bar-river, i3status-rs, mako, and swayosd with native status bar, workspace radar, OSD, notifications, launcher, and control center.*
+*Goal: Consolidate Niri desktop surfaces into a single, unified, GPU-accelerated Wayland desktop shell suite (`amane`, `crates/amane-shell`) using Amane (`MystiaFin/amane`), replacing i3bar-river, i3status-rs, mako, and swayosd with native status bar, workspace radar, OSD, notifications, launcher, terminal manager, and control center.*
 
-- [x] **Unified Shell Crate (`crates/dotfield-shell`)**:
-  - Implement workspace crate with `amane`, `wgpu`, `tokio`, `zbus`, `niri-ipc`.
+- [x] **Unified Amane Shell Crate (`crates/amane-shell`, binary: `amane`)**:
+  - Implement workspace crate with `amane`, `wgpu`, `niri-ipc`, `zbus`.
   - Subsystem 1: Status Bar with Niri spatial workspace radar & system pills.
-  - Subsystem 2: Ephemeral OSD sliders for volume & brightness (fixing duplicate notification race).
+  - Subsystem 2: Ephemeral OSD sliders for volume & brightness (direct hardware control).
   - Subsystem 3: Native `org.freedesktop.Notifications` D-Bus daemon.
-  - Subsystem 4: Application launcher modal overlay with fuzzy `.desktop` search.
-  - Subsystem 5: Control center & modular widgets (Wi-Fi, Bluetooth, Audio, Power, Notification drawer).
-- [x] **Dotfield Core & CLI Integration**:
-  - Add `ShellConfig` schema to `dotfield-core` profile AST.
-  - Compiler generation of `~/.config/dotfield/shell.toml` with Controlled Chaos palette tokens.
-  - Update `dotfield apply` and reloader for atomic symlink rollout and IPC/SIGHUP reload.
-- [x] **Niri Compositor Wiring**:
-  - Update `compositor/niri/conf.d/` to autostart `dotfield-shell`.
-  - Bind hotkeys for launcher, control center, and OSD volume/brightness keys.
+  - Subsystem 4: Application launcher modal grid with fuzzy `.desktop` search.
+  - Subsystem 5: Terminal manager modal grid with active window indicators.
+  - Subsystem 6: Control center & modular widgets (Wi-Fi, Bluetooth, Audio, Power, Notification drawer).
+  - Subsystem 7: Monthly interactive Calendar and Wayland Screen Recorder.
+- [x] **Compositor & Systemd Integration**:
+  - Update `compositor/niri/conf.d/` to autostart `amane` via `systemctl --user start amane.service`.
+  - Bind hotkeys for launcher, terminal manager, control center, and OSD volume/brightness keys.
+  - Supervise daemon under systemd user manager with automatic recovery across output disconnects and DPMS sleep.
 - [x] **Quality & CI Verification**:
-  - Unit tests, `cargo test --workspace`, `cargo clippy -- -D warnings`, and live validation.
+  - Comprehensive unit tests (`cargo test -p amane-shell`), `cargo clippy -- -D warnings`, and live validation.

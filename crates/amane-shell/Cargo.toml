@@ -1,10 +1,14 @@
 [package]
-name = "dotfield-shell"
+name = "amane-shell"
 version.workspace = true
 edition = "2024"
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+
+[[bin]]
+name = "amane"
+path = "src/main.rs"
 
 [dependencies]
 amane = { git = "https://github.com/MystiaFin/amane.git", branch = "main" }

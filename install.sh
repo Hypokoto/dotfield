@@ -64,7 +64,7 @@ Options:
   --all                  Install dependencies for both compositors (default)
   -y, --yes, --noconfirm Automatically answer yes to package manager prompts
   --no-setup             Skip running setup.sh after dependency installation
-  --no-build             Skip compiling dotfield-shell binary
+  --no-build             Skip compiling amane desktop shell binary
   -f, --force            Force replacement of existing configs (forwarded to setup.sh)
   --prefix <dir>         Directory to install binaries into (default: ~/.local/bin)
   -d, --dry-run          Preview installation commands without executing them
@@ -209,7 +209,7 @@ case "${PKG_MANAGER}" in
     pacman)
         # Arch Linux / Manjaro / EndeavourOS
         COMMON_PKGS=(
-            foot kitty alacritty fuzzel kanshi tmux zellij neovim zsh starship
+            foot kitty alacritty fuzzel kanshi tmux zellij neovim zsh starship fastfetch
             mako swaylock swayidle grim slurp wl-clipboard wlr-randr wlogout
             wf-recorder eza bat ripgrep fd dust duf btop doggo xh trash-cli
             zoxide direnv ttf-jetbrains-mono-nerd papirus-icon-theme playerctl
@@ -220,7 +220,7 @@ case "${PKG_MANAGER}" in
     apt)
         # Debian / Ubuntu
         COMMON_PKGS=(
-            foot kitty alacritty tmux neovim zsh kanshi playerctl
+            foot kitty alacritty tmux neovim zsh kanshi playerctl fastfetch
             swaylock swayidle grim slurp wl-clipboard wlogout ripgrep
             fd-find bat btop direnv
         )
@@ -230,7 +230,7 @@ case "${PKG_MANAGER}" in
     dnf)
         # Fedora
         COMMON_PKGS=(
-            foot kitty alacritty fuzzel kanshi tmux zellij neovim zsh starship
+            foot kitty alacritty fuzzel kanshi tmux zellij neovim zsh starship fastfetch
             mako playerctl swaylock swayidle grim slurp wl-clipboard wlr-randr
             wlogout ripgrep fd-find bat eza btop zoxide direnv
         )
@@ -240,7 +240,7 @@ case "${PKG_MANAGER}" in
     zypper)
         # openSUSE
         COMMON_PKGS=(
-            kitty alacritty tmux zellij neovim zsh starship mako playerctl
+            kitty alacritty tmux zellij neovim zsh starship mako playerctl fastfetch
             swaylock swayidle grim slurp wl-clipboard wlogout ripgrep bat
         )
         SWAY_PKGS=(sway swaybg)
@@ -337,9 +337,9 @@ else
     fi
 fi
 
-# 4. Check Rust toolchain (required for Niri / Amane dotfield-shell)
+# 4. Check Rust toolchain (required for Niri / Amane desktop shell)
 if [[ "${TARGET}" == "all" || "${TARGET}" == "niri" ]]; then
-    step "Checking Rust development toolchain for dotfield-shell..."
+    step "Checking Rust development toolchain for amane..."
     if ! command -v cargo >/dev/null 2>&1; then
         warn "Rust toolchain ('cargo') not found."
         if [[ "${DRY_RUN}" == true ]]; then

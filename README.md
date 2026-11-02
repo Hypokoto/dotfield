@@ -1,30 +1,20 @@
 # Dotfield
 
-> **Declarative Linux ricing engine, dotfile compiler, and high-performance Wayland desktop suite built with Rust.**
-> *"Store logical choices, not duplicated config."*
+> **Declarative, modular Linux ricing ecosystem and high-performance Wayland desktop suite.**
+> *"Modular configs, zero bloat, pure Wayland performance."*
 
 ---
 
 ## Overview
 
-In traditional Linux desktop customization (ricing), changing a default terminal from `foot` to `kitty` or switching application shortcuts requires manually editing multiple configuration files across compositors (Niri, Sway), hotkey daemons, launcher scripts, and window rules.
+In traditional Linux desktop customization (ricing), changing a default terminal, launcher, or hotkey requires navigating bloated monolithic files with hard-to-maintain duplication.
 
-**Dotfield** eliminates this fragmentation with an abstract semantic profile model:
+**Dotfield** provides a clean, declarative, and modular foundation built specifically for modern Wayland workflows:
 
-```toml
-[apps]
-terminal = "foot"
-launcher = "fuzzel"
-editor = "nvim"
-multiplexer = "zellij"
-
-[bindings]
-terminal = "Super+Return"
-launcher = "Super+space"
-editor = "Super+e"
-```
-
-Running `dotfield apply` parses this logical model and generates target-specific configuration fragments (e.g., Niri `spawn "foot"`, Sway `bindsym Mod4+Return exec foot`). Altering an app or keybinding only touches the high-level profile, while target configuration files and process reloads are handled automatically.
+- **Niri Workflows**: Accelerated by **Amane** (`amane`), a native Rust desktop shell suite built with Vulkan and Vello GPU rendering, delivering an integrated status bar, horizontal workspace radar, application launcher, terminal manager, control center, and OSD overlays.
+- **Sway Workflows**: Lean, distraction-free environment with suppressed status bars (100% vertical screen space), native Fuzzel menus, and zero background daemon overhead.
+- **Unified Aesthetic**: Styled end-to-end with the **Controlled Chaos** theme — an industrial, high-contrast dark aesthetic balancing Void Black, Industrial Amber, and Crimson.
+- **Automated Deployment**: Managed via idempotent shell scripts (`install.sh`, `setup.sh`) supporting `--sway`, `--niri`, and `--all` targets.
 
 ---
 
@@ -57,7 +47,7 @@ Dotfield natively supports two distinct Wayland compositor workflows:
 
 ### 1. Niri (Modern Scrollable Tiling + Amane Desktop Shell)
 - **Compositor**: [Niri](https://github.com/YaLTeR/niri) infinite horizontal scrollable tiling.
-- **Desktop Shell**: **`dotfield-shell`** — Built with **Pure Rust + Amane** (Vulkan and Vello backends).
+- **Desktop Shell**: **`amane`** (`crates/amane-shell`) — Built with **Pure Rust + Amane** (Vulkan and Vello backends).
 - **Features**:
   - Top status bar with hardware telemetry (CPU, RAM, network, battery, clock).
   - Modern grid-based Application Launcher with keyboard long-press scrolling.
@@ -66,7 +56,8 @@ Dotfield natively supports two distinct Wayland compositor workflows:
   - Quick Settings Control Center and Notification HUD.
   - Interactive Monthly Calendar and Wayland Screen Recorder.
   - Sub-millisecond IPC communication via `$XDG_RUNTIME_DIR/amane.sock`.
-  - Zero WebKit, Electron, or Slint overhead.
+  - Supervised by systemd user service (`amane.service`) with auto-recreation across output DPMS/re-negotiation events.
+  - Zero WebKit, Electron, or Slint overhead (~60 MB RAM).
 
 ### 2. Sway (Minimalist Reference + Fuzzel Native)
 - **Compositor**: [Sway](https://github.com/swaywm/sway) i3-compatible tiling.
@@ -74,13 +65,14 @@ Dotfield natively supports two distinct Wayland compositor workflows:
 - **Features**:
   - **Zero Bar**: Status bars suppressed via `swaybar_command /bin/true` for 100% vertical screen space.
   - **Fuzzel Native**: Application launcher and terminal selector powered by lightweight `fuzzel`.
-  - **Zero Daemon**: Completely independent of `dotfield-shell`.
+  - **Zero Daemon**: Completely independent of `amane`.
   - Fast notifications via `mako` and volume/brightness OSD via `swayosd`.
 
 ---
 
 ## Integrated Desktop Stack
 
+- **Fastfetch ([fastfetch](fastfetch))**: Aesthetic fetch layout themed with the Controlled Chaos palette and custom braille emblem art.
 - **Terminals**: Templates for [Foot](terminals/foot), [Kitty](terminals/kitty), [Alacritty](terminals/alacritty), and [Ghostty](terminals/ghostty).
 - **Multiplexers**:
   - **[Zellij](multiplexer/zellij)**: Zero-collision modal configuration (`clear-defaults=true`), `Ctrl-a` leader prefix, and instant `Alt` navigation (`Alt-h/j/k/l`, `Alt-n`, `Alt-t`, `Alt-w`, `Alt-z`, `Alt-1..9`).
@@ -116,7 +108,7 @@ Audits system packages, installs missing tools across package managers (`pacman`
 # Install only Sway dependencies (skips Rust crate compilation)
 ./install.sh sway
 
-# Install only Niri + Amane dependencies (includes Rust toolchain & dotfield-shell build)
+# Install only Niri + Amane dependencies (includes Rust toolchain & amane build)
 ./install.sh niri -y
 ```
 
@@ -162,14 +154,14 @@ Stages dotfiles into `~/.config/`, links helper scripts, sets up permissions, an
 | Keybinding | Action |
 | :--- | :--- |
 | `Mod + Return` | Launch default terminal (`foot`) |
-| `Mod + Shift + Return` | Terminal Manager Grid overlay (`dotfield-shell`) |
-| `Mod + Space` | Application Launcher Grid overlay (`dotfield-shell`) |
-| `Mod + Shift + Space` | Control Center & Quick Settings overlay |
-| `Mod + Shift + C` | Monthly Calendar overlay |
-| `Mod + Shift + R` | Wayland Screen Recorder overlay |
-| `Mod + Shift + D` | Display Configurator overlay |
-| `Mod + Shift + E` | Powermenu overlay |
-| `Mod + Shift + N/A/B/T`| Network / Audio / Bluetooth / Tray overlays |
+| `Mod + Shift + Return` | Terminal Manager Grid overlay (`amane`) |
+| `Mod + Space` | Application Launcher Grid overlay (`amane`) |
+| `Mod + Shift + Space` | Control Center & Quick Settings overlay (`amane`) |
+| `Mod + Shift + C` | Monthly Calendar overlay (`amane`) |
+| `Mod + Shift + R` | Wayland Screen Recorder overlay (`amane`) |
+| `Mod + Shift + D` | Display Configurator overlay (`amane`) |
+| `Mod + Shift + E` | Powermenu overlay (`amane`) |
+| `Mod + Shift + N/A/B/T`| Network / Audio / Bluetooth / Tray overlays (`amane`) |
 | `Mod + Q` | Close focused window |
 | `Mod + Escape` | Lock screen |
 | `Print` / `Shift + Print` | Screenshot (Full / Area) |
@@ -199,6 +191,9 @@ dotfield/
 ├── compositor/             # Modular configs for Niri and Sway
 │   ├── niri/conf.d/
 │   └── sway/conf.d/
+├── fastfetch/              # Fastfetch configuration & braille emblem art
+│   ├── config.jsonc
+│   └── logo.txt
 ├── launcher/fuzzel/        # Fuzzel launcher configuration & theme
 ├── kanshi/                 # Multi-monitor dynamic display autoconfig
 ├── shell/                  # Shell configurations (Zsh, Starship)
@@ -210,17 +205,13 @@ dotfield/
 ├── ly/                     # Ly TUI display manager configuration
 ├── mako/                   # Notification daemon templates & rules
 ├── osd/                    # On-screen display configs (SwayOSD / Avizo)
+├── systemd/user/           # Systemd user services (amane.service)
 ├── scripts/                # Standalone helper scripts
 ├── security/               # Hardening rules (Firejail, AppArmor, Flatpak, NFT)
-├── docs/                   # Architectural blueprints, roadmaps, and designs
-│   ├── ARCHITECTURE.md
-│   ├── PROFILES.md
-│   ├── ROADMAP.md
-│   ├── designs/
-│   └── reviews/
+├── docs/                   # Architectural blueprints and guides
 ├── crates/
-│   ├── dotfield-shell/     # Native Rust + Amane Wayland desktop shell
-│   └── amane/              # Immediate-mode GPU rendering engine
+│   ├── amane-shell/        # Native Rust + Amane Wayland desktop shell for Niri (binary: amane)
+│   └── amane/              # Immediate-mode GPU rendering engine (upstream library)
 ├── .gitleaks.toml          # Secret scanner rules
 ├── .semgrep.yml            # Static security analysis rules
 └── .pre-commit-config.yaml # Pre-commit hook definitions

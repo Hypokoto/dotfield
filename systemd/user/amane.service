@@ -1,0 +1,14 @@
+[Unit]
+Description=Amane Wayland Desktop Shell Daemon for Niri
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/amane --foreground
+Restart=always
+RestartSec=1
+Slice=session.slice
+
+[Install]
+WantedBy=graphical-session.target

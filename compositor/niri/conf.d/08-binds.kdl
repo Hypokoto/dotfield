@@ -5,20 +5,20 @@ binds {
     // Core Application Launchers
     // Super + Return launches configured default terminal directly
     Mod+Return { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
-    Mod+Shift+Return { spawn "dotfield-shell" "--terminal-manager"; }
-    Mod+Space { spawn "dotfield-shell" "--launcher"; }
-    Mod+Shift+Space { spawn "dotfield-shell" "--control-center"; }
+    Mod+Shift+Return { spawn "amane" "--terminal-manager"; }
+    Mod+Space { spawn "amane" "--launcher"; }
+    Mod+Shift+Space { spawn "amane" "--control-center"; }
     Mod+Q { close-window; }
-    Mod+Shift+E { spawn "dotfield-shell" "--powermenu"; }
+    Mod+Shift+E { spawn "amane" "--powermenu"; }
 
     // Dotfield Interactive Hardware & System Widgets
-    Mod+Shift+N { spawn "dotfield-shell" "--network"; }
-    Mod+Shift+A { spawn "dotfield-shell" "--audio"; }
-    Mod+Shift+B { spawn "dotfield-shell" "--bluetooth"; }
-    Mod+Shift+T { spawn "dotfield-shell" "--tray"; }
-    Mod+Shift+D { spawn "dotfield-shell" "--display-config"; }
-    Mod+Shift+C { spawn "dotfield-shell" "--calendar"; }
-    Mod+Shift+R { spawn "dotfield-shell" "--screen-recorder"; }
+    Mod+Shift+N { spawn "amane" "--network"; }
+    Mod+Shift+A { spawn "amane" "--audio"; }
+    Mod+Shift+B { spawn "amane" "--bluetooth"; }
+    Mod+Shift+T { spawn "amane" "--tray"; }
+    Mod+Shift+D { spawn "amane" "--display-config"; }
+    Mod+Shift+C { spawn "amane" "--calendar"; }
+    Mod+Shift+R { spawn "amane" "--screen-recorder"; }
     Mod+Escape { spawn "sh" "-c" "~/.config/dotfield/scripts/lock.sh"; }
 
     // Screen Capturing

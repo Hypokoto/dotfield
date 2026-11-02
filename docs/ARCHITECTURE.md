@@ -2,112 +2,93 @@
 
 ## 1. Executive Summary
 
-**Dotfield** is a next-generation declarative dotfile and Linux ricing management system written in Rust. It decouples high-level user intent (the *what*) from low-level software syntax (the *how*).
+**Dotfield** is a declarative, modular Linux ricing ecosystem and Wayland desktop suite designed for production stability, security sandboxing, and ultra-low overhead.
 
-Traditional dotfile managers (e.g., GNU Stow, chezmoi) manage symlinks or template files directly, but still require users to manually maintain duplicated configuration syntax across different window managers, terminal emulators, and utility daemons. Dotfield treats dotfiles as a compilation target, where a centralized TOML profile serves as the single source of truth.
+Rather than maintaining fragile compiler layers or monolithic configuration files, Dotfield organizes configurations into composable, drop-in modules (`conf.d/*.kdl`, `conf.d/*.conf`). It natively supports two distinct Wayland paradigms:
+
+1. **Niri**: Powered by **Amane** (`amane`), a high-performance native desktop shell written in Rust with Vulkan/Vello GPU rendering.
+2. **Sway**: A lean, distraction-free environment utilizing native `fuzzel` menus, suppressed status bars, and zero daemon overhead.
 
 ```mermaid
 flowchart TD
-    A[User Profile: minimal.toml] --> B[dotfield-core Parser & Validator]
-    B --> C[AST / Semantic Model]
-    C --> D1[Sway Generator: config.d/00-generated.conf]
-    C --> D2[Niri Generator: config.kdl.d/00-generated.kdl]
-    C --> D3[Launcher Generator: fuzzel.ini / rofi.rasi]
-    C --> D4[Terminal Generator: foot.ini / kitty.conf]
-    C --> D5[Bar Generator: i3status-rust / swaybar]
-    C --> D6[Security Generator: firejail / nftables]
+    A[Dotfield Repository] --> B[install.sh: Dependency & Package Installer]
+    A --> C[setup.sh: Configuration & Service Deployment]
 
-    D1 & D2 & D3 & D4 & D5 & D6 --> E[Diff & Staging Engine]
-    E --> F[Atomic Deployment & Symlinking]
-    F --> G[Selective Reload Engine]
-    G --> H1[swaymsg reload]
-    G --> H2[niri msg action load-config-file]
-    G --> H3[makoctl reload]
-    F --> I[State Store: .dotfield/state.json]
+    C --> D1[Niri Stack: compositor/niri/conf.d/]
+    C --> D2[Sway Stack: compositor/sway/conf.d/]
+    C --> D3[Common Desktops: fuzzel, kanshi, terminals, tmux, zellij, nvim, fastfetch]
+
+    D1 --> E1[Amane Shell Daemon: amane]
+    E1 --> F1[Top Bar & Workspace Radar]
+    E1 --> F2[App Launcher & Terminal Manager]
+    E1 --> F3[Control Center & Telemetry HUD]
+    E1 --> F4[OSD & Hardware Controls]
+    E1 --> F5[Calendar & Screen Recorder]
+
+    D2 --> G1[Zero-Daemon Minimalist Sway]
+    G1 --> G2[Fuzzel Native Overlays]
+    G1 --> G3[SwayOSD / Mako Fallback]
+
+    C --> H[Security Layer: Firejail / AppArmor / Flatpak / NFTables]
 ```
 
 ---
 
-## 2. Core Components
+## 2. Core Subsystems
 
-### 2.1 `dotfield-core`
-- **Role**: Headless engine, library crate.
-- **Responsibilities**:
-  - **Schema & Deserialization**: Parses profile TOML files (`profiles/*.toml`) using Serde.
-  - **Model Validation**: Validates keybinding consistency (checks for collisions, missing modifier keys, and unavailable binaries on `$PATH`).
-  - **Target Generators**: Compiles abstract models into concrete configuration files for:
-    - Compositors: Sway (`bindsym Mod4+Return exec foot`), Niri (`binds { Mod+Return { spawn "foot"; } }`).
-    - Launchers: Fuzzel (`fuzzel.ini`), Rofi (`config.rasi`).
-    - Terminals: Foot, Kitty, Alacritty, Ghostty.
-    - Bars: `i3status-rust`, Swaybar, Waybar.
-    - Shells: Zsh aliases and Starship palette overrides.
-    - Sandboxing: Firejail profile overlays and NFTables rulesets.
-  - **Diff Engine**: Computes AST or textual diffs between target system files and newly generated outputs.
-  - **Transactional Staging**: Writes files to `.dotfield/staging/`, validates them, then atomically moves or creates symlinks to target destinations.
-  - **State Ledger & Rollback**: Maintains a hash-chained ledger in `.dotfield/state.json` allowing immediate rollbacks via `dotfield rollback`.
-
-### 2.2 `dotfield-cli`
-- **Role**: Command-line binary (`dotfield`).
-- **Commands**:
-  - `dotfield status`: Reports currently active profile, compositor detected (Sway/Niri), drift detection, and state hash.
-  - `dotfield check [profile]`: Static linting and dependency verification (e.g. alerts if `terminal = "foot"` is specified but `foot` is not installed).
-  - `dotfield diff [profile]`: Colorized terminal diff showing exactly what will change across all generated files before application.
-  - `dotfield apply [profile]`: Compiles, stages, atomically deploys, and selectively triggers reloads.
-  - `dotfield rollback`: Reverts symlinks/files to the previous generation snapshot.
-  - `dotfield list`: Displays available profiles (`minimal`, `hardening`, `default`).
-
-### 2.3 `dotfield-shell`
-- **Role**: High-performance native Wayland desktop shell built with **Pure Rust + Amane** (Vulkan and Vello backends).
-- **Architecture**:
-  - Zero WebKit, Electron, or Slint bloat; ultra-low CPU and memory footprints.
-  - Instant IPC and zero-lag overlays communicated via Unix domain socket (`$XDG_RUNTIME_DIR/amane.sock`).
+### 2.1 `amane` (Desktop Shell for Niri)
+- **Role**: High-performance native Wayland desktop shell (`crates/amane-shell`, binary: `amane`) built exclusively for **Niri**.
+- **Rendering**: Pure Rust + Vulkan with Vello 2D GPU rendering. Zero WebKit, Electron, or Slint bloat.
+- **Memory Footprint**: Steady state ~58–60 MB RAM.
+- **Supervisor**: Supervised under systemd user manager (`amane.service`) with auto-recreation across output DPMS/re-negotiation events and auto-healing CLI IPC.
 - **Integrated Capabilities**:
-  - Status top bar with configurable modules and `--no-bar` toggle support.
-  - Modern grid-based Application Launcher with arrow-key long-press scrolling.
-  - Modern grid-based Terminal Manager with active terminal indicator.
-  - Interactive Display Configurator for multi-monitor layout management.
+  - Full-width Top Status Bar with dynamic multi-monitor tracking (`window_per_monitor`).
+  - Spatial Workspace Radar tracking Niri's infinite horizontal ribbon via `$NIRI_SOCKET`.
+  - Modern Grid-based Application Launcher with arrow-key long-press scrolling.
+  - Modern Grid-based Terminal Manager with active terminal indicators.
+  - Interactive Display Configurator for dynamic layout adjustments.
   - Quick Settings Control Center and Notification HUD.
   - Monthly interactive Calendar and Wayland Screen Recorder.
   - System Powermenu (Lock, Sleep, Reboot, Shutdown).
+  - Sub-millisecond IPC over `$XDG_RUNTIME_DIR/amane.sock`.
 
-### 2.4 `dotfieldd` (Optional Daemon)
-- **Role**: Lightweight background event daemon.
-- **Responsibilities**:
-  - Listens to Wayland IPC events (workspace changes, display hotplugging).
-  - Monitors system state (AC/Battery transitions, dark mode triggers).
-  - Triggers profile adjustments dynamically (e.g., switches to power-saving bar intervals on battery).
+### 2.2 Minimalist Sway Stack
+- **Role**: Reference i3-compatible Wayland environment.
+- **Philosophy**: Distraction-free, zero-bar workflow for maximum vertical coding real estate.
+- **Overlays**: Native `fuzzel` launcher and terminal selector.
+- **Zero Daemon**: Strictly bypasses `amane` to run lean with zero background shell processes.
+
+### 2.3 Fastfetch Setup
+- **Role**: Aesthetic system telemetry display.
+- **Components**:
+  - `fastfetch/config.jsonc`: Tailored layout with icon key labels, color palette circles, and Controlled Chaos styling.
+  - `fastfetch/logo.txt`: Custom braille arrowhead/crest emblem art.
+
+### 2.4 Terminal & Multiplexer Harmony
+- **Terminals**: Synchronized templates for Foot, Kitty, Alacritty, and Ghostty.
+- **Multiplexers**: Harmonized `Ctrl-a` leader prefix and identical Alt-navigation (`Alt-h/j/k/l`, `Alt-n`, `Alt-t`, `Alt-w`, `Alt-z`, `Alt-1..9`) across both Zellij and Tmux.
 
 ---
 
-## 3. The Compilation & Deployment Pipeline
+## 3. Deployment & Lifecycle Pipeline
 
-1. **Profile Resolution**:
-   The engine reads the active profile (e.g. `profiles/minimal.toml`). If inheritance is supported, base defaults are merged with the active profile.
-2. **Keybinding Translation**:
-   Abstract key combinations are parsed into an intermediate key representation:
-   - `Super+Return` -> Modifier: `Super` (maps to `Mod4` in Sway/i3, `Mod` in Niri), Key: `Return`.
-   - Command: `exec <app.terminal>`.
-3. **Template / Fragment Synthesis**:
-   Rather than rewriting entire monolithic configurations, Dotfield uses modular drop-in directories (`~/.config/sway/config.d/00-generated.conf` or `~/.config/niri/config.kdl.d/00-generated.kdl`). Base user configurations remain intact; Dotfield only owns the generated fragments.
-4. **Staging & Verification**:
-   The synthesized fragments are written to `.dotfield/staging/`. If any generator fails, the transaction aborts with zero side-effects.
-5. **Atomic Swap**:
-   The files are atomically moved or symlinked into target locations.
-6. **Selective IPC Reload**:
-   Only affected subsystems are signaled:
-   - If only `fuzzel.ini` changed: no compositor reload needed.
-   - If Sway bindings changed: execute `swaymsg reload`.
-   - If Niri bindings changed: execute `niri msg action load-config-file`.
-   - If Mako changed: execute `makoctl reload`.
+1. **Dependency Audit (`install.sh`)**:
+   - Detects host distribution (`pacman`, `apt`, `dnf`, `zypper`).
+   - Audits and installs required packages (compositor tools, fastfetch, CLI utilities).
+   - Verifies Rust development toolchain and compiles `amane` when targeting Niri.
+2. **Configuration Deployment (`setup.sh`)**:
+   - Stages modular configuration skeletons into `~/.config/`.
+   - Cleans broken symlinks automatically.
+   - Deploys helper scripts to `~/.config/dotfield/scripts/`.
+   - Links `systemd/user/amane.service` and activates user services.
+   - Triggers live runtime reloads via `niri msg action load-config-file`, `swaymsg reload`, or `makoctl reload`.
 
 ---
 
 ## 4. Hardening and Security Layer
 
-Dotfield integrates Linux security controls into the ricing workflow:
-- **Firejail**: Automatic profile wrappers for network-facing applications (browsers, matrix clients).
+Dotfield integrates Linux security controls into the desktop environment:
+- **Firejail**: Automatic profile wrappers for network-facing applications.
 - **NFTables**: Application-level firewall rulesets (`security/nft/`).
 - **Flatpak**: Fine-grained sandbox permission overrides (`flatpak override --user ...`).
 - **AppArmor**: Custom profiles for untrusted binary execution (`security/apparmor/`).
-
-The `hardening.toml` profile activates these isolation boundaries automatically.

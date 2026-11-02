@@ -9,8 +9,8 @@ use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 
 #[derive(Parser, Debug, Default)]
-#[command(name = "dotfield-shell")]
-#[command(about = "Unified Wayland desktop shell for Dotfield powered by Amane")]
+#[command(name = "amane")]
+#[command(about = "Unified Wayland desktop shell for Niri powered by Amane")]
 struct Cli {
     /// Run in the foreground without detaching to background
     #[arg(short, long)]
@@ -121,8 +121,7 @@ fn send_amane_ipc(call: &amane::IpcCall) -> anyhow::Result<String> {
                     break;
                 }
             }
-            connected
-                .ok_or_else(|| anyhow::anyhow!("Failed to connect to dotfield-shell daemon"))?
+            connected.ok_or_else(|| anyhow::anyhow!("Failed to connect to amane daemon"))?
         }
     };
     call.write(&mut stream)?;
@@ -400,7 +399,7 @@ fn main() -> anyhow::Result<()> {
 
     // Check if another daemon instance is already active and responding
     if UnixStream::connect(amane::ipc_socket()).is_ok() {
-        println!("dotfield-shell is already running");
+        println!("amane is already running");
         return Ok(());
     }
 
@@ -425,7 +424,7 @@ fn main() -> anyhow::Result<()> {
             .stderr(std::process::Stdio::null());
 
         let child = cmd.spawn()?;
-        println!("dotfield-shell started in background (PID {})", child.id());
+        println!("amane started in background (PID {})", child.id());
         return Ok(());
     }
 

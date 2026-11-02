@@ -13,12 +13,6 @@ window-rule {
 }
 
 window-rule {
-    match app-id="dotfield-gui"
-    open-floating true
-    default-column-width { fixed 780; }
-}
-
-window-rule {
     match app-id="floating-term"
     open-floating true
     default-column-width { fixed 960; }

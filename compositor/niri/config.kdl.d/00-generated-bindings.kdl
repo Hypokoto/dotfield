@@ -9,9 +9,6 @@ binds {
     Mod+Q { close-window; }
     Mod+Shift+F { fullscreen-window; }
 
-    // Keybind HUD (Slint overlay)
-    Mod+Slash { spawn "dotfield-gui" "--hud"; }
-
     // Phase 4 Utilities: Screenshots and Lockscreen
     Print { spawn "sh" "-c" "~/.config/dotfield/scripts/screenshot.sh --area"; }
     Shift+Print { spawn "sh" "-c" "~/.config/dotfield/scripts/screenshot.sh --full"; }

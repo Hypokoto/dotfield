@@ -8,7 +8,6 @@ binds {
     Mod+Shift+Return { spawn "dotfield-shell" "--terminal-manager"; }
     Mod+Space { spawn "dotfield-shell" "--launcher"; }
     Mod+Shift+Space { spawn "dotfield-shell" "--control-center"; }
-    Mod+W { spawn "dotfield-shell" "--control-center"; }
     Mod+Q { close-window; }
     Mod+Shift+E { spawn "dotfield-shell" "--powermenu"; }
 

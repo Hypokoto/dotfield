@@ -1,37 +1,59 @@
 # Swaylock configuration managed by Dotfield
-# Controlled Chaos color palette — Void Black · Crimson · Industrial Amber · Steel
+# Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
 
 daemonize
 ignore-empty-password
 show-failed-attempts
+show-keyboard-layout
+indicator-caps-lock
+indicator-idle-visible
+
+# Typography & Indicator Geometry
 font=JetBrainsMono Nerd Font
+font-size=14
+indicator-radius=110
+indicator-thickness=8
 
-# Colors (Hex without #)
+# Base Canvas (Default Void Black)
 color=0A0A0C
-inside-color=0A0A0C
-inside-clear-color=121216
-inside-ver-color=121216
-inside-wrong-color=121216
+scaling=fill
 
+# Indicator Center Disc (Semi-translucent Obsidian & Graphite)
+inside-color=121216cc
+inside-clear-color=1C1C23ee
+inside-ver-color=1C1C23ee
+inside-wrong-color=221014ee
+inside-caps-lock-color=221014cc
+
+# Indicator Ring Outer Boundary
 ring-color=34343D
-ring-clear-color=FFB000
+ring-clear-color=FFD166
 ring-ver-color=FFB000
 ring-wrong-color=E63946
+ring-caps-lock-color=E63946
 
+# Inner Separator Line
 line-color=00000000
 line-clear-color=00000000
 line-ver-color=00000000
 line-wrong-color=00000000
-
-key-hl-color=E8E6E3
-bs-hl-color=E63946
+line-caps-lock-color=00000000
 separator-color=00000000
 
+# Keypress & Backspace Glowing Arc Highlights
+key-hl-color=FFB000
+bs-hl-color=E63946
+caps-lock-key-hl-color=FFB000
+caps-lock-bs-hl-color=E63946
+
+# Center Text & Status Labels
 text-color=E8E6E3
-text-clear-color=FFB000
+text-clear-color=FFD166
 text-ver-color=FFB000
 text-wrong-color=E63946
+text-caps-lock-color=E63946
 
-indicator-radius=90
-indicator-thickness=10
-indicator-idle-visible
+# Keyboard Layout Badge Box
+layout-bg-color=1C1C23dd
+layout-border-color=34343D
+layout-text-color=E8E6E3

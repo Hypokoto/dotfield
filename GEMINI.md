@@ -63,8 +63,7 @@ dotfield/
 ├── terminals/              # Terminal templates (Foot, Kitty, Alacritty, Ghostty)
 ├── multiplexer/            # Terminal multiplexers (Zellij, Tmux)
 ├── nvim/                   # Neovim configurations
-├── i3-rust/                # i3status-rust and bar configurations
-├── i3bar-river/            # i3bar-river integration
+├── ly/                     # Ly TUI display manager configurations (config.ini, config.lua)
 ├── mako/                   # Notification daemon templates
 ├── osd/                    # On-screen display configs (SwayOSD / Avizo)
 ├── security/               # Hardening rules (Firejail, AppArmor, Flatpak, NFTables)

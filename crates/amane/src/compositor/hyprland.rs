@@ -12,7 +12,7 @@ use crate::Workspace;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ConfigProvider {
     Hyprlang, // hyprland.conf files
-    Lua,      // hyprland.lua files 
+    Lua,      // hyprland.lua files
 }
 
 static HYPRLAND_CONFIG_PROVIDER: OnceLock<ConfigProvider> = OnceLock::new();
@@ -257,4 +257,3 @@ mod tests {
         assert_eq!(list[3].name.as_deref(), Some("chat"));
     }
 }
-        

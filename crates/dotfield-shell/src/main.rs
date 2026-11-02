@@ -247,9 +247,10 @@ fn run_shell(config_path: Option<PathBuf>) -> anyhow::Result<()> {
         let _ = std::fs::remove_file(&sock);
     }
 
-    // Start background event watchers (e.g. Niri socket, StatusNotifierWatcher tray)
+    // Start background event watchers (e.g. Niri socket, StatusNotifierWatcher tray, battery monitor)
     services::niri::NiriService::start();
     services::tray::TrayService::start();
+    services::battery::BatteryMonitor::start();
 
     // Start notification auto-dismiss timer worker
     ui::notifications::start_expiry_worker();

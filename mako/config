@@ -71,6 +71,24 @@ border-color=#FFB000
 [app-name=Screenshot]
 border-color=#FFD166
 
+# Battery Alerts (Controlled Chaos Low & Critical Warnings)
+[app-name=battery-alert]
+border-color=#FFB000
+default-timeout=8000
+
+[category=battery-low]
+border-color=#FFB000
+background-color=#181822
+text-color=#E8E6E3
+default-timeout=10000
+
+[category=battery-critical]
+border-color=#E63946
+background-color=#1C1014
+text-color=#FFFFFF
+default-timeout=0
+ignore-timeout=1
+
 # Do-Not-Disturb Mode
 [mode=do-not-disturb]
 invisible=1

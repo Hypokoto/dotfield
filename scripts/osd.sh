@@ -22,7 +22,8 @@ SHELL_BIN=$(command -v dotfield-shell 2>/dev/null || {
     [[ -x "${HOME}/.cargo/bin/dotfield-shell" ]] && echo "${HOME}/.cargo/bin/dotfield-shell"
 } || true)
 
-if [[ -n "${SHELL_BIN}" ]] && pgrep -x dotfield-shell >/dev/null 2>&1; then
+# In Sway, strictly bypass dotfield-shell / amane and use swayosd/mako
+if [[ -z "${SWAYSOCK:-}" ]] && [[ -n "${SHELL_BIN}" ]] && pgrep -x dotfield-shell >/dev/null 2>&1; then
     case "${ACTION}" in
         volume_up)
             "${SHELL_BIN}" --osd volume-up 5

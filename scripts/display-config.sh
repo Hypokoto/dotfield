@@ -12,7 +12,8 @@ SHELL_BIN=$(command -v dotfield-shell 2>/dev/null || {
     [[ -x "${HOME}/.cargo/bin/dotfield-shell" ]] && echo "${HOME}/.cargo/bin/dotfield-shell"
 } || true)
 
-if [[ -n "${SHELL_BIN}" ]] && pgrep -x dotfield-shell >/dev/null 2>&1; then
+# In Sway, strictly bypass dotfield-shell / amane and use Fuzzel
+if [[ -z "${SWAYSOCK:-}" ]] && [[ -n "${SHELL_BIN}" ]] && pgrep -x dotfield-shell >/dev/null 2>&1; then
     "${SHELL_BIN}" --display-config
     exit 0
 fi

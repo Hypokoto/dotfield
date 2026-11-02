@@ -56,12 +56,19 @@ flowchart TD
   - `dotfield rollback`: Reverts symlinks/files to the previous generation snapshot.
   - `dotfield list`: Displays available profiles (`minimal`, `hardening`, `default`).
 
-### 2.3 `dotfield-gui`
-- **Role**: Native graphical overlays built using **Rust + Slint**.
-- **Tools**:
-  - `rice-menu`: A Wayland overlay launcher to switch rices/profiles, toggle dark/light color schemes, and adjust wallpaper.
-  - `profile-switcher`: Visual card interface showing live previews of window gaps, color schemes, and bar styles.
-  - `keybind-hud`: Interactive search and cheat-sheet displaying all active bindings compiled from the current profile.
+### 2.3 `dotfield-shell`
+- **Role**: High-performance native Wayland desktop shell built with **Pure Rust + Amane** (Vulkan and Vello backends).
+- **Architecture**:
+  - Zero WebKit, Electron, or Slint bloat; ultra-low CPU and memory footprints.
+  - Instant IPC and zero-lag overlays communicated via Unix domain socket (`$XDG_RUNTIME_DIR/amane.sock`).
+- **Integrated Capabilities**:
+  - Status top bar with configurable modules and `--no-bar` toggle support.
+  - Modern grid-based Application Launcher with arrow-key long-press scrolling.
+  - Modern grid-based Terminal Manager with active terminal indicator.
+  - Interactive Display Configurator for multi-monitor layout management.
+  - Quick Settings Control Center and Notification HUD.
+  - Monthly interactive Calendar and Wayland Screen Recorder.
+  - System Powermenu (Lock, Sleep, Reboot, Shutdown).
 
 ### 2.4 `dotfieldd` (Optional Daemon)
 - **Role**: Lightweight background event daemon.

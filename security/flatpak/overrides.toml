@@ -2,14 +2,14 @@
 # Managed by Dotfield
 
 [global]
-# Enforce native Wayland display and disable X11 socket sharing
-socket = ["wayland", "!x11", "!fallback-x11"]
+# Enforce native Wayland and deny legacy display, audio, and credential sockets.
+socket = ["wayland", "!x11", "!fallback-x11", "!pulseaudio", "!ssh-auth", "!gpg-agent", "!pcsc", "!cups"]
 
-# Deny global filesystem snooping by default
-filesystem = ["!home", "!host"]
+# Deny broad host and document-provider access by default.
+filesystem = ["!home", "!host", "!host-os", "!host-etc", "!xdg-run/gvfs"]
 
 [browser]
-# Sandboxed browser profile overrides
-filesystem = ["xdg-download:rw"]
+# Sandboxed browser profile: downloads and GPU rendering only.
+socket = ["wayland", "!x11", "!fallback-x11", "!pulseaudio", "!ssh-auth", "!gpg-agent", "!pcsc", "!cups"]
+filesystem = ["xdg-download:rw", "!home", "!host", "!host-os", "!host-etc", "!xdg-run/gvfs"]
 device = ["dri"]
-socket = ["wayland"]

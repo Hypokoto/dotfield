@@ -3,54 +3,43 @@
 # Managed by Dotfield
 
 # Scope ruleset to dotfield table to preserve Docker, Podman, and VPN configurations.
-# Retain table across reloads so dynamically configured ports in host_ports are preserved.
+# ``add`` is idempotent: it retains dynamically configured host_ports across reloads.
 add table inet dotfield
 add set inet dotfield host_ports { type inet_service; flags interval; }
 
-# Declare input chain idempotently and flush rules on reload to avoid duplication
+# Declare base chains idempotently and flush their rules on reload to avoid duplication.
 add chain inet dotfield input { type filter hook input priority filter; policy drop; }
 flush chain inet dotfield input
-
-# Declare output chain idempotently
 add chain inet dotfield output { type filter hook output priority filter; policy accept; }
 flush chain inet dotfield output
 
-table inet dotfield {
-    chain input {
-        # Allow established and related connections
-        ct state established,related accept
+# Allow established and related connections; discard malformed packets first.
+add rule inet dotfield input ct state established,related accept
+add rule inet dotfield input ct state invalid drop
 
-        # Drop invalid packets immediately
-        ct state invalid drop
+# Reject loopback-source spoofing before allowing legitimate loopback traffic.
+add rule inet dotfield input iifname != "lo" ip saddr 127.0.0.0/8 drop
+add rule inet dotfield input iifname != "lo" ip6 saddr ::1 drop
+add rule inet dotfield input iif "lo" accept
 
-        # Allow loopback interface traffic
-        iif "lo" accept
+# Allow inbound DHCP replies required for network configuration.
+add rule inet dotfield input udp sport 67 udp dport 68 accept
+add rule inet dotfield input udp sport 547 udp dport 546 accept
 
-        # Allow inbound DHCPv4 server replies (RFC 2131)
-        udp sport 67 udp dport 68 accept
+# Keep PMTU discovery and IPv6 neighbour discovery working; rate-limit only pings.
+add rule inet dotfield input ip protocol icmp icmp type echo-request limit rate over 5/second burst 10 packets drop
+add rule inet dotfield input ip protocol icmp accept
+add rule inet dotfield input meta l4proto ipv6-icmp icmpv6 type echo-request limit rate over 5/second burst 10 packets drop
+add rule inet dotfield input meta l4proto ipv6-icmp accept
 
-        # Allow DHCPv6 client discovery replies
-        udp sport 547 udp dport 546 accept
+# Allow inbound VPN handshake listeners (Tailscale 41641, WireGuard 51820).
+add rule inet dotfield input udp dport { 41641, 51820 } accept
 
-        # Allow basic ICMP / ping for network diagnostics (reach ICMPv6 behind extension headers)
-        ip protocol icmp accept
-        meta l4proto ipv6-icmp accept
+# Allow container bridges and VPN interfaces to access the host DNS resolver (port 53).
+add rule inet dotfield input iifname { "docker0", "podman*", "br-*", "veth*", "wg*", "tailscale*" } meta l4proto { tcp, udp } th dport 53 accept
 
-        # Allow inbound VPN handshake listeners (Tailscale 41641, WireGuard 51820)
-        udp dport { 41641, 51820 } accept
+# Allow explicitly configured host-bound services (for example, published container ports).
+add rule inet dotfield input tcp dport @host_ports accept
+add rule inet dotfield input udp dport @host_ports accept
 
-        # Allow container bridges and VPN interfaces to access host DNS resolver (port 53)
-        iifname { "docker0", "podman*", "br-*", "veth*", "wg*", "tailscale*" } meta l4proto { tcp, udp } th dport 53 accept
-
-        # Allow configured host-bound services (e.g. published container proxy ports)
-        tcp dport @host_ports accept
-        udp dport @host_ports accept
-    }
-
-    # Forwarding is left unmanaged in the dotfield table so container runtimes
-    # (Docker, Podman) and VPN tunnels (Wireguard, Tailscale) manage their own forwarded traffic.
-
-    chain output {
-        type filter hook output priority filter; policy accept;
-    }
-}
+# Forwarding is left unmanaged so container runtimes and VPN tunnels can manage it.

@@ -10,12 +10,22 @@ seccomp
 # Filesystem sandboxing
 private-tmp
 private-dev
+disable-mnt
+machine-id
+tracelog
+
+# Browsers need Unix sockets plus normal IPv4/IPv6 networking, but not raw
+# packet, Bluetooth, or other socket families.
+protocol unix,inet,inet6,netlink
 
 # Deny access to sensitive host credentials and dotfield metadata
 blacklist ${HOME}/.ssh
 blacklist ${HOME}/.gnupg
 blacklist ${HOME}/.aws
 blacklist ${HOME}/.dotfield
+blacklist ${HOME}/.pki
+blacklist ${HOME}/.local/share/keyrings
+blacklist ${HOME}/.config/keepassxc
 
 # Whitelist font caches
 mkdir ${HOME}/.config/fontconfig

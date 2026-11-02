@@ -8,17 +8,21 @@ profile dotfield-daemon flags=(attach_disconnected,mediate_deleted) {
   include <abstractions/base>
   include <abstractions/nameservice>
 
-  # Allow execution of helper binaries
-  /usr/bin/* rix,
-  /usr/sbin/* rix,
-  /bin/* rix,
+  # Helper binaries execute within this profile; they cannot read arbitrary host binaries.
+  /usr/bin/* ix,
+  /usr/sbin/* ix,
+  /bin/* ix,
 
   # Deny read access to critical secrets and keys
   deny @{HOME}/.ssh/** rwklx,
   deny @{HOME}/.gnupg/** rwklx,
   deny @{HOME}/.aws/** rwklx,
+  deny @{HOME}/.pki/** rwklx,
+  deny @{HOME}/.local/share/keyrings/** rwklx,
+  deny @{HOME}/.config/keepassxc/** rwklx,
   deny /etc/shadow r,
   deny /etc/gshadow r,
+  deny /etc/{shadow-,gshadow-} r,
 
   # Allow reading/writing to dotfield state and cache
   owner @{HOME}/.dotfield/** rwk,

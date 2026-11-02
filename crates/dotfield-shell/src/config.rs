@@ -39,11 +39,17 @@ fn default_steel() -> String {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BarSettings {
+    #[serde(default = "default_bar_enabled")]
+    pub enabled: bool,
     pub height: f64,
     pub position: String,
     pub show_workspaces: bool,
     pub show_title: bool,
     pub show_telemetry: bool,
+}
+
+fn default_bar_enabled() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -116,6 +122,7 @@ impl Default for ShellManifest {
                 steel: "#8B949E".to_string(),
             },
             bar: BarSettings {
+                enabled: true,
                 height: 32.0,
                 position: "top".to_string(),
                 show_workspaces: true,

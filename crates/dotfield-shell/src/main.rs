@@ -24,6 +24,10 @@ struct Cli {
     #[arg(short, long)]
     config: Option<PathBuf>,
 
+    /// Run desktop shell without top status bar
+    #[arg(long)]
+    no_bar: bool,
+
     /// Toggle application launcher overlay
     #[arg(long)]
     launcher: bool,
@@ -227,7 +231,7 @@ fn ipc_screen_record_handler(_args: &[String]) -> String {
     "screen-recorder toggled".to_string()
 }
 
-fn run_shell(config_path: Option<PathBuf>) -> anyhow::Result<()> {
+fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
     let path = config_path.unwrap_or_else(config::ShellManifest::default_path);
     let manifest = config::ShellManifest::load_from_path(&path)?;
     ui::bar::set_config(manifest.clone());
@@ -239,7 +243,7 @@ fn run_shell(config_path: Option<PathBuf>) -> anyhow::Result<()> {
     ui::terminal_manager::set_config(manifest.clone());
     ui::powermenu::set_config(manifest.clone());
     ui::calendar::set_config(manifest.clone());
-    ui::screen_record::set_config(manifest);
+    ui::screen_record::set_config(manifest.clone());
 
     // Clean up stale IPC socket if no running daemon is actively listening
     let sock = amane::ipc_socket();
@@ -255,8 +259,10 @@ fn run_shell(config_path: Option<PathBuf>) -> anyhow::Result<()> {
     // Start notification auto-dismiss timer worker
     ui::notifications::start_expiry_worker();
 
-    // Run Amane application with bar, osd, notifications, launcher, control-center, display-config, terminal-manager, powermenu, calendar, and screen-recorder
-    amane::App::new()
+    let show_bar = !no_bar && manifest.bar.enabled;
+
+    // Run Amane application with bar (if enabled), osd, notifications, launcher, control-center, display-config, terminal-manager, powermenu, calendar, and screen-recorder
+    let mut app = amane::App::new()
         .ipc("osd", ipc_osd_handler)
         .ipc("reload", ipc_reload_handler)
         .ipc("launcher", ipc_launcher_handler)
@@ -269,9 +275,13 @@ fn run_shell(config_path: Option<PathBuf>) -> anyhow::Result<()> {
         .ipc("terminal-manager", ipc_terminal_manager_handler)
         .ipc("powermenu", ipc_powermenu_handler)
         .ipc("calendar", ipc_calendar_handler)
-        .ipc("screen-recorder", ipc_screen_record_handler)
-        .window(ui::bar::top_bar)
-        .window(ui::osd::osd_overlay)
+        .ipc("screen-recorder", ipc_screen_record_handler);
+
+    if show_bar {
+        app = app.window(ui::bar::top_bar);
+    }
+
+    app.window(ui::osd::osd_overlay)
         .window(ui::notifications::notification_popups)
         .window(ui::launcher::launcher_overlay)
         .window(ui::control_center::control_center_panel)
@@ -368,6 +378,9 @@ fn main() -> anyhow::Result<()> {
         let exe = std::env::current_exe()?;
         let mut cmd = std::process::Command::new(exe);
         cmd.arg("--foreground");
+        if cli.no_bar {
+            cmd.arg("--no-bar");
+        }
         if let Some(cfg) = &cli.config {
             cmd.arg("--config").arg(cfg);
         }
@@ -384,5 +397,5 @@ fn main() -> anyhow::Result<()> {
     }
 
     // Running directly in foreground (systemd, Niri spawn-at-startup, or explicit --foreground)
-    run_shell(cli.config)
+    run_shell(cli.config, cli.no_bar)
 }

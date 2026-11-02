@@ -138,11 +138,26 @@ impl WaylandState {
     }
 
     pub fn close(&mut self, surface: &WlSurface) {
+        let closed_window = self.windows
+            .iter()
+            .find(|w| w.role.wl_surface() == surface)
+            .map(|w| (w.view.clone(), w.output.clone()));
+
         self.windows
             .retain(|window| window.role.wl_surface() != surface);
 
-        // windows made per monitor come back when a monitor is plugged in again
-        if self.windows.is_empty() && self.per_monitor.is_empty() {
+        // If a plain layer window was closed by the compositor (e.g. output renegotiation/sleep),
+        // and an active output is still available, recreate the window so overlays are never lost
+        if let Some((View::Plain { id, view }, _)) = closed_window {
+            let active_output = self.output.outputs().next();
+            if let Some(output) = active_output {
+                self.open(View::Plain { id, view }, Some(output));
+            }
+        }
+
+        // windows made per monitor or plain views come back when a monitor is plugged in again.
+        // A shell daemon with IPC also keeps running.
+        if self.windows.is_empty() && self.per_monitor.is_empty() && self.plain_views.is_empty() && !self.has_ipc {
             self.running = false;
         }
     }

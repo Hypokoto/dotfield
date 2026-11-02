@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # installs the system libraries amane links, then the amane cli
-set -eu
+set -euo pipefail
 
 # checked first, so nothing is installed when the build can't run anyway
 if ! command -v cargo > /dev/null; then

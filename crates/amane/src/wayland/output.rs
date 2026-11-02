@@ -30,6 +30,21 @@ impl OutputHandler for WaylandState {
             self.open(view, Some(output.clone()));
         }
 
+        // Recreate any plain layer views that currently don't have an open window
+        let plain_views = self.plain_views.clone();
+        for (id, plain) in plain_views.into_iter().enumerate() {
+            let already_open = self.windows.iter().any(|w| {
+                if let View::Plain { id: existing_id, .. } = w.view {
+                    existing_id == id
+                } else {
+                    false
+                }
+            });
+            if !already_open {
+                self.open(View::Plain { id, view: plain }, Some(output.clone()));
+            }
+        }
+
         // a monitor plugged in while locked needs a lock screen too
         self.open_lock(output);
     }

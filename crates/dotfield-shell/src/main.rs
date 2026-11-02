@@ -93,7 +93,38 @@ fn send_amane_ipc(call: &amane::IpcCall) -> anyhow::Result<String> {
     use std::io::Read;
 
     let socket_path = amane::ipc_socket();
-    let mut stream = UnixStream::connect(socket_path)?;
+    let stream_res = UnixStream::connect(&socket_path);
+    let mut stream = match stream_res {
+        Ok(s) => s,
+        Err(_) => {
+            // Daemon is not running or socket is stale
+            if socket_path.exists() {
+                let _ = std::fs::remove_file(&socket_path);
+            }
+            // Auto-spawn the daemon in the background
+            if let Ok(exe) = std::env::current_exe() {
+                use std::os::unix::process::CommandExt;
+                let mut cmd = std::process::Command::new(exe);
+                cmd.arg("--foreground");
+                cmd.process_group(0)
+                    .stdin(std::process::Stdio::null())
+                    .stdout(std::process::Stdio::null())
+                    .stderr(std::process::Stdio::null());
+                let _ = cmd.spawn();
+            }
+            // Poll for socket readiness
+            let mut connected = None;
+            for _ in 0..20 {
+                std::thread::sleep(std::time::Duration::from_millis(50));
+                if let Ok(s) = UnixStream::connect(&socket_path) {
+                    connected = Some(s);
+                    break;
+                }
+            }
+            connected
+                .ok_or_else(|| anyhow::anyhow!("Failed to connect to dotfield-shell daemon"))?
+        }
+    };
     call.write(&mut stream)?;
     stream.shutdown(std::net::Shutdown::Write)?;
 
@@ -278,7 +309,7 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         .ipc("screen-recorder", ipc_screen_record_handler);
 
     if show_bar {
-        app = app.window(ui::bar::top_bar);
+        app = app.window_per_monitor(ui::bar::top_bar_monitor);
     }
 
     app.window(ui::osd::osd_overlay)
@@ -292,7 +323,8 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         .window(ui::screen_record::screen_record_overlay)
         .run();
 
-    Ok(())
+    // Clean exit without racing detached worker threads
+    std::process::exit(0);
 }
 
 fn main() -> anyhow::Result<()> {
@@ -366,15 +398,16 @@ fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
+    // Check if another daemon instance is already active and responding
+    if UnixStream::connect(amane::ipc_socket()).is_ok() {
+        println!("dotfield-shell is already running");
+        return Ok(());
+    }
+
     // No action requested: run the shell!
     // When invoked from an interactive terminal and --foreground is not set,
     // automatically fork/detach into the background.
     if (std::io::stdout().is_terminal() || cli.daemon) && !cli.foreground {
-        if UnixStream::connect(amane::ipc_socket()).is_ok() {
-            println!("dotfield-shell is already running in background");
-            return Ok(());
-        }
-
         let exe = std::env::current_exe()?;
         let mut cmd = std::process::Command::new(exe);
         cmd.arg("--foreground");

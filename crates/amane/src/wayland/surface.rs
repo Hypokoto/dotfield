@@ -85,14 +85,29 @@ pub enum Role {
 }
 
 // what a window runs on every redraw to find out what it shows
+#[derive(Clone)]
 pub enum View {
-    Plain(fn() -> LayerWindow),
+    Plain {
+        id: usize,
+        view: fn() -> LayerWindow,
+    },
 
     // the monitor is replaced when the compositor reports a change to it
     Monitor(fn(&Monitor) -> LayerWindow, Monitor),
 
     // the name tells it apart from other normal windows
     Normal(&'static str, fn() -> Window),
+}
+
+impl PartialEq for View {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (View::Plain { id: a, .. }, View::Plain { id: b, .. }) => a == b,
+            (View::Monitor(_, a), View::Monitor(_, b)) => a == b,
+            (View::Normal(a, _), View::Normal(b, _)) => a == b,
+            _ => false,
+        }
+    }
 }
 
 // what a view gave back
@@ -154,7 +169,7 @@ impl Role {
 impl View {
     pub fn run(&self) -> Content {
         match self {
-            View::Plain(view) => Content::Layer(view()),
+            View::Plain { view, .. } => Content::Layer(view()),
             View::Monitor(view, monitor) => Content::Layer(view(monitor)),
             View::Normal(_, view) => Content::Normal(view()),
         }

@@ -18,6 +18,10 @@ pub fn set_config(manifest: ShellManifest) {
     *CONFIG.write() = manifest;
 }
 
+pub fn top_bar_monitor(_monitor: &amane::Monitor) -> LayerWindow {
+    top_bar()
+}
+
 pub fn top_bar() -> LayerWindow {
     let manifest = CONFIG.read().clone();
     let bar_cfg = &manifest.bar;

@@ -52,8 +52,13 @@ struct WaylandState {
     // every window has its own layer surface and gpu, and is dropped before the connection
     windows: Vec<OpenWindow>,
 
+    // plain layer views registered with app.window(), kept so they can be recreated if outputs reset
+    plain_views: Vec<fn() -> LayerWindow>,
+
     // each of these gets a window on every monitor, including ones plugged in later
     per_monitor: Vec<fn(&Monitor) -> LayerWindow>,
+
+    has_ipc: bool,
 
     scale_factor: ScaleFactor,
 
@@ -140,11 +145,18 @@ impl WaylandApp {
         let event_loop = EventLoop::try_new().expect("failed to create event loop");
         let loop_handle = event_loop.handle();
 
+        let has_ipc = handlers.is_some();
+        let plain_views = views.clone();
+
         // windows per monitor are opened once the compositor describes each monitor
         let mut state = WaylandState {
             windows: Vec::new(),
 
+            plain_views,
+
             per_monitor,
+
+            has_ipc,
 
             scale_factor,
 
@@ -180,8 +192,8 @@ impl WaylandApp {
             running: true,
         };
 
-        for view in views {
-            state.open(View::Plain(view), None);
+        for (id, view) in views.into_iter().enumerate() {
+            state.open(View::Plain { id, view }, None);
         }
 
         for (name, view) in normal_views {

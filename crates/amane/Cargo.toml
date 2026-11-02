@@ -1,0 +1,38 @@
+[package]
+name = "amane"
+version = "0.1.2"
+edition = "2024"
+license = "MIT"
+
+[lib]
+name = "amane"
+path = "src/lib.rs"
+
+[dependencies]
+smithay-client-toolkit = { version = "0.21.1", default-features = false, features = ["calloop", "xkbcommon"] }
+vello = "0.11"
+# only for glsl shaders, vello already brings wgpu and this turns on its glsl reader
+wgpu = { version = "30.0", default-features = false, features = ["glsl"] }
+wayland-client = "0.31.15"
+# only for client_system, which hands the gpu libwayland's own display pointer
+wayland-backend = { version = "0.3.17", features = ["client_system"] }
+fontconfig = "0.11"
+swash = "0.2.10"
+zune-jpeg = "0.5.15"
+png = "0.18.1"
+inotify = { version = "0.11.5", default-features = false }
+serde_json = "1.0.151"
+zbus = "5.19.0"
+libpulse-binding = "2.30"
+# turns svg icons into pixels once, so they draw like any other image
+resvg = { version = "0.48.1", default-features = false }
+
+[dev-dependencies]
+chrono = "0.4"
+
+[lints.clippy]
+# keep the zero-denominator guard explicit
+manual_checked_ops = "allow"
+
+[workspace]
+members = ["cli", "cli/template/example"]

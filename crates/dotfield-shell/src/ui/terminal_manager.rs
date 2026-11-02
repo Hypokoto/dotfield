@@ -334,9 +334,9 @@ pub fn terminal_manager_overlay() -> LayerWindow {
 
     rows.push(Box::new(header_row));
 
-    // 2. Terminal Preset Cards
+    // 2. Terminal Preset Cards in a 2x2 Grid Box
     let total_presets = TERMINAL_PRESETS.len();
-    let mut preset_rows: Vec<Box<dyn Widget>> = Vec::new();
+    let mut cards: Vec<Box<dyn Widget>> = Vec::new();
 
     let hover_color = Color::from(manifest.palette.hover.as_str()); // Pale Amber #FFD166
     let steel_color = Color::from(manifest.palette.steel.as_str()); // Steel #8B949E
@@ -354,7 +354,7 @@ pub fn terminal_manager_overlay() -> LayerWindow {
         } else if is_hovered {
             Color::from("#202028") // Subtle hover surface
         } else {
-            bg_color // Obsidian #121216
+            Color::from("#17171E") // Structured Obsidian card surface
         };
 
         let border_color = if is_selected {
@@ -385,34 +385,57 @@ pub fn terminal_manager_overlay() -> LayerWindow {
             Color::from("#71717A")
         };
 
-        let icon = Text::new(preset.glyph)
-            .size(18.0)
-            .color(icon_color)
-            .font(&font);
-
-        let title_row = Row::new(vec![
+        // Top line: Glyph + Title on left, quick number badge on right
+        let title_left = Row::new(vec![
             Box::new(
-                Text::new(preset.name)
-                    .size(12.0)
-                    .color(title_color)
+                Text::new(preset.glyph)
+                    .size(16.0)
+                    .color(icon_color)
                     .font(&font),
             ),
             Box::new(
-                Text::new(preset.tag)
-                    .size(9.0)
-                    .color(if is_selected {
-                        hover_color
-                    } else {
-                        steel_color
-                    })
+                Text::new(preset.name)
+                    .size(12.5)
+                    .color(title_color)
                     .font(&font),
             ),
         ])
         .gap(6.0)
         .align(Align::Center);
 
-        let desc = Text::new(preset.description)
-            .size(9.0)
+        let num_badge = Rectangle::new()
+            .width(20.0)
+            .height(16.0)
+            .radius(3.0)
+            .fill(overlay_color)
+            .border(
+                1.0,
+                if is_selected {
+                    amber_color
+                } else {
+                    border_color_token
+                },
+            )
+            .align_child(Align::Center, Align::Center)
+            .child(
+                Text::new(format!("[{}]", idx + 1))
+                    .size(8.5)
+                    .color(if is_selected {
+                        amber_color
+                    } else {
+                        steel_color
+                    })
+                    .font(&font),
+            );
+
+        let top_row = Row::new(vec![Box::new(title_left), Box::new(num_badge)])
+            .width(Parent)
+            .justify(Justify::SpaceBetween)
+            .align(Align::Center);
+
+        // Middle line: Description
+        let desc_text = Text::new(preset.description)
+            .size(8.5)
             .color(if installed {
                 muted_color
             } else {
@@ -420,79 +443,84 @@ pub fn terminal_manager_overlay() -> LayerWindow {
             })
             .font(&font);
 
-        let text_col = Column::new(vec![Box::new(title_row), Box::new(desc)])
-            .gap(2.0)
-            .align(Align::Start);
-
-        let left_content = Row::new(vec![Box::new(icon), Box::new(text_col)])
-            .gap(10.0)
-            .align(Align::Center);
-
-        let mut right_badges: Vec<Box<dyn Widget>> = Vec::new();
-
+        // Bottom line: Badges (Default / Not Found / Tag) on left, Launch on right
+        let mut left_badges: Vec<Box<dyn Widget>> = Vec::new();
         if is_default {
-            right_badges.push(Box::new(
+            left_badges.push(Box::new(
                 Rectangle::new()
-                    .width(62.0)
-                    .height(18.0)
+                    .width(58.0)
+                    .height(16.0)
                     .radius(3.0)
                     .fill(Color::from("#152818"))
                     .border(1.0, green_color)
                     .align_child(Align::Center, Align::Center)
                     .child(
                         Text::new("★ Default")
-                            .size(9.0)
+                            .size(8.5)
                             .color(green_color)
                             .font(&font),
                     ),
             ));
         } else if !installed {
-            right_badges.push(Box::new(
+            left_badges.push(Box::new(
                 Rectangle::new()
-                    .width(66.0)
-                    .height(18.0)
+                    .width(62.0)
+                    .height(16.0)
                     .radius(3.0)
                     .fill(overlay_color)
                     .border(1.0, Color::from("#452A2D"))
                     .align_child(Align::Center, Align::Center)
                     .child(
                         Text::new("Not Found")
-                            .size(9.0)
+                            .size(8.5)
                             .color(Color::from("#E63946"))
                             .font(&font),
                     ),
             ));
+        } else {
+            left_badges.push(Box::new(
+                Text::new(preset.tag)
+                    .size(8.5)
+                    .color(if is_selected {
+                        hover_color
+                    } else {
+                        steel_color
+                    })
+                    .font(&font),
+            ));
         }
 
+        let mut right_badges: Vec<Box<dyn Widget>> = Vec::new();
         if is_selected {
             right_badges.push(Box::new(
                 Rectangle::new()
                     .width(52.0)
-                    .height(18.0)
+                    .height(16.0)
                     .radius(3.0)
                     .fill(Color::BLACK)
                     .border(1.0, amber_color)
                     .align_child(Align::Center, Align::Center)
                     .child(
                         Text::new("↵ Launch")
-                            .size(9.0)
+                            .size(8.5)
                             .color(amber_color)
                             .font(&font),
                     ),
             ));
         }
 
-        let right_row = Row::new(right_badges).gap(4.0).align(Align::Center);
-
-        let main_card_row = Row::new(vec![Box::new(left_content), Box::new(right_row)])
-            .width(Parent)
-            .justify(Justify::SpaceBetween)
-            .align(Align::Center);
+        let bottom_row = Row::new(vec![
+            Box::new(Row::new(left_badges).gap(4.0).align(Align::Center)),
+            Box::new(Row::new(right_badges).gap(4.0).align(Align::Center)),
+        ])
+        .width(Parent)
+        .justify(Justify::SpaceBetween)
+        .align(Align::Center);
 
         let indicator_pill =
             Rectangle::new()
                 .width(3.0)
-                .height(34.0)
+                .height(50.0)
                 .radius(1.5)
                 .fill(if is_selected {
                     amber_color
@@ -502,21 +530,30 @@ pub fn terminal_manager_overlay() -> LayerWindow {
                     Color::TRANSPARENT
                 });
 
-        let card_content = Row::new(vec![Box::new(indicator_pill), Box::new(main_card_row)])
+        let card_body = Column::new(vec![
+            Box::new(top_row),
+            Box::new(desc_text),
+            Box::new(bottom_row),
+        ])
+        .gap(3.0)
+        .width(Parent)
+        .align(Align::Start);
+
+        let card_content = Row::new(vec![Box::new(indicator_pill), Box::new(card_body)])
             .width(Parent)
-            .gap(6.0)
+            .gap(8.0)
             .align(Align::Center);
 
         let card = Rectangle::new()
-            .width(Parent)
-            .height(48.0)
-            .radius(6.0)
+            .width(240.0)
+            .height(78.0)
+            .radius(8.0)
             .fill(card_bg)
-            .border(1.0, border_color)
+            .border(if is_selected { 1.5 } else { 1.0 }, border_color)
             .padding(Padding {
-                top: 5.0,
-                bottom: 5.0,
-                left: 6.0,
+                top: 7.0,
+                bottom: 7.0,
+                left: 8.0,
                 right: 8.0,
             })
             .cursor(Pointer)
@@ -533,11 +570,35 @@ pub fn terminal_manager_overlay() -> LayerWindow {
             })
             .child(card_content);
 
-        preset_rows.push(Box::new(card));
+        cards.push(Box::new(card));
     }
 
-    let preset_container = Column::new(preset_rows).width(Parent).gap(6.0);
-    rows.push(Box::new(preset_container));
+    // Assemble 2x2 Grid Box
+    if cards.len() >= 4 {
+        let card3 = cards.pop().unwrap();
+        let card2 = cards.pop().unwrap();
+        let card1 = cards.pop().unwrap();
+        let card0 = cards.pop().unwrap();
+
+        let grid_row_0 = Row::new(vec![card0, card1])
+            .width(Parent)
+            .justify(Justify::SpaceBetween)
+            .align(Align::Center);
+
+        let grid_row_1 = Row::new(vec![card2, card3])
+            .width(Parent)
+            .justify(Justify::SpaceBetween)
+            .align(Align::Center);
+
+        let grid_container = Column::new(vec![Box::new(grid_row_0), Box::new(grid_row_1)])
+            .width(Parent)
+            .gap(10.0);
+
+        rows.push(Box::new(grid_container));
+    } else {
+        let grid_container = Column::new(cards).width(Parent).gap(8.0);
+        rows.push(Box::new(grid_container));
+    }
 
     // 3. Status Message Banner
     if let Some(ref msg) = svc.status_message {
@@ -557,8 +618,8 @@ pub fn terminal_manager_overlay() -> LayerWindow {
     let sel_name = sel_preset.map(|p| p.name).unwrap_or("Terminal");
 
     let mux_btn = Rectangle::new()
-        .width(144.0)
-        .height(24.0)
+        .width(156.0)
+        .height(26.0)
         .radius(4.0)
         .fill(overlay_color)
         .border(1.0, border_color_token)
@@ -575,8 +636,8 @@ pub fn terminal_manager_overlay() -> LayerWindow {
         );
 
     let scratch_btn = Rectangle::new()
-        .width(144.0)
-        .height(24.0)
+        .width(156.0)
+        .height(26.0)
         .radius(4.0)
         .fill(overlay_color)
         .border(1.0, border_color_token)
@@ -593,8 +654,8 @@ pub fn terminal_manager_overlay() -> LayerWindow {
         );
 
     let default_btn = Rectangle::new()
-        .width(144.0)
-        .height(24.0)
+        .width(156.0)
+        .height(26.0)
         .radius(4.0)
         .fill(overlay_color)
         .border(1.0, border_color_token)
@@ -610,7 +671,7 @@ pub fn terminal_manager_overlay() -> LayerWindow {
                 .font(&font),
         );
 
-    let actions_row = Rectangle::new().width(Parent).height(24.0).child(
+    let actions_row = Rectangle::new().width(Parent).height(26.0).child(
         Row::new(vec![
             Box::new(mux_btn),
             Box::new(scratch_btn),
@@ -625,9 +686,21 @@ pub fn terminal_manager_overlay() -> LayerWindow {
 
     // 5. Footer Navigation Key Hints
     let footer_hints = Row::new(vec![
-        Box::new(Text::new("[↑/↓]").size(9.0).color(hover_color).font(&font)),
+        Box::new(
+            Text::new("[Arrows]")
+                .size(9.0)
+                .color(hover_color)
+                .font(&font),
+        ),
         Box::new(
             Text::new("Navigate")
+                .size(9.0)
+                .color(steel_color)
+                .font(&font),
+        ),
+        Box::new(Text::new("[1-4]").size(9.0).color(hover_color).font(&font)),
+        Box::new(
+            Text::new("Quick Pick")
                 .size(9.0)
                 .color(steel_color)
                 .font(&font),
@@ -638,14 +711,14 @@ pub fn terminal_manager_overlay() -> LayerWindow {
         Box::new(Text::new("Tmux").size(9.0).color(steel_color).font(&font)),
         Box::new(Text::new("[s]").size(9.0).color(hover_color).font(&font)),
         Box::new(
-            Text::new("Scratchpad")
+            Text::new("Floating")
                 .size(9.0)
                 .color(steel_color)
                 .font(&font),
         ),
         Box::new(Text::new("[d]").size(9.0).color(hover_color).font(&font)),
         Box::new(
-            Text::new("Set Default")
+            Text::new("Default")
                 .size(9.0)
                 .color(steel_color)
                 .font(&font),
@@ -669,10 +742,10 @@ pub fn terminal_manager_overlay() -> LayerWindow {
 
     rows.push(Box::new(footer_row));
 
-    // Main Modal Dialog Container
+    // Main Modal Dialog Container (520x340)
     let dialog = Rectangle::new()
-        .width(480.0)
-        .height(380.0)
+        .width(520.0)
+        .height(340.0)
         .radius(10.0)
         .fill(bg_color)
         .border(1.0, border_color_token)
@@ -685,8 +758,8 @@ pub fn terminal_manager_overlay() -> LayerWindow {
         .child(Column::new(rows).width(Parent).gap(8.0));
 
     LayerWindow::new()
-        .width(480.0)
-        .height(380.0)
+        .width(520.0)
+        .height(340.0)
         .anchor_vertical(Vertical::Middle)
         .anchor_horizontal(Horizontal::Middle)
         .margin(Margin {
@@ -710,13 +783,39 @@ fn handle_key(key: Key, count: usize) {
     match key {
         Key::Down => {
             let mut svc = TerminalManagerService::write();
-            if count > 0 && svc.selected + 1 < count {
-                svc.selected += 1;
+            if svc.selected + 2 < count {
+                svc.selected += 2;
             }
         }
         Key::Up => {
             let mut svc = TerminalManagerService::write();
-            svc.selected = svc.selected.saturating_sub(1);
+            if svc.selected >= 2 {
+                svc.selected -= 2;
+            }
+        }
+        Key::Right => {
+            let mut svc = TerminalManagerService::write();
+            if svc.selected % 2 == 0 && svc.selected + 1 < count {
+                svc.selected += 1;
+            }
+        }
+        Key::Left => {
+            let mut svc = TerminalManagerService::write();
+            if svc.selected % 2 == 1 {
+                svc.selected -= 1;
+            }
+        }
+        Key::Character('1') => {
+            launch_preset(0, LaunchMode::Standard);
+        }
+        Key::Character('2') => {
+            launch_preset(1, LaunchMode::Standard);
+        }
+        Key::Character('3') => {
+            launch_preset(2, LaunchMode::Standard);
+        }
+        Key::Character('4') => {
+            launch_preset(3, LaunchMode::Standard);
         }
         Key::Home => {
             let mut svc = TerminalManagerService::write();

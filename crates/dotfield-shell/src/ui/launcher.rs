@@ -9,11 +9,15 @@ use parking_lot::RwLock;
 
 use crate::config::ShellManifest;
 
+pub const GRID_COLS: usize = 3;
+pub const GRID_VISIBLE_ROWS: usize = 4;
+
 pub struct LauncherService {
     pub open: bool,
     pub query: String,
     pub selected: usize,
     pub hover_index: Option<usize>,
+    pub scroll_row: usize,
 }
 
 impl Service for LauncherService {
@@ -23,6 +27,7 @@ impl Service for LauncherService {
             query: String::new(),
             selected: 0,
             hover_index: None,
+            scroll_row: 0,
         }
     }
 
@@ -43,6 +48,7 @@ pub fn toggle() {
     launcher.open = !launcher.open;
     launcher.query.clear();
     launcher.selected = 0;
+    launcher.scroll_row = 0;
     launcher.hover_index = None;
     TextInput::set_text("launcher-search", "");
 }
@@ -52,6 +58,7 @@ pub fn close() {
     launcher.open = false;
     launcher.query.clear();
     launcher.selected = 0;
+    launcher.scroll_row = 0;
     launcher.hover_index = None;
 }
 
@@ -82,8 +89,8 @@ pub fn launcher_overlay() -> LayerWindow {
         }
     }
 
-    let visible_count = manifest.launcher.max_results;
     let total_results = matched_apps.len();
+    let total_rows = total_results.div_ceil(GRID_COLS);
 
     // Adjust sliding window offset to keep selected item inside visible window
     let selected = if total_results == 0 {
@@ -92,13 +99,13 @@ pub fn launcher_overlay() -> LayerWindow {
         launcher.selected.min(total_results - 1)
     };
 
-    let scroll_offset = if total_results <= visible_count {
-        0
-    } else if selected >= visible_count {
-        (selected + 1).saturating_sub(visible_count)
-    } else {
-        0
-    };
+    let cur_row = selected / GRID_COLS;
+    let mut scroll_row = launcher.scroll_row;
+    if cur_row < scroll_row {
+        scroll_row = cur_row;
+    } else if cur_row >= scroll_row + GRID_VISIBLE_ROWS {
+        scroll_row = cur_row + 1 - GRID_VISIBLE_ROWS;
+    }
 
     let mut rows: Vec<Box<dyn Widget>> = Vec::new();
 
@@ -113,15 +120,16 @@ pub fn launcher_overlay() -> LayerWindow {
             let mut launcher = LauncherService::write();
             launcher.query = text;
             launcher.selected = 0;
+            launcher.scroll_row = 0;
         })
         .on_submit(|_| {
             submit_selection();
         });
 
     let count_text = if total_results > 0 {
-        format!("{}/{}", selected + 1, total_results)
+        format!("{}/{} apps", selected + 1, total_results)
     } else {
-        "0".to_string()
+        "0 apps".to_string()
     };
     let count_badge = Text::new(count_text)
         .size(10.0)
@@ -153,183 +161,192 @@ pub fn launcher_overlay() -> LayerWindow {
 
     rows.push(Box::new(search_box));
 
-    // 2. Results list with sliding viewport window
-    let mut app_rows: Vec<Box<dyn Widget>> = Vec::new();
-    let visible_slice = matched_apps
-        .iter()
-        .skip(scroll_offset)
-        .take(visible_count)
-        .enumerate();
-
+    // 2. Results Grid with 3 Columns x 4 Rows
     let hover_color = Color::from(manifest.palette.hover.as_str()); // Pale Amber #FFD166
     let steel_color = Color::from(manifest.palette.steel.as_str()); // Steel #8B949E
-    let border_color_token = Color::from(manifest.palette.border.as_str()); // Iron #34343D
 
-    for (rel_idx, app) in visible_slice {
-        let abs_idx = scroll_offset + rel_idx;
-        let is_selected = abs_idx == selected;
-        let is_hovered = launcher.hover_index == Some(abs_idx);
-        let launched = app.clone();
+    let mut grid_rows: Vec<Box<dyn Widget>> = Vec::new();
+    let start_idx = scroll_row * GRID_COLS;
 
-        let row_bg = if is_selected {
-            Color::from("#262632") // Elevated Graphite
-        } else if is_hovered {
-            Color::from("#202028") // Subtle hover surface
-        } else {
-            overlay_color // Graphite #1C1C23
-        };
+    for row_idx in 0..GRID_VISIBLE_ROWS {
+        let mut row_cards: Vec<Box<dyn Widget>> = Vec::new();
+        for col_idx in 0..GRID_COLS {
+            let abs_idx = start_idx + (row_idx * GRID_COLS) + col_idx;
+            if abs_idx < total_results {
+                let app = &matched_apps[abs_idx];
+                let is_selected = abs_idx == selected;
+                let is_hovered = launcher.hover_index == Some(abs_idx);
+                let launched = app.clone();
 
-        let card_border = if is_selected {
-            amber_color // Industrial Amber #FFB000
-        } else if is_hovered {
-            Color::from("#4E4E5C") // Focused steel-iron border
-        } else {
-            Color::from("#2A2A34") // Restrained separator
-        };
+                let card_bg = if is_selected {
+                    Color::from("#262632") // Elevated Graphite
+                } else if is_hovered {
+                    Color::from("#202028") // Subtle hover surface
+                } else {
+                    overlay_color // Graphite #1C1C23
+                };
 
-        let mut row_children: Vec<Box<dyn Widget>> = Vec::new();
+                let card_border = if is_selected {
+                    amber_color // Industrial Amber #FFB000
+                } else if is_hovered {
+                    Color::from("#4E4E5C") // Focused steel-iron border
+                } else {
+                    Color::from("#2A2A34") // Restrained separator
+                };
 
-        // Indicator pill for selected / hovered item
-        let indicator = Rectangle::new()
-            .width(3.0)
-            .height(20.0)
-            .radius(2.0)
-            .fill(if is_selected {
-                amber_color
-            } else if is_hovered {
-                hover_color
-            } else {
-                Color::TRANSPARENT
-            });
-        row_children.push(Box::new(indicator));
+                let title_color = if is_selected {
+                    amber_color
+                } else if is_hovered {
+                    hover_color
+                } else {
+                    fg_color
+                };
 
-        // Icon with fallback glyph if missing
-        let icon_widget: Box<dyn Widget> = match app.icon_path() {
-            Some(path) => Box::new(
-                Rectangle::new()
-                    .width(24.0)
-                    .height(24.0)
-                    .fill(Image::contain(path)),
-            ),
-            None => Box::new(
-                Rectangle::new()
-                    .width(24.0)
-                    .height(24.0)
-                    .radius(4.0)
-                    .fill(Color::from("#16161D"))
-                    .border(1.0, Color::from("#2A2A34"))
-                    .align_child(Align::Center, Align::Center)
-                    .child(
-                        Text::new("󰵆")
-                            .size(13.0)
-                            .color(if is_selected {
-                                amber_color
-                            } else if is_hovered {
-                                hover_color
-                            } else {
-                                steel_color
-                            })
+                // Indicator pill for selected / hovered item
+                let indicator =
+                    Rectangle::new()
+                        .width(3.0)
+                        .height(40.0)
+                        .radius(1.5)
+                        .fill(if is_selected {
+                            amber_color
+                        } else if is_hovered {
+                            hover_color
+                        } else {
+                            Color::TRANSPARENT
+                        });
+
+                // Icon with fallback glyph if missing
+                let icon_widget: Box<dyn Widget> = match app.icon_path() {
+                    Some(path) => Box::new(
+                        Rectangle::new()
+                            .width(28.0)
+                            .height(28.0)
+                            .fill(Image::contain(path)),
+                    ),
+                    None => Box::new(
+                        Rectangle::new()
+                            .width(28.0)
+                            .height(28.0)
+                            .radius(4.0)
+                            .fill(Color::from("#16161D"))
+                            .border(1.0, Color::from("#2A2A34"))
+                            .align_child(Align::Center, Align::Center)
+                            .child(
+                                Text::new("󰵆")
+                                    .size(14.0)
+                                    .color(if is_selected {
+                                        amber_color
+                                    } else if is_hovered {
+                                        hover_color
+                                    } else {
+                                        steel_color
+                                    })
+                                    .font(&font),
+                            ),
+                    ),
+                };
+
+                // Truncate name and description cleanly
+                let app_name: String = app.name().chars().take(18).collect();
+                let app_desc: String = app
+                    .description()
+                    .map(|d| d.chars().take(22).collect())
+                    .unwrap_or_else(|| "Application".to_string());
+
+                let text_col = Column::new(vec![
+                    Box::new(
+                        Text::new(app_name)
+                            .size(11.5)
+                            .color(title_color)
                             .font(&font),
                     ),
-            ),
-        };
-        row_children.push(icon_widget);
+                    Box::new(Text::new(app_desc).size(8.5).color(steel_color).font(&font)),
+                ])
+                .gap(2.0)
+                .width(140.0)
+                .align(Align::Start);
 
-        // App Name with dynamic hover / selection contrast
-        let title_color = if is_selected {
-            amber_color
-        } else if is_hovered {
-            hover_color
-        } else {
-            fg_color
-        };
-        row_children.push(Box::new(
-            Text::new(app.name())
-                .size(12.0)
-                .color(title_color)
-                .font(&font),
-        ));
+                let card_content =
+                    Row::new(vec![Box::new(indicator), icon_widget, Box::new(text_col)])
+                        .gap(7.0)
+                        .align(Align::Center);
 
-        let left_group = Row::new(row_children).gap(8.0).align(Align::Center);
-        let mut card_content: Vec<Box<dyn Widget>> = vec![Box::new(left_group)];
+                let app_card = Rectangle::new()
+                    .width(204.0)
+                    .height(64.0)
+                    .radius(8.0)
+                    .fill(card_bg)
+                    .border(if is_selected { 1.5 } else { 1.0 }, card_border)
+                    .cursor(Pointer)
+                    .padding(Padding {
+                        top: 6.0,
+                        bottom: 6.0,
+                        left: 6.0,
+                        right: 8.0,
+                    })
+                    .align_child(Align::Start, Align::Center)
+                    .on_hover(move |inside| {
+                        let mut launcher = LauncherService::write();
+                        if inside {
+                            launcher.hover_index = Some(abs_idx);
+                        } else if launcher.hover_index == Some(abs_idx) {
+                            launcher.hover_index = None;
+                        }
+                    })
+                    .on_click(move |_| {
+                        launched.launch();
+                        close();
+                    })
+                    .child(card_content);
 
-        // Badge on right for selected item
-        if is_selected {
-            let enter_badge = Rectangle::new()
-                .width(62.0)
-                .height(20.0)
-                .radius(4.0)
-                .fill(Color::from("#0A0A0C"))
-                .border(1.0, border_color_token)
-                .padding(Padding {
-                    top: 1.0,
-                    bottom: 1.0,
-                    left: 6.0,
-                    right: 6.0,
-                })
-                .align_child(Align::Center, Align::Center)
-                .child(
-                    Text::new("↵ Launch")
-                        .size(9.0)
-                        .color(amber_color)
-                        .font(&font),
-                );
-            card_content.push(Box::new(enter_badge));
+                row_cards.push(Box::new(app_card));
+            } else {
+                let placeholder = Rectangle::new()
+                    .width(204.0)
+                    .height(64.0)
+                    .fill(Color::TRANSPARENT);
+                row_cards.push(Box::new(placeholder));
+            }
         }
-
-        let app_card = Rectangle::new()
-            .width(Parent)
-            .height(38.0)
-            .radius(8.0)
-            .fill(row_bg)
-            .border(1.0, card_border)
-            .cursor(Pointer)
-            .padding(Padding {
-                top: 4.0,
-                bottom: 4.0,
-                left: 6.0,
-                right: 10.0,
-            })
-            .align_child(Align::Start, Align::Center)
-            .on_hover(move |inside| {
-                let mut launcher = LauncherService::write();
-                if inside {
-                    launcher.hover_index = Some(abs_idx);
-                } else if launcher.hover_index == Some(abs_idx) {
-                    launcher.hover_index = None;
-                }
-            })
-            .on_click(move |_| {
-                launched.launch();
-                close();
-            })
-            .child(
-                Row::new(card_content)
-                    .width(Parent)
-                    .justify(amane::Justify::SpaceBetween)
-                    .align(Align::Center),
-            );
-
-        app_rows.push(Box::new(app_card));
+        grid_rows.push(Box::new(
+            Row::new(row_cards)
+                .width(Parent)
+                .gap(10.0)
+                .align(Align::Center),
+        ));
     }
 
-    if !app_rows.is_empty() {
-        let app_list_column = Column::new(app_rows).width(Parent).gap(5.0);
+    if total_results > 0 {
+        let app_grid_column = Column::new(grid_rows).width(Parent).gap(8.0);
         let scrollable_container = Rectangle::new()
             .width(Parent)
-            .height(340.0)
+            .height(280.0)
             .cursor(Pointer)
             .on_scroll(move |scroll: amane::Scroll| {
                 let mut launcher = LauncherService::write();
                 if scroll.y < 0.0 {
-                    if total_results > 0 && launcher.selected + 1 < total_results {
-                        launcher.selected += 1;
+                    if launcher.scroll_row + 1 < total_rows {
+                        launcher.scroll_row += 1;
+                        let cur_row = launcher.selected / GRID_COLS;
+                        if cur_row < launcher.scroll_row {
+                            launcher.selected = (launcher.scroll_row * GRID_COLS
+                                + (launcher.selected % GRID_COLS))
+                                .min(total_results - 1);
+                        }
                     }
-                } else {
-                    launcher.selected = launcher.selected.saturating_sub(1);
+                } else if launcher.scroll_row > 0 {
+                    launcher.scroll_row = launcher.scroll_row.saturating_sub(1);
+                    let cur_row = launcher.selected / GRID_COLS;
+                    if cur_row >= launcher.scroll_row + GRID_VISIBLE_ROWS {
+                        launcher.selected = ((launcher.scroll_row + GRID_VISIBLE_ROWS - 1)
+                            * GRID_COLS
+                            + (launcher.selected % GRID_COLS))
+                            .min(total_results - 1);
+                    }
                 }
             })
-            .child(app_list_column);
+            .child(app_grid_column);
 
         rows.push(Box::new(scrollable_container));
     } else if !launcher.query.trim().is_empty() {
@@ -363,8 +380,8 @@ pub fn launcher_overlay() -> LayerWindow {
 
     // 3. Footer Bar with Navigation Hints
     let footer_text =
-        Text::new("[↑/↓] Navigate   [Home/End] First/Last   [↵] Launch   [Esc] Dismiss")
-            .size(10.0)
+        Text::new("[Arrows] Navigate Grid   [PgUp/PgDn] Page   [↵] Launch   [Esc] Dismiss")
+            .size(9.5)
             .color(Color::from(manifest.palette.muted.as_str()))
             .font(&font);
 
@@ -377,8 +394,8 @@ pub fn launcher_overlay() -> LayerWindow {
     rows.push(Box::new(footer_row));
 
     let dialog = Rectangle::new()
-        .width(440.0)
-        .height(470.0)
+        .width(660.0)
+        .height(460.0)
         .radius(12.0)
         .fill(bg_color)
         .border(1.0, Color::from("#34343D"))
@@ -391,8 +408,8 @@ pub fn launcher_overlay() -> LayerWindow {
         .child(Column::new(rows).width(Parent).gap(10.0));
 
     LayerWindow::new()
-        .width(440.0)
-        .height(470.0)
+        .width(660.0)
+        .height(460.0)
         .anchor_vertical(Vertical::Middle)
         .anchor_horizontal(Horizontal::Middle)
         .layer(Layer::Overlay)
@@ -410,22 +427,81 @@ fn handle_key(key: Key, count: usize) {
     match key {
         Key::Down => {
             let mut launcher = LauncherService::write();
-            if count > 0 && launcher.selected + 1 < count {
-                launcher.selected += 1;
+            if count > 0 {
+                if launcher.selected + GRID_COLS < count {
+                    launcher.selected += GRID_COLS;
+                } else if launcher.selected < count - 1 {
+                    launcher.selected = count - 1;
+                }
+                let cur_row = launcher.selected / GRID_COLS;
+                if cur_row >= launcher.scroll_row + GRID_VISIBLE_ROWS {
+                    launcher.scroll_row = cur_row + 1 - GRID_VISIBLE_ROWS;
+                }
             }
         }
         Key::Up => {
             let mut launcher = LauncherService::write();
+            if launcher.selected >= GRID_COLS {
+                launcher.selected -= GRID_COLS;
+            } else {
+                launcher.selected = 0;
+            }
+            let cur_row = launcher.selected / GRID_COLS;
+            if cur_row < launcher.scroll_row {
+                launcher.scroll_row = cur_row;
+            }
+        }
+        Key::Right => {
+            let mut launcher = LauncherService::write();
+            if count > 0 && launcher.selected + 1 < count {
+                launcher.selected += 1;
+                let cur_row = launcher.selected / GRID_COLS;
+                if cur_row >= launcher.scroll_row + GRID_VISIBLE_ROWS {
+                    launcher.scroll_row = cur_row + 1 - GRID_VISIBLE_ROWS;
+                }
+            }
+        }
+        Key::Left => {
+            let mut launcher = LauncherService::write();
             launcher.selected = launcher.selected.saturating_sub(1);
+            let cur_row = launcher.selected / GRID_COLS;
+            if cur_row < launcher.scroll_row {
+                launcher.scroll_row = cur_row;
+            }
+        }
+        Key::PageDown => {
+            let mut launcher = LauncherService::write();
+            if count > 0 {
+                let step = GRID_COLS * GRID_VISIBLE_ROWS;
+                launcher.selected = (launcher.selected + step).min(count - 1);
+                let cur_row = launcher.selected / GRID_COLS;
+                if cur_row >= launcher.scroll_row + GRID_VISIBLE_ROWS {
+                    launcher.scroll_row = cur_row + 1 - GRID_VISIBLE_ROWS;
+                }
+            }
+        }
+        Key::PageUp => {
+            let mut launcher = LauncherService::write();
+            let step = GRID_COLS * GRID_VISIBLE_ROWS;
+            launcher.selected = launcher.selected.saturating_sub(step);
+            let cur_row = launcher.selected / GRID_COLS;
+            if cur_row < launcher.scroll_row {
+                launcher.scroll_row = cur_row;
+            }
         }
         Key::Home => {
             let mut launcher = LauncherService::write();
             launcher.selected = 0;
+            launcher.scroll_row = 0;
         }
         Key::End => {
             let mut launcher = LauncherService::write();
             if count > 0 {
                 launcher.selected = count - 1;
+                let cur_row = launcher.selected / GRID_COLS;
+                if cur_row >= launcher.scroll_row + GRID_VISIBLE_ROWS {
+                    launcher.scroll_row = cur_row + 1 - GRID_VISIBLE_ROWS;
+                }
             }
         }
         Key::Escape => {
@@ -474,6 +550,7 @@ mod tests {
         assert!(!svc.open);
         assert!(svc.query.is_empty());
         assert_eq!(svc.selected, 0);
+        assert_eq!(svc.scroll_row, 0);
     }
 
     #[test]

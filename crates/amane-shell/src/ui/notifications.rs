@@ -28,17 +28,25 @@ pub fn notification_popups() -> LayerWindow {
     }
 
     let notifications = Notifications::read();
-    let max_visible = notifs_cfg.max_visible;
+    let notifs_list = notifications.list();
+    let cc_open = crate::ui::control_center::ControlCenterService::read().open;
 
+    if notifs_list.is_empty() || cc_open {
+        return LayerWindow::new()
+            .width(1.0)
+            .height(1.0)
+            .visible(false)
+            .namespace("dotfield-shell-notifications");
+    }
+
+    let max_visible = notifs_cfg.max_visible;
     let mut cards: Vec<Box<dyn Widget>> = Vec::new();
     let font = manifest.theme.font_family.clone();
 
-    for notif in notifications.list().iter().take(max_visible) {
+    for notif in notifs_list.iter().take(max_visible) {
         cards.push(render_notification_card(notif, &manifest, &font));
     }
 
-    let cc_open = crate::ui::control_center::ControlCenterService::read().open;
-    let is_visible = !cards.is_empty() && !cc_open;
     let window_h = (cards.len() as f32 * 96.0).clamp(96.0, 520.0);
 
     LayerWindow::new()
@@ -54,7 +62,7 @@ pub fn notification_popups() -> LayerWindow {
         })
         .layer(Layer::Overlay)
         .space(Zone::Respect)
-        .visible(is_visible)
+        .visible(true)
         .namespace("dotfield-shell-notifications")
         .child(Column::new(cards).width(Parent).gap(10.0))
 }

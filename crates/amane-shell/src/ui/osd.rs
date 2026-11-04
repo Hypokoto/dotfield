@@ -72,6 +72,13 @@ pub fn osd_overlay() -> LayerWindow {
     let osd = OsdService::read();
 
     let is_visible = osd.visible && manifest.osd.enabled;
+    if !is_visible {
+        return LayerWindow::new()
+            .width(1.0)
+            .height(1.0)
+            .visible(false)
+            .namespace("dotfield-shell-osd");
+    }
 
     let bg_color = Color::from(manifest.palette.overlay.as_str()); // Graphite #1C1C23
     let fg_color = Color::from(manifest.palette.foreground.as_str());

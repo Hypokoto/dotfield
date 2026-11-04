@@ -224,6 +224,13 @@ pub fn display_config_overlay() -> LayerWindow {
     let svc = DisplayConfigService::read();
 
     let is_visible = svc.open;
+    if !is_visible {
+        return LayerWindow::new()
+            .width(1.0)
+            .height(1.0)
+            .visible(false)
+            .namespace("dotfield-shell-display-config");
+    }
     let selected_idx = svc.selected;
 
     let bg_color = Color::from(manifest.palette.surface.as_str()); // Obsidian #121216

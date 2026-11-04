@@ -257,6 +257,13 @@ pub fn terminal_manager_overlay() -> LayerWindow {
     let svc = TerminalManagerService::read();
 
     let is_visible = svc.open;
+    if !is_visible {
+        return LayerWindow::new()
+            .width(1.0)
+            .height(1.0)
+            .visible(false)
+            .namespace("dotfield-shell-terminal-manager");
+    }
     let selected_idx = svc.selected;
     let default_id = svc.default_terminal.clone();
 

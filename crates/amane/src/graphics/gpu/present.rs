@@ -55,6 +55,9 @@ impl Gpu {
         // presenting attaches the frame to the wayland surface and commits it
         self.queue.present(frame);
 
+        // Process completed GPU tasks and release host-visible staging memory immediately
+        let _ = self.device.poll(vello::wgpu::PollType::Poll);
+
         true
     }
 

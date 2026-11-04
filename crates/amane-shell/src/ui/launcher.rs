@@ -67,6 +67,13 @@ pub fn launcher_overlay() -> LayerWindow {
     let launcher = LauncherService::read();
 
     let is_visible = launcher.open && manifest.launcher.enabled;
+    if !is_visible {
+        return LayerWindow::new()
+            .width(1.0)
+            .height(1.0)
+            .visible(false)
+            .namespace("dotfield-shell-launcher");
+    }
 
     let bg_color = Color::from(manifest.palette.surface.as_str()); // Obsidian #121216
     let fg_color = Color::from(manifest.palette.foreground.as_str());

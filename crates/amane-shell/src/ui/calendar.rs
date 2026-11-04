@@ -101,6 +101,13 @@ pub fn calendar_overlay() -> LayerWindow {
     let cal = CalendarService::read();
 
     let is_visible = cal.open;
+    if !is_visible {
+        return LayerWindow::new()
+            .width(1.0)
+            .height(1.0)
+            .visible(false)
+            .namespace("dotfield-shell-calendar");
+    }
 
     let bg_color = Color::from(manifest.palette.surface.as_str()); // Obsidian #121216
     let overlay_color = Color::from(manifest.palette.overlay.as_str()); // Graphite #1C1C23

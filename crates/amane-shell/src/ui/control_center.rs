@@ -73,6 +73,13 @@ pub fn control_center_panel() -> LayerWindow {
     let cc = ControlCenterService::read();
 
     let is_visible = cc.open && manifest.control_center.enabled;
+    if !is_visible {
+        return LayerWindow::new()
+            .width(1.0)
+            .height(1.0)
+            .visible(false)
+            .namespace("dotfield-shell-control-center");
+    }
 
     let bg_color = Color::from(manifest.palette.surface.as_str()); // Obsidian #121216
     let font = manifest.theme.font_family.clone();

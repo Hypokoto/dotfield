@@ -166,6 +166,13 @@ pub fn powermenu_overlay() -> LayerWindow {
     let menu = PowermenuService::read();
 
     let is_visible = menu.open;
+    if !is_visible {
+        return LayerWindow::new()
+            .width(1.0)
+            .height(1.0)
+            .visible(false)
+            .namespace("dotfield-shell-powermenu");
+    }
 
     let bg_color = Color::from(manifest.palette.surface.as_str()); // Obsidian #121216
     let overlay_color = Color::from(manifest.palette.overlay.as_str()); // Graphite #1C1C23

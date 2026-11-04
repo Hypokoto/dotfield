@@ -30,7 +30,9 @@ impl Gpu {
     }
 
     pub(super) fn give_back(&mut self, texture: Texture) {
-        self.spare.push(texture);
+        if self.spare.len() < 3 {
+            self.spare.push(texture);
+        }
     }
 
     fn take(&mut self, width: u32, height: u32, usage: TextureUsages) -> Option<Texture> {

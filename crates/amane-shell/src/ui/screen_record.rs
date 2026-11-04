@@ -163,6 +163,13 @@ pub fn screen_record_overlay() -> LayerWindow {
     let rec = ScreenRecordService::read();
 
     let is_visible = rec.open;
+    if !is_visible {
+        return LayerWindow::new()
+            .width(1.0)
+            .height(1.0)
+            .visible(false)
+            .namespace("dotfield-shell-screen-record");
+    }
 
     let bg_color = Color::from(manifest.palette.surface.as_str()); // Obsidian #121216
     let overlay_color = Color::from(manifest.palette.overlay.as_str()); // Graphite #1C1C23

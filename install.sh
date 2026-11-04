@@ -62,6 +62,11 @@ Options:
   --sway                 Install dependencies for Sway
   --niri                 Install dependencies for Niri + Amane
   --all                  Install dependencies for both compositors (default)
+  --hardening            Forward hardening suite configuration to setup.sh
+  --apparmor             Forward AppArmor profile setup to setup.sh
+  --firejail             Forward Firejail sandbox setup to setup.sh
+  --flatpak              Forward Flatpak overrides setup to setup.sh
+  --nft                  Forward NFTables firewall setup to setup.sh
   -y, --yes, --noconfirm Automatically answer yes to package manager prompts
   --no-setup             Skip running setup.sh after dependency installation
   --no-build             Skip compiling amane desktop shell binary
@@ -73,9 +78,12 @@ Options:
 Examples:
   ./install.sh sway
   ./install.sh --niri -y
+  ./install.sh --all --hardening
   ./install.sh --all --dry-run
 EOF
 }
+
+HARDENING_FLAGS=()
 
 # Parse positional subcommands and options
 while [[ $# -gt 0 ]]; do
@@ -92,6 +100,11 @@ while [[ $# -gt 0 ]]; do
             TARGET="all"
             shift
             ;;
+        hardening)
+            TARGET="all"
+            HARDENING_FLAGS+=("--hardening")
+            shift
+            ;;
         --sway)
             TARGET="sway"
             shift
@@ -102,6 +115,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --all)
             TARGET="all"
+            shift
+            ;;
+        --hardening|--apparmor|--firejail|--flatpak|--nft)
+            HARDENING_FLAGS+=("$1")
             shift
             ;;
         -y|--yes|--noconfirm)
@@ -388,6 +405,9 @@ if [[ "${RUN_SETUP}" == true ]]; then
     fi
     if [[ -n "${PREFIX}" ]]; then
         SETUP_ARGS+=("--prefix" "${PREFIX}")
+    fi
+    if [[ ${#HARDENING_FLAGS[@]} -gt 0 ]]; then
+        SETUP_ARGS+=("${HARDENING_FLAGS[@]}")
     fi
 
     if [[ "${DRY_RUN}" == true ]]; then

@@ -1,6 +1,5 @@
 use std::cell::{Cell, OnceCell, RefCell};
 use std::ffi::c_void;
-use std::process;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -101,9 +100,7 @@ fn open(instance: &Instance, surface: &Surface) -> Shared {
             return;
         }
 
-        eprintln!("amane: lost the gpu ({message}), start the shell again");
-
-        process::exit(1);
+        eprintln!("amane: gpu device lost event ({message}), surface re-configuration will be attempted on next active frame");
     });
 
     // area anti-aliasing matches how edges looked with the cpu renderer

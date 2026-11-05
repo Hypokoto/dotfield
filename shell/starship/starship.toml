@@ -14,6 +14,7 @@ $nodejs\
 $golang\
 $docker_context\
 $cmd_duration\
+$status\
 $jobs\
 $line_break\
 $character"""
@@ -94,9 +95,15 @@ style = "bold steel"
 format = "[$symbol$context]($style) "
 
 [cmd_duration]
-min_time = 2_000
+min_time = 1_000
 style = "bold steel"
 format = "[$duration]($style) "
+
+[status]
+disabled = false
+style = "bold crimson"
+symbol = "✘ "
+format = "[$symbol$status]($style) "
 
 [jobs]
 symbol = "󰔚 "

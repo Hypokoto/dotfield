@@ -256,6 +256,7 @@ check_companion "slurp" "Screen region selector"
 check_companion "wl-copy" "Wayland clipboard utility"
 check_companion "zsh" "Z shell"
 check_companion "starship" "Cross-shell prompt"
+check_companion "carapace" "Multi-shell structured completion engine"
 if [[ "${ENABLE_HARDENING}" == true ]]; then
     check_companion "firejail" "Firejail security sandbox"
     check_companion "flatpak" "Flatpak package manager & permissions"

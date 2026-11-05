@@ -47,6 +47,10 @@ zshaddhistory() {
 ### 2. High-Performance Caching & Completion Initialization
 zmodload -i zsh/complist
 autoload -Uz compinit
+
+# Ensure local user binaries are available for completions and helpers
+[[ -d "$HOME/.local/bin" ]] && path=("$HOME/.local/bin" $path)
+[[ -d "$HOME/.cargo/bin" ]] && path=("$HOME/.cargo/bin" $path)
 typeset -U path fpath
 
 local ZSH_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
@@ -68,6 +72,21 @@ zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:
 zstyle ':completion:*:descriptions' format '%F{#FFB000}-- %d --%f'
 zstyle ':completion:*:messages' format '%F{#82AAFF}-- %d --%f'
 zstyle ':completion:*:warnings' format '%F{#E63946}-- No matches found --%f'
+zstyle ':completion:*' extra-verbose yes
+zstyle ':completion:*:options' auto-description '%d'
+
+# Carapace multi-shell structured completions (Nushell-style parameter & flag annotations)
+if command -v carapace >/dev/null 2>&1; then
+    export CARAPACE_BRIDGES='zsh,fish,bash'
+    zstyle ':completion:*' format $'\e[2;37mCompleting %d\e[m'
+    local CARAPACE_CACHE="$ZSH_CACHE_DIR/carapace_init.zsh"
+    local CARAPACE_BIN="$(whence -p carapace)"
+    if [[ ! -s "$CARAPACE_CACHE" || "$CARAPACE_CACHE" -ot "$CARAPACE_BIN" ]]; then
+        carapace _carapace zsh >| "$CARAPACE_CACHE"
+        zcompile "$CARAPACE_CACHE" 2>/dev/null || true
+    fi
+    source "$CARAPACE_CACHE"
+fi
 
 # Use vim motion keys in tab-completion selection menu
 bindkey -M menuselect 'h' vi-backward-char
@@ -212,7 +231,7 @@ alias chmod="chmod --preserve-root"
 alias chown="chown --preserve-root"
 alias chgrp="chgrp --preserve-root"
 
-# Git Aliases
+# Git Aliases (Structured & Tabular Views)
 alias g="git"
 alias ga="git add"
 alias gaa="git add --all"
@@ -222,6 +241,8 @@ alias gca="git commit --amend"
 alias gco="git checkout"
 alias gcb="git checkout -b"
 alias gst="git status -sb"
+alias gstat="git diff --stat"
+alias gbranch="git branch --format='%(color:yellow)%(refname:short)%(color:reset)|%(color:green)%(committerdate:relative)%(color:reset)|%(subject)' | column -ts'|'"
 alias gd="git diff"
 alias gds="git diff --staged"
 alias gl="git log --oneline --graph --decorate -n 15"
@@ -232,10 +253,12 @@ alias gpull="git pull --rebase"
 alias gsta="git stash"
 alias gstp="git stash pop"
 
-# Network & System Inspection
+# Network & System Inspection (Tabular formatting)
 alias ports="ss -tulanp"
 alias listening="ss -tlnp"
 alias estab="ss -tp state established"
+alias psaux="ps aux --sort=-%cpu | head -20"
+alias memtop="ps aux --sort=-%mem | head -20"
 alias myip="curl -s https://icanhazip.com || curl -s https://ifconfig.me"
 alias v="nvim"
 
@@ -368,18 +391,27 @@ if [[ -r /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; 
     bindkey '^F' autosuggest-accept
 fi
 
-# Real-time syntax highlighting (Must be loaded after all widgets)
-if [[ -r /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
+# Real-time semantic syntax highlighting (Nushell-style token & flag coloring)
+# Prioritize fast-syntax-highlighting (FSH); fallback gracefully to zsh-syntax-highlighting
+if [[ -r /usr/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh ]]; then
+    source /usr/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
+elif [[ -r "$HOME/.local/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh" ]]; then
+    source "$HOME/.local/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh"
+elif [[ -r /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
     source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
     typeset -A ZSH_HIGHLIGHT_STYLES
-    ZSH_HIGHLIGHT_STYLES[command]='fg=#FFB000,bold'       # Amber
-    ZSH_HIGHLIGHT_STYLES[builtin]='fg=#FFD166,bold'       # Pale Amber
-    ZSH_HIGHLIGHT_STYLES[alias]='fg=#FFD166'              # Pale Amber
-    ZSH_HIGHLIGHT_STYLES[function]='fg=#FFB000'           # Amber
-    ZSH_HIGHLIGHT_STYLES[path]='fg=#82AAFF,underline'     # Blue/Steel
-    ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=#E63946,bold' # Crimson
-    ZSH_HIGHLIGHT_STYLES[single-quoted-argument]='fg=#7BC47F' # Green
-    ZSH_HIGHLIGHT_STYLES[double-quoted-argument]='fg=#7BC47F' # Green
+    ZSH_HIGHLIGHT_STYLES[command]='fg=#FFB000,bold'           # Amber
+    ZSH_HIGHLIGHT_STYLES[builtin]='fg=#FFD166,bold'           # Pale Amber
+    ZSH_HIGHLIGHT_STYLES[alias]='fg=#FFD166'                  # Pale Amber
+    ZSH_HIGHLIGHT_STYLES[function]='fg=#FFB000'               # Amber
+    ZSH_HIGHLIGHT_STYLES[single-hyphen-option]='fg=#82AAFF'   # Steel / Light Blue flags
+    ZSH_HIGHLIGHT_STYLES[double-hyphen-option]='fg=#82AAFF'   # Steel / Light Blue flags
+    ZSH_HIGHLIGHT_STYLES[command-substitution]='fg=#8B949E'   # Steel
+    ZSH_HIGHLIGHT_STYLES[path]='fg=#82AAFF,underline'         # Blue/Steel path
+    ZSH_HIGHLIGHT_STYLES[path_prefix]='fg=#82AAFF'            # Path prefix
+    ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=#E63946,bold'     # Crimson error
+    ZSH_HIGHLIGHT_STYLES[single-quoted-argument]='fg=#7BC47F' # Green string
+    ZSH_HIGHLIGHT_STYLES[double-quoted-argument]='fg=#7BC47F' # Green string
 fi
 
 ### 11. Developer Toolchains & Environments

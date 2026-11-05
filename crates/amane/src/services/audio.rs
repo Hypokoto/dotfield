@@ -4,6 +4,7 @@ use crate::Service;
 use crate::services::worker;
 
 use pulse::Device;
+pub use pulse::{SinkInfo, SinkType};
 
 #[derive(Default)]
 pub struct Audio {
@@ -16,6 +17,8 @@ pub struct Audio {
     microphone_volume: u8,
 
     microphone_muted: bool,
+
+    sinks: Vec<SinkInfo>,
 }
 
 // event-driven, the sound server announces every volume change
@@ -29,7 +32,7 @@ impl Service for Audio {
     }
 
     fn update(&mut self) -> bool {
-        let before = (
+        let before_levels = (
             self.volume,
             self.muted,
             self.microphone_volume,
@@ -38,6 +41,7 @@ impl Service for Audio {
 
         let output = pulse::read(Device::Output);
         let input = pulse::read(Device::Input);
+        let current_sinks = pulse::read_sinks();
 
         self.volume = output.volume;
         self.muted = output.muted;
@@ -45,12 +49,20 @@ impl Service for Audio {
         self.microphone_volume = input.volume;
         self.microphone_muted = input.muted;
 
-        (
+        let levels_changed = (
             self.volume,
             self.muted,
             self.microphone_volume,
             self.microphone_muted,
-        ) != before
+        ) != before_levels;
+
+        let sinks_changed = self.sinks != current_sinks;
+
+        if sinks_changed {
+            self.sinks = current_sinks;
+        }
+
+        levels_changed || sinks_changed
     }
 
     // the sound server also announces changes to devices nothing shows
@@ -82,6 +94,14 @@ impl Audio {
         self.microphone_muted
     }
 
+    pub fn sinks(&self) -> &[SinkInfo] {
+        &self.sinks
+    }
+
+    pub fn default_sink(&self) -> Option<&SinkInfo> {
+        self.sinks.iter().find(|s| s.is_default)
+    }
+
     // anything above 100 is treated as 100
     pub fn set_volume(volume: u8) {
         worker::run(move || pulse::set_volume(Device::Output, volume.min(100)));
@@ -98,6 +118,11 @@ impl Audio {
 
     pub fn toggle_microphone_mute() {
         worker::run(|| toggle(Device::Input));
+    }
+
+    pub fn set_default_sink(name: impl Into<String>) {
+        let name = name.into();
+        worker::run(move || pulse::set_default_sink(&name));
     }
 }
 

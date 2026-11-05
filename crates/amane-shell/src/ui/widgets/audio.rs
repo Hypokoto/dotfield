@@ -1,6 +1,6 @@
 use amane::{
     Align, Audio, Center, Color, Column, Justify, Padding, Parent, Pointer, Rectangle, Row, Scroll,
-    Service, Text, Widget,
+    Service, SinkType, Text, Widget,
 };
 
 use crate::config::ShellManifest;
@@ -159,7 +159,139 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
             .align(Align::Center),
     ));
 
-    // 2. Microphone Input Section
+    // 2. Output Sinks (Devices) Selection Section
+    let sinks = audio.sinks();
+    if !sinks.is_empty() {
+        let sinks_header = Row::new(vec![
+            Box::new(
+                Row::new(vec![
+                    Box::new(Text::new("󰓃").size(13.0).color(amber_color).font(font)),
+                    Box::new(
+                        Text::new("OUTPUT DEVICES")
+                            .size(10.0)
+                            .color(amber_color)
+                            .font(font),
+                    ),
+                ])
+                .gap(6.0)
+                .align(Align::Center),
+            ),
+            Box::new(
+                Text::new(format!("{} AVAILABLE", sinks.len()))
+                    .size(9.0)
+                    .color(steel_color)
+                    .font(font),
+            ),
+        ])
+        .width(Parent)
+        .justify(Justify::SpaceBetween)
+        .align(Align::Center);
+
+        elements.push(Box::new(sinks_header));
+
+        let mut sink_cards: Vec<Box<dyn Widget>> = Vec::new();
+        for sink in sinks {
+            let is_default = sink.is_default;
+            let sink_name = sink.name.clone();
+            let sink_desc = sink.description.clone();
+
+            let icon_str = match sink.sink_type {
+                SinkType::Bluetooth => "󰂯",
+                SinkType::Hdmi => "󰍹",
+                SinkType::Headphones => "󰋋",
+                SinkType::Usb => "󰓃",
+                SinkType::Speaker => "󰌢",
+            };
+
+            // Format friendly name: clean up alsa suffixes or display names
+            let display_name = if sink_desc.len() > 32 {
+                format!("{}…", &sink_desc[..31])
+            } else {
+                sink_desc.clone()
+            };
+
+            let card = Rectangle::new()
+                .width(Parent)
+                .height(34.0)
+                .radius(5.0)
+                .fill(if is_default {
+                    overlay_color
+                } else {
+                    surface_color
+                })
+                .border(
+                    1.0,
+                    if is_default {
+                        amber_color
+                    } else {
+                        border_color
+                    },
+                )
+                .cursor(Pointer)
+                .padding(Padding {
+                    top: 2.0,
+                    bottom: 2.0,
+                    left: 10.0,
+                    right: 10.0,
+                })
+                .on_click(move |_| {
+                    Audio::set_default_sink(&sink_name);
+                    let _ = std::process::Command::new("notify-send")
+                        .args([
+                            "-a",
+                            "dotfield",
+                            "-c",
+                            "audio",
+                            "-r",
+                            "9994",
+                            "-h",
+                            "string:x-canonical-private-synchronous:audio-sink",
+                            "-t",
+                            "1500",
+                            "Audio Output",
+                            &sink_desc,
+                        ])
+                        .spawn();
+                })
+                .child(
+                    Row::new(vec![
+                        Box::new(
+                            Row::new(vec![
+                                Box::new(
+                                    Text::new(icon_str)
+                                        .size(13.0)
+                                        .color(if is_default { amber_color } else { fg_color })
+                                        .font(font),
+                                ),
+                                Box::new(
+                                    Text::new(display_name)
+                                        .size(10.0)
+                                        .color(if is_default { fg_color } else { steel_color })
+                                        .font(font),
+                                ),
+                            ])
+                            .gap(8.0)
+                            .align(Align::Center),
+                        ),
+                        Box::new(
+                            Text::new(if is_default { "ACTIVE" } else { "SELECT" })
+                                .size(9.0)
+                                .color(if is_default { amber_color } else { steel_color })
+                                .font(font),
+                        ),
+                    ])
+                    .width(Parent)
+                    .justify(Justify::SpaceBetween)
+                    .align(Align::Center),
+                );
+
+            sink_cards.push(Box::new(card));
+        }
+
+        elements.push(Box::new(Column::new(sink_cards).width(Parent).gap(4.0)));
+    }
+
+    // 3. Microphone Input Section
     let mic_header = Row::new(vec![
         Box::new(
             Row::new(vec![

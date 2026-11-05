@@ -595,6 +595,7 @@ fi
 # Common Desktop Configurations
 ensure_config_link_or_dir "${SCRIPT_DIR}/launcher/fuzzel" "${HOME}/.config/fuzzel"
 ensure_config_link_or_dir "${SCRIPT_DIR}/kanshi" "${HOME}/.config/kanshi"
+ensure_config_link_or_dir "${SCRIPT_DIR}/wireplumber" "${HOME}/.config/wireplumber"
 ensure_config_link_or_dir "${SCRIPT_DIR}/terminals/foot" "${HOME}/.config/foot"
 ensure_config_link_or_dir "${SCRIPT_DIR}/terminals/kitty" "${HOME}/.config/kitty"
 ensure_config_link_or_dir "${SCRIPT_DIR}/terminals/alacritty" "${HOME}/.config/alacritty"

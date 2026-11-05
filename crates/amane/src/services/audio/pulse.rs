@@ -29,6 +29,24 @@ impl Device {
     }
 }
 
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum SinkType {
+    #[default]
+    Speaker,
+    Headphones,
+    Hdmi,
+    Bluetooth,
+    Usb,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct SinkInfo {
+    pub name: String,
+    pub description: String,
+    pub is_default: bool,
+    pub sink_type: SinkType,
+}
+
 #[derive(Default, Clone, Copy)]
 pub struct Level {
     // 0 to 100
@@ -117,6 +135,19 @@ pub fn set_muted(device: Device, muted: bool) {
             Device::Input => introspect.set_source_mute_by_name(device.name(), muted, None),
         };
 
+        connection.wait(operation);
+    });
+}
+
+pub fn read_sinks() -> Vec<SinkInfo> {
+    with_connection(|connection| {
+        connection.sinks()
+    })
+}
+
+pub fn set_default_sink(name: &str) {
+    with_connection(|connection| {
+        let operation = connection.context.set_default_sink(name, |_| {});
         connection.wait(operation);
     });
 }
@@ -234,6 +265,66 @@ impl Connection {
         }
 
         found.take()
+    }
+
+    fn sinks(&mut self) -> Vec<SinkInfo> {
+        let default_name = Rc::new(RefCell::new(String::new()));
+        let default_slot = Rc::clone(&default_name);
+
+        let introspect = self.context.introspect();
+        let server_op = introspect.get_server_info(move |info| {
+            if let Some(def) = &info.default_sink_name {
+                *default_slot.borrow_mut() = def.to_string();
+            }
+        });
+        self.wait(server_op);
+
+        let active_default = default_name.borrow().clone();
+
+        let sinks_list = Rc::new(RefCell::new(Vec::new()));
+        let sinks_slot = Rc::clone(&sinks_list);
+
+        let introspect = self.context.introspect();
+        let list_op = introspect.get_sink_info_list(move |result| {
+            let ListResult::Item(sink) = result else {
+                return;
+            };
+
+            let name = sink.name.as_deref().unwrap_or("").to_string();
+            let description = sink.description.as_deref().unwrap_or(&name).to_string();
+
+            let lower_name = name.to_lowercase();
+            let lower_desc = description.to_lowercase();
+
+            let sink_type = if lower_name.contains("bluez") || lower_desc.contains("bluetooth") {
+                SinkType::Bluetooth
+            } else if lower_name.contains("hdmi") || lower_desc.contains("hdmi") || lower_name.contains("displayport") || lower_desc.contains("displayport") {
+                SinkType::Hdmi
+            } else if lower_name.contains("headphone") || lower_desc.contains("headphone") || lower_desc.contains("headset") {
+                SinkType::Headphones
+            } else if lower_name.contains("usb") || lower_desc.contains("usb") {
+                SinkType::Usb
+            } else {
+                SinkType::Speaker
+            };
+
+            sinks_slot.borrow_mut().push(SinkInfo {
+                name,
+                description,
+                is_default: false,
+                sink_type,
+            });
+        });
+        self.wait(list_op);
+
+        let mut sinks = sinks_list.take();
+        for sink in &mut sinks {
+            if !active_default.is_empty() && sink.name == active_default {
+                sink.is_default = true;
+            }
+        }
+
+        sinks
     }
 
     // blocks until pulse has answered

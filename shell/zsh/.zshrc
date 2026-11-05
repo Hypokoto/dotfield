@@ -46,7 +46,6 @@ zshaddhistory() {
 
 ### 2. High-Performance Caching & Completion Initialization
 zmodload -i zsh/complist
-autoload -Uz compinit
 
 # Ensure local user binaries are available for completions and helpers
 [[ -d "$HOME/.local/bin" ]] && path=("$HOME/.local/bin" $path)
@@ -57,15 +56,27 @@ local ZSH_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
 [[ -d "$ZSH_CACHE_DIR" ]] || mkdir -p "$ZSH_CACHE_DIR"
 local ZCOMPDUMP="$ZSH_CACHE_DIR/zcompdump"
 
-# Audit and compile completion dump every 24 hours; otherwise skip checks (-C) for instantaneous spawn
-if [[ -s "$ZCOMPDUMP" && -n "$ZCOMPDUMP"(N.mh-24) ]]; then
-    compinit -C -d "$ZCOMPDUMP"
+# zsh-autocomplete: IDE-style real-time type-ahead live menu.
+# CRITICAL: must source BEFORE compinit — it hooks in and manages compinit internally.
+if [[ -r /usr/share/zsh/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh ]]; then
+    # Live menu height — 8 lines keeps it snappy and IDE-toolbar-like
+    zstyle ':autocomplete:*' max-lines 8
+    # Trigger 50ms after typing stops (avoid spam on fast bursts)
+    zstyle ':autocomplete:*' delay 0.05
+    # Don't auto-accept unambiguous prefix; always show the menu
+    zstyle ':autocomplete:*' insert-unambiguous no
+    source /usr/share/zsh/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh
 else
-    compinit -i -d "$ZCOMPDUMP"
-    { zcompile "$ZCOMPDUMP" 2>/dev/null } &!
+    # Fallback: manual compinit when zsh-autocomplete is absent
+    autoload -Uz compinit
+    if [[ -s "$ZCOMPDUMP" && -n "$ZCOMPDUMP"(N.mh-24) ]]; then
+        compinit -C -d "$ZCOMPDUMP"
+    else
+        compinit -i -d "$ZCOMPDUMP"
+        { zcompile "$ZCOMPDUMP" 2>/dev/null } &!
+    fi
 fi
 
-zstyle ':completion:*' menu select
 zstyle ':completion:*' use-cache on
 zstyle ':completion:*' cache-path "$ZSH_CACHE_DIR/zcompcache"
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
@@ -74,8 +85,11 @@ zstyle ':completion:*:messages' format '%F{#82AAFF}-- %d --%f'
 zstyle ':completion:*:warnings' format '%F{#E63946}-- No matches found --%f'
 zstyle ':completion:*' extra-verbose yes
 zstyle ':completion:*:options' auto-description '%d'
+# Group completions by category (commands / flags / paths)
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*:*:-command-:*:*' group-order builtins functions commands
 
-# Carapace multi-shell structured completions (Nushell-style parameter & flag annotations)
+# Carapace: structured completions for 1000+ CLIs — subcommands, flags, arg types
 if command -v carapace >/dev/null 2>&1; then
     export CARAPACE_BRIDGES='zsh,fish,bash'
     zstyle ':completion:*' format $'\e[2;37mCompleting %d\e[m'
@@ -135,11 +149,15 @@ bindkey -M viins '^H' backward-delete-char
 bindkey -M viins '^?' backward-delete-char
 
 # History prefix searching on Up/Down arrows
-autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
-zle -N up-line-or-beginning-search
-zle -N down-line-or-beginning-search
-bindkey '^[[A' up-line-or-beginning-search
-bindkey '^[[B' down-line-or-beginning-search
+# Skip when zsh-autocomplete is active — it owns Up/Down for live menu navigation
+if [[ ! -v _autocomplete__sourced ]]; then
+    autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+    zle -N up-line-or-beginning-search
+    zle -N down-line-or-beginning-search
+    bindkey '^[[A' up-line-or-beginning-search
+    bindkey '^[[B' down-line-or-beginning-search
+fi
+# Vi normal mode j/k always search history regardless
 bindkey -M vicmd 'k' up-line-or-beginning-search
 bindkey -M vicmd 'j' down-line-or-beginning-search
 bindkey '^R' history-incremental-pattern-search-backward
@@ -392,6 +410,10 @@ if [[ -r /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; 
 fi
 
 # Real-time semantic syntax highlighting (Nushell-style token & flag coloring)
+# Pre-define placeholder widgets so syntax highlighter doesn't warn on bound key aliases
+zle -N menu-search 2>/dev/null || true
+zle -N recent-paths 2>/dev/null || true
+
 # Prioritize fast-syntax-highlighting (FSH); fallback gracefully to zsh-syntax-highlighting
 if [[ -r /usr/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh ]]; then
     source /usr/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh

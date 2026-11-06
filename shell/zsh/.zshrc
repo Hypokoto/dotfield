@@ -80,19 +80,28 @@ fi
 zstyle ':completion:*' use-cache on
 zstyle ':completion:*' cache-path "$ZSH_CACHE_DIR/zcompcache"
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
-zstyle ':completion:*:descriptions' format '%F{#FFB000}-- %d --%f'
-zstyle ':completion:*:messages' format '%F{#82AAFF}-- %d --%f'
-zstyle ':completion:*:warnings' format '%F{#E63946}-- No matches found --%f'
+
+# Section headers — Controlled Chaos Amber bold
+zstyle ':completion:*:descriptions' format $'\e[1;38;2;255;176;0m %d \e[0m'
+zstyle ':completion:*:messages'     format $'\e[0;38;2;130;170;255m %d \e[0m'
+zstyle ':completion:*:warnings'     format $'\e[0;38;2;230;57;70m No matches: %d \e[0m'
+
+# Dim the (MORE) scroll indicator so it doesn't clash
+zstyle ':completion:*' select-scroll 0
+zstyle ':completion:*' list-prompt $'\e[2;37m── %l ──\e[0m'
+zstyle ':completion:*' select-prompt $'\e[2;37m── %l ──\e[0m'
+
 zstyle ':completion:*' extra-verbose yes
 zstyle ':completion:*:options' auto-description '%d'
 # Group completions by category (commands / flags / paths)
 zstyle ':completion:*' group-name ''
 zstyle ':completion:*:*:-command-:*:*' group-order builtins functions commands
+# Single-column list so description alignment is always consistent
+zstyle ':completion:*' list-rows-first yes
 
 # Carapace: structured completions for 1000+ CLIs — subcommands, flags, arg types
 if command -v carapace >/dev/null 2>&1; then
     export CARAPACE_BRIDGES='zsh,fish,bash'
-    zstyle ':completion:*' format $'\e[2;37mCompleting %d\e[m'
     local CARAPACE_CACHE="$ZSH_CACHE_DIR/carapace_init.zsh"
     local CARAPACE_BIN="$(whence -p carapace)"
     if [[ ! -s "$CARAPACE_CACHE" || "$CARAPACE_CACHE" -ot "$CARAPACE_BIN" ]]; then
@@ -100,6 +109,9 @@ if command -v carapace >/dev/null 2>&1; then
         zcompile "$CARAPACE_CACHE" 2>/dev/null || true
     fi
     source "$CARAPACE_CACHE"
+    # Re-assert themed formats after carapace sourcing (carapace sets its own generic format)
+    zstyle ':completion:*' format $'\e[1;38;2;255;176;0m %d \e[0m'
+    zstyle ':completion:*:descriptions' format $'\e[1;38;2;255;176;0m %d \e[0m'
 fi
 
 # Use vim motion keys in tab-completion selection menu

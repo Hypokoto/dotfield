@@ -37,20 +37,15 @@ pub fn send(key: Key) -> bool {
         return false;
     }
 
-    // if left or right is pressed while text input is empty, forward to window
+    // left and right move the text cursor but also reach the window's on_key
+    // so the launcher grid can be navigated even while there is search text
     if matches!(key, Key::Left | Key::Right) {
-        let is_empty = FOCUS.with_borrow(|focus| {
-            if let Some(focus) = focus {
-                crate::widgets::text_input::fields::get(focus.id)
-                    .text
-                    .is_empty()
-            } else {
-                true
-            }
-        });
-        if is_empty {
-            return false;
+        let on_key =
+            FOCUS.with_borrow(|focus| focus.as_ref().map(|focus| focus.on_key.clone()));
+        if let Some(on_key) = on_key {
+            on_key(key);
         }
+        return false;
     }
 
     // copied out first, so the handler is free to change the focus itself

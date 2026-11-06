@@ -38,7 +38,7 @@ use smithay_client_toolkit::{
 use wayland_client::{
     Connection, QueueHandle,
     globals::registry_queue_init,
-    protocol::{wl_keyboard::WlKeyboard, wl_surface::WlSurface},
+    protocol::{wl_keyboard::WlKeyboard, wl_output::WlOutput, wl_surface::WlSurface},
 };
 
 use crate::ipc::IpcHandlers;
@@ -64,6 +64,9 @@ struct WaylandState {
 
     // keys do not say which window they are for, so the window that has focus is kept
     keyboard_focus: Option<WlSurface>,
+
+    // the output the focused window is on; overlays open here when they become visible
+    focused_output: Option<WlOutput>,
 
     registry: RegistryState,
     output: OutputState,
@@ -161,6 +164,7 @@ impl WaylandApp {
             scale_factor,
 
             keyboard_focus: None,
+            focused_output: None,
 
             registry: RegistryState::new(&globals),
             output: OutputState::new(&globals, &qh),

@@ -7,7 +7,7 @@ use wayland_client::{
 
 use crate::graphics::Gpu;
 use crate::input::Pointer;
-use crate::{changes, frame};
+use crate::{changes, frame, LayerWindow};
 
 use super::{
     WaylandState,
@@ -159,6 +159,51 @@ impl WaylandState {
         // A shell daemon with IPC also keeps running.
         if self.windows.is_empty() && self.per_monitor.is_empty() && self.plain_views.is_empty() && !self.has_ipc {
             self.running = false;
+        }
+    }
+
+    // After a redraw pass, move any plain overlay that is visible but on the wrong output
+    // to the focused output, so overlays appear on the external display when it has focus.
+    pub fn relocate_plain_overlays(&mut self) {
+        let Some(focused) = self.focused_output.clone() else {
+            return;
+        };
+
+        // collect plain windows that are visible and on a different output
+        let to_move: Vec<(usize, fn() -> LayerWindow)> = self
+            .windows
+            .iter()
+            .filter_map(|w| {
+                let View::Plain { id, view } = w.view else {
+                    return None;
+                };
+                // only act when the overlay is currently visible
+                let Role::Layer { settings, .. } = &w.role else {
+                    return None;
+                };
+                if !settings.visible {
+                    return None;
+                }
+                // already on the focused output — nothing to do
+                if w.output.as_ref() == Some(&focused) {
+                    return None;
+                }
+                Some((id, view))
+            })
+            .collect();
+
+        for (id, view) in to_move {
+            // drop the window on the wrong output
+            self.windows.retain(|w| {
+                if let View::Plain { id: wid, .. } = w.view {
+                    wid != id
+                } else {
+                    true
+                }
+            });
+            // reopen on the focused output — the overlay's view fn returns the current
+            // visible=true state so it draws immediately on the new output
+            self.open(View::Plain { id, view }, Some(focused.clone()));
         }
     }
 }

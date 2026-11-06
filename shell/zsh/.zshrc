@@ -56,48 +56,30 @@ local ZSH_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
 [[ -d "$ZSH_CACHE_DIR" ]] || mkdir -p "$ZSH_CACHE_DIR"
 local ZCOMPDUMP="$ZSH_CACHE_DIR/zcompdump"
 
-# zsh-autocomplete: IDE-style real-time type-ahead live menu.
-# CRITICAL: must source BEFORE compinit — it hooks in and manages compinit internally.
-if [[ -r /usr/share/zsh/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh ]]; then
-    # Live menu height — 8 lines keeps it snappy and IDE-toolbar-like
-    zstyle ':autocomplete:*' max-lines 8
-    # Trigger 50ms after typing stops (avoid spam on fast bursts)
-    zstyle ':autocomplete:*' delay 0.05
-    # Don't auto-accept unambiguous prefix; always show the menu
-    zstyle ':autocomplete:*' insert-unambiguous no
-    source /usr/share/zsh/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh
+# Standard compinit with 24h cache (fast — fzf-tab manages the UI, not zsh-autocomplete)
+autoload -Uz compinit
+if [[ -s "$ZCOMPDUMP" && -n "$ZCOMPDUMP"(N.mh-24) ]]; then
+    compinit -C -d "$ZCOMPDUMP"
 else
-    # Fallback: manual compinit when zsh-autocomplete is absent
-    autoload -Uz compinit
-    if [[ -s "$ZCOMPDUMP" && -n "$ZCOMPDUMP"(N.mh-24) ]]; then
-        compinit -C -d "$ZCOMPDUMP"
-    else
-        compinit -i -d "$ZCOMPDUMP"
-        { zcompile "$ZCOMPDUMP" 2>/dev/null } &!
-    fi
+    compinit -i -d "$ZCOMPDUMP"
+    { zcompile "$ZCOMPDUMP" 2>/dev/null } &!
 fi
 
+# Completion behavior
 zstyle ':completion:*' use-cache on
 zstyle ':completion:*' cache-path "$ZSH_CACHE_DIR/zcompcache"
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
 
-# Section headers — Controlled Chaos Amber bold
+# Section headers — Controlled Chaos Amber bold (used in fzf-tab group labels)
 zstyle ':completion:*:descriptions' format $'\e[1;38;2;255;176;0m %d \e[0m'
 zstyle ':completion:*:messages'     format $'\e[0;38;2;130;170;255m %d \e[0m'
 zstyle ':completion:*:warnings'     format $'\e[0;38;2;230;57;70m No matches: %d \e[0m'
-
-# Dim the (MORE) scroll indicator so it doesn't clash
-zstyle ':completion:*' select-scroll 0
-zstyle ':completion:*' list-prompt $'\e[2;37m── %l ──\e[0m'
-zstyle ':completion:*' select-prompt $'\e[2;37m── %l ──\e[0m'
 
 zstyle ':completion:*' extra-verbose yes
 zstyle ':completion:*:options' auto-description '%d'
 # Group completions by category (commands / flags / paths)
 zstyle ':completion:*' group-name ''
 zstyle ':completion:*:*:-command-:*:*' group-order builtins functions commands
-# Single-column list so description alignment is always consistent
-zstyle ':completion:*' list-rows-first yes
 
 # Carapace: structured completions for 1000+ CLIs — subcommands, flags, arg types
 if command -v carapace >/dev/null 2>&1; then
@@ -114,7 +96,42 @@ if command -v carapace >/dev/null 2>&1; then
     zstyle ':completion:*:descriptions' format $'\e[1;38;2;255;176;0m %d \e[0m'
 fi
 
-# Use vim motion keys in tab-completion selection menu
+# fzf-tab: replace Tab completion menu with fzf popup (prompt never moves up)
+# Must source AFTER compinit and carapace, BEFORE other completion-wrapping plugins
+local FZF_TAB_DIR="$HOME/.local/share/zsh/plugins/fzf-tab"
+if [[ -r "$FZF_TAB_DIR/fzf-tab.plugin.zsh" ]]; then
+    source "$FZF_TAB_DIR/fzf-tab.plugin.zsh"
+
+    # Controlled Chaos palette — matches FZF_DEFAULT_OPTS in section 8
+    zstyle ':fzf-tab:*' fzf-flags \
+        --color='bg+:#1C1C23,bg:#0A0A0C,hl:#E63946,hl+:#E63946' \
+        --color='fg:#E8E6E3,fg+:#E8E6E3,border:#2A2A35,separator:#2A2A35' \
+        --color='header:#FFB000,info:#FFB000,prompt:#FFB000,pointer:#FFB000' \
+        --color='marker:#7BC47F,spinner:#FFB000,query:#E8E6E3' \
+        --prompt='❯ ' --pointer='▶' --marker='✔' \
+        --border=rounded --height=~40% --layout=reverse \
+        --min-height=6 --bind='tab:accept'
+
+    # Show group headers (command / path / flag) using the amber format
+    zstyle ':fzf-tab:*' show-group full
+
+    # Descriptions from carapace alongside the candidate name
+    zstyle ':fzf-tab:*' fzf-preview ''
+
+    # Continuous trigger: retrigger fzf-tab after accepting a dir to keep completing
+    zstyle ':fzf-tab:complete:cd:*' fzf-preview \
+        'eza --tree --level=1 --color=always --icons=auto "$realpath" 2>/dev/null || ls "$realpath"'
+    zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview \
+        'eza --tree --level=1 --color=always --icons=auto "$realpath" 2>/dev/null || ls "$realpath"'
+
+    # Switch between groups (command vs path vs flags) with Ctrl+G
+    zstyle ':fzf-tab:*' switch-group 'ctrl-g'
+
+    # Accept and immediately retrigger completion inside directories
+    zstyle ':fzf-tab:*' continuous-trigger '/'
+fi
+
+# Use vim motion keys in tab-completion selection menu (fallback when fzf-tab absent)
 bindkey -M menuselect 'h' vi-backward-char
 bindkey -M menuselect 'k' vi-up-line-or-history
 bindkey -M menuselect 'l' vi-forward-char
@@ -161,15 +178,12 @@ bindkey -M viins '^H' backward-delete-char
 bindkey -M viins '^?' backward-delete-char
 
 # History prefix searching on Up/Down arrows
-# Skip when zsh-autocomplete is active — it owns Up/Down for live menu navigation
-if [[ ! -v _autocomplete__sourced ]]; then
-    autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
-    zle -N up-line-or-beginning-search
-    zle -N down-line-or-beginning-search
-    bindkey '^[[A' up-line-or-beginning-search
-    bindkey '^[[B' down-line-or-beginning-search
-fi
-# Vi normal mode j/k always search history regardless
+autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+zle -N up-line-or-beginning-search
+zle -N down-line-or-beginning-search
+bindkey '^[[A' up-line-or-beginning-search
+bindkey '^[[B' down-line-or-beginning-search
+# Vi normal mode j/k always search history
 bindkey -M vicmd 'k' up-line-or-beginning-search
 bindkey -M vicmd 'j' down-line-or-beginning-search
 bindkey '^R' history-incremental-pattern-search-backward
@@ -422,9 +436,6 @@ if [[ -r /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; 
 fi
 
 # Real-time semantic syntax highlighting (Nushell-style token & flag coloring)
-# Pre-define placeholder widgets so syntax highlighter doesn't warn on bound key aliases
-zle -N menu-search 2>/dev/null || true
-zle -N recent-paths 2>/dev/null || true
 
 # Prioritize fast-syntax-highlighting (FSH); fallback gracefully to zsh-syntax-highlighting
 if [[ -r /usr/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh ]]; then

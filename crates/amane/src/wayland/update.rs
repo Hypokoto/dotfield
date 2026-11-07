@@ -89,7 +89,7 @@ impl OpenWindow {
         region.destroy();
     }
 
-    fn hide(&mut self) {
+    pub(crate) fn hide(&mut self) {
         // taking the buffer away unmaps the window and gives back its reserved space
         self.role.wl_surface().attach(None, 0, 0);
 

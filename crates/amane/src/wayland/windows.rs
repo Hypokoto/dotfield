@@ -7,7 +7,7 @@ use wayland_client::{
 
 use crate::graphics::Gpu;
 use crate::input::Pointer;
-use crate::{changes, frame, LayerWindow};
+use crate::{changes, frame, LayerWindow, Service};
 
 use super::{
     WaylandState,
@@ -160,12 +160,44 @@ impl WaylandState {
         if self.windows.is_empty() && self.per_monitor.is_empty() && self.plain_views.is_empty() && !self.has_ipc {
             self.running = false;
         }
+
+        // free the memory the closed windows held, instead of waiting for the next trim pass
+        #[cfg(target_env = "gnu")]
+        crate::allocator::trim();
     }
 
-    // After a redraw pass, move any plain overlay that is visible but on the wrong output
-    // to the focused output, so overlays appear on the external display when it has focus.
+    /// Returns the currently active output for placing overlays:
+    /// 1. The output tracked from recent pointer/keyboard interaction on an Amane window (e.g. top bar).
+    /// 2. If none, the output corresponding to the compositor's currently focused workspace.
+    /// 3. If neither is available, falls back to the first available output.
+    pub fn current_focused_output(&self) -> Option<WlOutput> {
+        if let Some(focused) = &self.focused_output {
+            if self.output.outputs().any(|o| &o == focused) {
+                return Some(focused.clone());
+            }
+        }
+
+        let focused_ws_output = crate::Workspaces::read()
+            .list()
+            .iter()
+            .find(|ws| ws.focused())
+            .and_then(|ws| ws.output().map(String::from));
+
+        if let Some(ws_name) = focused_ws_output {
+            if let Some(matched) = self.output.outputs().find(|out| {
+                self.output.info(out).and_then(|i| i.name) == Some(ws_name.clone())
+            }) {
+                return Some(matched);
+            }
+        }
+
+        self.output.outputs().next()
+    }
+
+    // Move any plain overlay that is visible but on the wrong output
+    // to the active output, so overlays appear on the external display when it has focus.
     pub fn relocate_plain_overlays(&mut self) {
-        let Some(focused) = self.focused_output.clone() else {
+        let Some(focused) = self.current_focused_output() else {
             return;
         };
 
@@ -193,6 +225,17 @@ impl WaylandState {
             .collect();
 
         for (id, view) in to_move {
+            // Unmap old surface cleanly from previous display before dropping
+            if let Some(w) = self.windows.iter_mut().find(|w| {
+                if let View::Plain { id: wid, .. } = w.view {
+                    wid == id
+                } else {
+                    false
+                }
+            }) {
+                w.hide();
+            }
+
             // drop the window on the wrong output
             self.windows.retain(|w| {
                 if let View::Plain { id: wid, .. } = w.view {

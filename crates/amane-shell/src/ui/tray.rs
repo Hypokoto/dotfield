@@ -26,8 +26,12 @@ pub fn render_tray_pill(manifest: &ShellManifest, font: &str) -> Box<dyn Widget>
             .border(1.0, border_color)
             .cursor(Pointer)
             .align_child(Center, Center)
-            .on_click(move |_| {
-                TrayService::activate(idx);
+            .on_click(move |btn| {
+                if btn == amane::Button::Right {
+                    TrayService::quit(idx);
+                } else {
+                    TrayService::activate(idx);
+                }
             })
             .child(Text::new(glyph).size(12.0).color(amber_color).font(font));
 
@@ -268,6 +272,25 @@ pub fn render_tray_drawer(manifest: &ShellManifest, font: &str) -> Box<dyn Widge
                                             Text::new("Menu")
                                                 .size(10.0)
                                                 .color(steel_color)
+                                                .font(font),
+                                        ),
+                                ),
+                                Box::new(
+                                    Rectangle::new()
+                                        .width(52.0)
+                                        .height(24.0)
+                                        .radius(4.0)
+                                        .fill(surface_color)
+                                        .border(1.0, Color::from(manifest.palette.accent.as_str()))
+                                        .cursor(Pointer)
+                                        .align_child(Center, Center)
+                                        .on_click(move |_| {
+                                            TrayService::quit(idx);
+                                        })
+                                        .child(
+                                            Text::new("Quit")
+                                                .size(10.0)
+                                                .color(crimson_color)
                                                 .font(font),
                                         ),
                                 ),

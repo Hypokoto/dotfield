@@ -31,10 +31,9 @@ pub fn limit() {
     let mapped = unsafe { mallopt(M_MMAP_THRESHOLD, ONE_MEGABYTE) };
     let pooled = unsafe { mallopt(M_ARENA_MAX, POOLS) };
 
-    assert!(
-        mapped == 1 && pooled == 1,
-        "failed to set the allocator's limits"
-    );
+    if mapped != 1 || pooled != 1 {
+        eprintln!("amane: could not set the allocator's limits, using defaults");
+    }
 
     thread::spawn(trim);
 }
@@ -43,8 +42,7 @@ pub fn limit() {
  * a pool only shrinks from its end, so the gaps decoding, d-bus and niri's
  * events leave in the middle stay with the process; trimming gives them back
  */
-// a fixed timer; if it ever shows up in frame times, trim after a window closes instead
-fn trim() {
+pub fn trim() {
     loop {
         thread::sleep(TRIM);
 

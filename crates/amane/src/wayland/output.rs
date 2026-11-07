@@ -71,6 +71,9 @@ impl OutputHandler for WaylandState {
 
     // dropping a window destroys its layer surface
     fn output_destroyed(&mut self, _: &Connection, _: &QueueHandle<Self>, output: WlOutput) {
+        if self.focused_output.as_ref() == Some(&output) {
+            self.focused_output = None;
+        }
         self.windows
             .retain(|window| window.output.as_ref() != Some(&output));
     }

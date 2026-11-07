@@ -226,6 +226,49 @@ impl TrayService {
             &[Argument::from(0), Argument::from(0)],
         );
     }
+
+    /// Terminates the background application associated with the tray item.
+    /// Looks up the owning process PID via D-Bus session bus and sends SIGTERM.
+    /// If the process is still running after 2.5 seconds, escalates to SIGKILL.
+    pub fn quit(index: usize) {
+        let service = {
+            let mut tray = TrayService::write();
+            if index < tray.items.len() {
+                let item = tray.items.remove(index);
+                item.service
+            } else {
+                return;
+            }
+        };
+
+        thread::spawn(move || {
+            let bus = Bus::session();
+            let pid_val = bus.call(
+                "org.freedesktop.DBus",
+                "/org/freedesktop/DBus",
+                "org.freedesktop.DBus",
+                "GetConnectionUnixProcessID",
+                &[Argument::from(service.as_str())],
+            );
+
+            let pid = pid_val.number() as u32;
+            if pid > 1 {
+                // Send SIGTERM for graceful exit
+                unsafe {
+                    libc::kill(pid as i32, libc::SIGTERM);
+                }
+
+                // Watchdog: after 2.5 seconds, escalate to SIGKILL if process remains stuck
+                thread::sleep(Duration::from_millis(2500));
+                let is_alive = unsafe { libc::kill(pid as i32, 0) == 0 };
+                if is_alive {
+                    unsafe {
+                        libc::kill(pid as i32, libc::SIGKILL);
+                    }
+                }
+            }
+        });
+    }
 }
 
 #[cfg(test)]
@@ -237,6 +280,32 @@ mod tests {
         let default = TrayService::default();
         assert!(default.items.is_empty());
         assert!(!default.watcher_active);
+    }
+
+    #[test]
+    fn test_tray_quit_out_of_bounds() {
+        // Calling quit on an empty or out-of-bounds index should safely no-op
+        TrayService::quit(999);
+    }
+
+    #[test]
+    fn test_tray_quit_removes_item() {
+        let mut tray = TrayService::write();
+        tray.items.push(TrayItem {
+            service: ":1.999999".into(),
+            path: "/StatusNotifierItem".into(),
+            id: "test-app".into(),
+            title: "Test App".into(),
+            icon_name: "test".into(),
+            status: "Active".into(),
+        });
+        let len_before = tray.items.len();
+        drop(tray);
+
+        TrayService::quit(len_before - 1);
+
+        let tray_after = TrayService::read();
+        assert_eq!(tray_after.items.len(), len_before - 1);
     }
 
     #[test]

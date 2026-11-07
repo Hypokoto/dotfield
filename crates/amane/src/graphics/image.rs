@@ -171,37 +171,44 @@ fn decode_png(bytes: &[u8]) -> Option<Bitmap> {
     let bitmap = Bitmap {
         width: frame.width,
         height: frame.height,
-        pixels: Arc::new(expand(&pixels, frame.color_type)),
+        pixels: Arc::new(expand(&pixels, frame.color_type)?),
     };
 
     Some(bitmap)
 }
 
 // fills in the channels a png left out, so every pixel is red, green, blue, alpha
-fn expand(pixels: &[u8], color_type: ColorType) -> Vec<u8> {
+fn expand(pixels: &[u8], color_type: ColorType) -> Option<Vec<u8>> {
     match color_type {
-        ColorType::Rgba => pixels.to_vec(),
+        ColorType::Rgba => Some(pixels.to_vec()),
 
-        ColorType::Rgb => pixels
-            .as_chunks::<3>()
-            .0
-            .iter()
-            .flat_map(|pixel| [pixel[0], pixel[1], pixel[2], 255])
-            .collect(),
+        ColorType::Rgb => Some(
+            pixels
+                .as_chunks::<3>()
+                .0
+                .iter()
+                .flat_map(|pixel| [pixel[0], pixel[1], pixel[2], 255])
+                .collect(),
+        ),
 
-        ColorType::GrayscaleAlpha => pixels
-            .as_chunks::<2>()
-            .0
-            .iter()
-            .flat_map(|pixel| [pixel[0], pixel[0], pixel[0], pixel[1]])
-            .collect(),
+        ColorType::GrayscaleAlpha => Some(
+            pixels
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .flat_map(|pixel| [pixel[0], pixel[0], pixel[0], pixel[1]])
+                .collect(),
+        ),
 
-        ColorType::Grayscale => pixels
-            .iter()
-            .flat_map(|&gray| [gray, gray, gray, 255])
-            .collect(),
+        ColorType::Grayscale => Some(
+            pixels
+                .iter()
+                .flat_map(|&gray| [gray, gray, gray, 255])
+                .collect(),
+        ),
 
-        ColorType::Indexed => panic!("failed to decode png: palette was not expanded"),
+        // a palette png would need its colors expanded first; leave it out instead of crashing
+        ColorType::Indexed => None,
     }
 }
 

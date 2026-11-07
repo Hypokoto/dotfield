@@ -40,6 +40,16 @@ impl PointerHandler for WaylandState {
 impl WaylandState {
     // returns whether a handler ran
     fn handle_pointer(&mut self, event: &PointerEvent) -> bool {
+        let output = self
+            .windows
+            .iter()
+            .find(|w| w.role.wl_surface() == &event.surface)
+            .and_then(|w| w.output.clone());
+
+        if let Some(output) = output {
+            self.focused_output = Some(output);
+        }
+
         // every event names the surface it happened on
         let Some(window) = self.window(&event.surface) else {
             return false;

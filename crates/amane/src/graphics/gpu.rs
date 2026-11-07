@@ -40,6 +40,7 @@ use vello::wgpu::{
     TextureFormat,
 };
 
+use crate::graphics::image::forget;
 use crate::graphics::image::Bitmap;
 
 use pass::Pass;
@@ -160,6 +161,16 @@ impl Gpu {
             present,
             box_blur,
             erase,
+        }
+    }
+}
+
+impl Drop for Gpu {
+    // when a window closes, release the full-size images it showed so the
+    // shared image cache does not keep them forever
+    fn drop(&mut self) {
+        for image in self.shown.values() {
+            forget(image);
         }
     }
 }

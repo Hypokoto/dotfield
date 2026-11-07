@@ -19,12 +19,22 @@ pub struct LayerWindow {
 
     pub(crate) visible: bool,
 
+    pub(crate) target_output: OutputTarget,
+
     // none means the whole window takes the pointer
     pub(crate) input_region: Option<Vec<InputArea>>,
 
     pub(crate) root: Option<Box<dyn Widget>>,
 
     pub(crate) on_key: Option<KeyHandler>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum OutputTarget {
+    #[default]
+    Default,
+    Active,
+    Named(&'static str),
 }
 
 pub struct LayerWindowNeedsWidth;
@@ -193,6 +203,12 @@ impl LayerWindow {
         self
     }
 
+    pub fn target_output(mut self, target: OutputTarget) -> Self {
+        self.target_output = target;
+
+        self
+    }
+
     pub fn child(mut self, child: impl Widget + 'static) -> Self {
         self.root = Some(Box::new(child));
 
@@ -225,6 +241,8 @@ impl LayerWindowNeedsHeight {
             namespace: "amane",
 
             visible: true,
+
+            target_output: OutputTarget::default(),
 
             input_region: None,
 

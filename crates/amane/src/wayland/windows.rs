@@ -7,7 +7,7 @@ use wayland_client::{
 
 use crate::graphics::Gpu;
 use crate::input::Pointer;
-use crate::{changes, frame, LayerWindow, Service};
+use crate::{changes, frame, LayerWindow, OutputTarget, Service};
 
 use super::{
     WaylandState,
@@ -194,37 +194,48 @@ impl WaylandState {
         self.output.outputs().next()
     }
 
-    // Move any plain overlay that is visible but on the wrong output
+    // Move any layer overlay requesting OutputTarget::Active that is visible but on the wrong output
     // to the active output, so overlays appear on the external display when it has focus.
     pub fn relocate_plain_overlays(&mut self) {
-        let Some(focused) = self.current_focused_output() else {
+        let Some(active) = self.current_focused_output() else {
             return;
         };
 
-        // collect plain windows that are visible and on a different output
-        let to_move: Vec<(usize, fn() -> LayerWindow)> = self
+        // collect plain windows that are visible and on a different output than targeted
+        let to_move: Vec<(usize, fn() -> LayerWindow, WlOutput)> = self
             .windows
             .iter()
             .filter_map(|w| {
                 let View::Plain { id, view } = w.view else {
                     return None;
                 };
-                // only act when the overlay is currently visible
                 let Role::Layer { settings, .. } = &w.role else {
                     return None;
                 };
                 if !settings.visible {
                     return None;
                 }
-                // already on the focused output — nothing to do
-                if w.output.as_ref() == Some(&focused) {
+
+                let target_output = match settings.target_output {
+                    OutputTarget::Active => active.clone(),
+                    OutputTarget::Named(name) => {
+                        self.output.outputs().find(|out| {
+                            self.output.info(out).and_then(|i| i.name) == Some(name.to_string())
+                        })?
+                    }
+                    OutputTarget::Default => return None,
+                };
+
+                // already on the target output — nothing to do
+                if w.output.as_ref() == Some(&target_output) {
                     return None;
                 }
-                Some((id, view))
+
+                Some((id, view, target_output))
             })
             .collect();
 
-        for (id, view) in to_move {
+        for (id, view, target) in to_move {
             // Unmap old surface cleanly from previous display before dropping
             if let Some(w) = self.windows.iter_mut().find(|w| {
                 if let View::Plain { id: wid, .. } = w.view {
@@ -244,9 +255,8 @@ impl WaylandState {
                     true
                 }
             });
-            // reopen on the focused output — the overlay's view fn returns the current
-            // visible=true state so it draws immediately on the new output
-            self.open(View::Plain { id, view }, Some(focused.clone()));
+            // reopen on the target output
+            self.open(View::Plain { id, view }, Some(target));
         }
     }
 }

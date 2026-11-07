@@ -1,28 +1,19 @@
-use parking_lot::RwLock;
-use std::sync::LazyLock;
-
 use amane::{
     Center, Color, Column, Horizontal, Layer, LayerWindow, Margin, Notification, Notifications,
-    Padding, Parent, Rectangle, Row, Service, Text, Urgency, Vertical, Widget, Zone,
+    OutputTarget, Padding, Parent, Rectangle, Row, Service, Text, Urgency, Vertical, Widget, Zone,
 };
 
-use crate::config::ShellManifest;
-
-static CONFIG: LazyLock<RwLock<ShellManifest>> =
-    LazyLock::new(|| RwLock::new(ShellManifest::default()));
-
-pub fn set_config(manifest: ShellManifest) {
-    *CONFIG.write() = manifest;
-}
+use crate::config::{ConfigService, ShellManifest};
 
 pub fn notification_popups() -> LayerWindow {
-    let manifest = CONFIG.read().clone();
+    let manifest = ConfigService::read().manifest.clone();
     let notifs_cfg = &manifest.notifications;
 
     if !notifs_cfg.enabled {
         return LayerWindow::new()
             .width(360.0)
             .height(1.0)
+            .target_output(OutputTarget::Active)
             .visible(false)
             .child(Rectangle::new().width(Parent).height(Parent));
     }
@@ -35,6 +26,7 @@ pub fn notification_popups() -> LayerWindow {
         return LayerWindow::new()
             .width(1.0)
             .height(1.0)
+            .target_output(OutputTarget::Active)
             .visible(false)
             .namespace("dotfield-shell-notifications");
     }
@@ -52,6 +44,7 @@ pub fn notification_popups() -> LayerWindow {
     LayerWindow::new()
         .width(360.0)
         .height(window_h)
+        .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Top)
         .anchor_horizontal(Horizontal::Right)
         .margin(Margin {
@@ -163,7 +156,7 @@ pub fn start_expiry_worker() {
         loop {
             std::thread::sleep(std::time::Duration::from_millis(250));
 
-            let manifest = CONFIG.read().clone();
+            let manifest = ConfigService::read().manifest.clone();
             if !manifest.notifications.enabled || manifest.notifications.timeout_ms == 0 {
                 continue;
             }
@@ -204,7 +197,7 @@ mod tests {
     #[test]
     fn test_notifications_config_defaults() {
         let manifest = ShellManifest::default();
-        set_config(manifest.clone());
+        ConfigService::write().manifest = manifest.clone();
         assert!(manifest.notifications.enabled);
         assert_eq!(manifest.notifications.timeout_ms, 5000);
         assert_eq!(manifest.notifications.max_visible, 5);

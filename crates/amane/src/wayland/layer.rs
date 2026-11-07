@@ -11,7 +11,9 @@ use wayland_client::{
 };
 
 use crate::scale::ScaleFactor;
-use crate::{Horizontal, Keyboard, Layer, LayerWindow, Margin, Vertical, WindowSize, Zone};
+use crate::{
+    Horizontal, Keyboard, Layer, LayerWindow, Margin, OutputTarget, Vertical, WindowSize, Zone,
+};
 
 use super::WaylandState;
 
@@ -32,6 +34,8 @@ pub struct Settings {
     pub namespace: &'static str,
 
     pub visible: bool,
+
+    pub target_output: OutputTarget,
 }
 
 impl From<&LayerWindow> for Settings {
@@ -51,6 +55,8 @@ impl From<&LayerWindow> for Settings {
             namespace: window.namespace,
 
             visible: window.visible,
+
+            target_output: window.target_output,
         }
     }
 }

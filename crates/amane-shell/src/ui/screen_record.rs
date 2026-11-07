@@ -1,14 +1,12 @@
 use std::process::Command;
-use std::sync::LazyLock;
 use std::time::{Duration, Instant};
 
 use amane::{
     Align, Center, Color, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin,
-    Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Zone,
+    OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Zone,
 };
-use parking_lot::RwLock;
 
-use crate::config::ShellManifest;
+use crate::config::ConfigService;
 
 pub struct ScreenRecordService {
     pub open: bool,
@@ -65,13 +63,6 @@ impl Service for ScreenRecordService {
         }
         changed
     }
-}
-
-static CONFIG: LazyLock<RwLock<ShellManifest>> =
-    LazyLock::new(|| RwLock::new(ShellManifest::default()));
-
-pub fn set_config(manifest: ShellManifest) {
-    *CONFIG.write() = manifest;
 }
 
 pub fn toggle() {
@@ -159,7 +150,7 @@ pub fn stop_recording() {
 
 /// Renders the fullscreen centered Screen Recorder overlay dialog.
 pub fn screen_record_overlay() -> LayerWindow {
-    let manifest = CONFIG.read().clone();
+    let manifest = ConfigService::read().manifest.clone();
     let rec = ScreenRecordService::read();
 
     let is_visible = rec.open;
@@ -167,6 +158,7 @@ pub fn screen_record_overlay() -> LayerWindow {
         return LayerWindow::new()
             .width(1.0)
             .height(1.0)
+            .target_output(OutputTarget::Active)
             .visible(false)
             .namespace("dotfield-shell-screen-record");
     }
@@ -434,6 +426,7 @@ pub fn screen_record_overlay() -> LayerWindow {
     LayerWindow::new()
         .width(440.0)
         .height(180.0)
+        .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Middle)
         .anchor_horizontal(Horizontal::Middle)
         .margin(Margin {

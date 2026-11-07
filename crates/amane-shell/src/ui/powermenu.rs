@@ -1,14 +1,12 @@
 use std::process::Command;
-use std::sync::LazyLock;
 use std::time::Duration;
 
 use amane::{
     Align, Center, Color, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin,
-    Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
+    OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
 };
-use parking_lot::RwLock;
 
-use crate::config::ShellManifest;
+use crate::config::ConfigService;
 
 #[derive(Debug, Clone)]
 pub struct PowerAction {
@@ -79,13 +77,6 @@ impl Service for PowermenuService {
     fn interval() -> Duration {
         Duration::from_secs(3600)
     }
-}
-
-static CONFIG: LazyLock<RwLock<ShellManifest>> =
-    LazyLock::new(|| RwLock::new(ShellManifest::default()));
-
-pub fn set_config(manifest: ShellManifest) {
-    *CONFIG.write() = manifest;
 }
 
 pub fn toggle() {
@@ -162,7 +153,7 @@ pub fn execute_action(idx: usize) {
 
 /// Renders the fullscreen centered Powermenu overlay modal.
 pub fn powermenu_overlay() -> LayerWindow {
-    let manifest = CONFIG.read().clone();
+    let manifest = ConfigService::read().manifest.clone();
     let menu = PowermenuService::read();
 
     let is_visible = menu.open;
@@ -170,6 +161,7 @@ pub fn powermenu_overlay() -> LayerWindow {
         return LayerWindow::new()
             .width(1.0)
             .height(1.0)
+            .target_output(OutputTarget::Active)
             .visible(false)
             .namespace("dotfield-shell-powermenu");
     }
@@ -376,6 +368,7 @@ pub fn powermenu_overlay() -> LayerWindow {
     LayerWindow::new()
         .width(580.0)
         .height(210.0)
+        .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Middle)
         .anchor_horizontal(Horizontal::Middle)
         .margin(Margin {

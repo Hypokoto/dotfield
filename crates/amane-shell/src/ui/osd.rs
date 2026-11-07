@@ -1,13 +1,11 @@
-use std::sync::LazyLock;
 use std::time::{Duration, Instant};
 
 use amane::{
-    Align, Center, Color, Horizontal, Layer, LayerWindow, Margin, Padding, Rectangle, Row, Service,
-    Text, Vertical, Zone,
+    Align, Center, Color, Horizontal, Layer, LayerWindow, Margin, OutputTarget, Padding, Rectangle,
+    Row, Service, Text, Vertical, Zone,
 };
-use parking_lot::RwLock;
 
-use crate::config::ShellManifest;
+use crate::config::ConfigService;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OsdType {
@@ -51,13 +49,6 @@ impl Service for OsdService {
     }
 }
 
-static CONFIG: LazyLock<RwLock<ShellManifest>> =
-    LazyLock::new(|| RwLock::new(ShellManifest::default()));
-
-pub fn set_config(manifest: ShellManifest) {
-    *CONFIG.write() = manifest;
-}
-
 pub fn trigger_osd(osd_type: OsdType, percent: u8, muted: bool, timeout_ms: u64) {
     let mut osd = OsdService::write();
     osd.osd_type = osd_type;
@@ -68,7 +59,7 @@ pub fn trigger_osd(osd_type: OsdType, percent: u8, muted: bool, timeout_ms: u64)
 }
 
 pub fn osd_overlay() -> LayerWindow {
-    let manifest = CONFIG.read().clone();
+    let manifest = ConfigService::read().manifest.clone();
     let osd = OsdService::read();
 
     let is_visible = osd.visible && manifest.osd.enabled;
@@ -76,6 +67,7 @@ pub fn osd_overlay() -> LayerWindow {
         return LayerWindow::new()
             .width(1.0)
             .height(1.0)
+            .target_output(OutputTarget::Active)
             .visible(false)
             .namespace("dotfield-shell-osd");
     }
@@ -145,6 +137,7 @@ pub fn osd_overlay() -> LayerWindow {
     LayerWindow::new()
         .width(260.0)
         .height(60.0)
+        .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Top)
         .anchor_horizontal(Horizontal::Middle)
         .margin(Margin {

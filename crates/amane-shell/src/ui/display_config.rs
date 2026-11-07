@@ -1,14 +1,12 @@
 use std::process::Command;
-use std::sync::LazyLock;
 use std::time::Duration;
 
 use amane::{
-    Align, Color, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin, Padding,
-    Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
+    Align, Color, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin,
+    OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
 };
-use parking_lot::RwLock;
 
-use crate::config::ShellManifest;
+use crate::config::ConfigService;
 
 #[derive(Debug, Clone)]
 pub struct DisplayPreset {
@@ -91,13 +89,6 @@ impl Service for DisplayConfigService {
     fn interval() -> Duration {
         Duration::from_secs(3600)
     }
-}
-
-static CONFIG: LazyLock<RwLock<ShellManifest>> =
-    LazyLock::new(|| RwLock::new(ShellManifest::default()));
-
-pub fn set_config(manifest: ShellManifest) {
-    *CONFIG.write() = manifest;
 }
 
 pub fn toggle() {
@@ -220,7 +211,7 @@ pub fn apply_preset(index: usize) {
 }
 
 pub fn display_config_overlay() -> LayerWindow {
-    let manifest = CONFIG.read().clone();
+    let manifest = ConfigService::read().manifest.clone();
     let svc = DisplayConfigService::read();
 
     let is_visible = svc.open;
@@ -228,6 +219,7 @@ pub fn display_config_overlay() -> LayerWindow {
         return LayerWindow::new()
             .width(1.0)
             .height(1.0)
+            .target_output(OutputTarget::Active)
             .visible(false)
             .namespace("dotfield-shell-display-config");
     }
@@ -468,6 +460,7 @@ pub fn display_config_overlay() -> LayerWindow {
     LayerWindow::new()
         .width(440.0)
         .height(430.0)
+        .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Middle)
         .anchor_horizontal(Horizontal::Middle)
         .margin(Margin {

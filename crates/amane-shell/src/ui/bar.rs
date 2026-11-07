@@ -1,6 +1,4 @@
 use chrono::Local;
-use parking_lot::RwLock;
-use std::sync::LazyLock;
 
 use amane::{
     Align, Audio, Battery, Bluetooth, Center, Color, Cpu, Full, Justify, Layer, LayerWindow,
@@ -8,22 +6,15 @@ use amane::{
     Text, Vertical, Widget, Workspaces, Zone,
 };
 
-use crate::config::ShellManifest;
+use crate::config::{ConfigService, ShellManifest};
 use crate::services::niri::NiriWindowService;
-
-static CONFIG: LazyLock<RwLock<ShellManifest>> =
-    LazyLock::new(|| RwLock::new(ShellManifest::default()));
-
-pub fn set_config(manifest: ShellManifest) {
-    *CONFIG.write() = manifest;
-}
 
 pub fn top_bar_monitor(_monitor: &amane::Monitor) -> LayerWindow {
     top_bar()
 }
 
 pub fn top_bar() -> LayerWindow {
-    let manifest = CONFIG.read().clone();
+    let manifest = ConfigService::read().manifest.clone();
     let bar_cfg = &manifest.bar;
 
     let height = bar_cfg.height as f32;

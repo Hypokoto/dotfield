@@ -9,14 +9,18 @@ MODE="${1:-default}"
 
 # 1. If explicit menu requested (--select, --menu, -m), summon Terminal Manager
 if [[ "$MODE" == "--select" || "$MODE" == "--menu" || "$MODE" == "-m" ]]; then
-    SHELL_BIN=$(command -v amane 2>/dev/null || {
-        [[ -x "${HOME}/.local/bin/amane" ]] && echo "${HOME}/.local/bin/amane"
-    } || command -v dotfield-shell 2>/dev/null || {
-        [[ -x "${HOME}/.local/bin/dotfield-shell" ]] && echo "${HOME}/.local/bin/dotfield-shell"
-    } || true)
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [[ -f "${SCRIPT_DIR}/lib/env.sh" ]]; then
+        # shellcheck source=lib/env.sh
+        source "${SCRIPT_DIR}/lib/env.sh"
+    elif [[ -f "${HOME}/.config/dotfield/scripts/lib/env.sh" ]]; then
+        source "${HOME}/.config/dotfield/scripts/lib/env.sh"
+    fi
+
+    SHELL_BIN=$(get_amane_bin)
 
     # In Sway, we strictly avoid amane and use fuzzel
-    if [[ -z "${SWAYSOCK:-}" ]] && [[ -n "${SHELL_BIN}" ]] && { pgrep -x amane >/dev/null 2>&1 || pgrep -x dotfield-shell >/dev/null 2>&1; }; then
+    if ! is_sway && [[ -n "${SHELL_BIN}" ]] && is_amane_running; then
         exec "${SHELL_BIN}" --terminal-manager
     fi
 

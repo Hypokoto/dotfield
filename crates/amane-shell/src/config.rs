@@ -170,3 +170,23 @@ impl ShellManifest {
         Ok(manifest)
     }
 }
+
+/// Unified, reactive shell configuration service.
+/// Windows and widgets reading ConfigService::read() automatically track
+/// changes and redraw when ConfigService::write() is updated on reload.
+#[derive(Debug, Clone, Default)]
+pub struct ConfigService {
+    pub manifest: ShellManifest,
+}
+
+impl amane::Service for ConfigService {
+    fn new() -> Self {
+        let path = ShellManifest::default_path();
+        let manifest = ShellManifest::load_from_path(&path).unwrap_or_default();
+        Self { manifest }
+    }
+
+    fn interval() -> std::time::Duration {
+        std::time::Duration::from_secs(3600)
+    }
+}

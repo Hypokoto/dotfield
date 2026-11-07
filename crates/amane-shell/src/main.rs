@@ -190,16 +190,7 @@ fn ipc_reload_handler(_args: &[String]) -> String {
     let path = config::ShellManifest::default_path();
     match config::ShellManifest::load_from_path(&path) {
         Ok(manifest) => {
-            ui::bar::set_config(manifest.clone());
-            ui::osd::set_config(manifest.clone());
-            ui::notifications::set_config(manifest.clone());
-            ui::launcher::set_config(manifest.clone());
-            ui::control_center::set_config(manifest.clone());
-            ui::display_config::set_config(manifest.clone());
-            ui::terminal_manager::set_config(manifest.clone());
-            ui::powermenu::set_config(manifest.clone());
-            ui::calendar::set_config(manifest.clone());
-            ui::screen_record::set_config(manifest);
+            config::ConfigService::write().manifest = manifest;
             "reloaded".to_string()
         }
         Err(e) => format!("reload failed: {e}"),
@@ -264,16 +255,7 @@ fn ipc_screen_record_handler(_args: &[String]) -> String {
 fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
     let path = config_path.unwrap_or_else(config::ShellManifest::default_path);
     let manifest = config::ShellManifest::load_from_path(&path)?;
-    ui::bar::set_config(manifest.clone());
-    ui::osd::set_config(manifest.clone());
-    ui::notifications::set_config(manifest.clone());
-    ui::launcher::set_config(manifest.clone());
-    ui::control_center::set_config(manifest.clone());
-    ui::display_config::set_config(manifest.clone());
-    ui::terminal_manager::set_config(manifest.clone());
-    ui::powermenu::set_config(manifest.clone());
-    ui::calendar::set_config(manifest.clone());
-    ui::screen_record::set_config(manifest.clone());
+    config::ConfigService::write().manifest = manifest.clone();
 
     // Clean up stale IPC socket if no running daemon is actively listening
     let sock = amane::ipc_socket();

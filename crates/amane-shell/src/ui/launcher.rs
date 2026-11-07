@@ -1,13 +1,12 @@
-use std::sync::LazyLock;
 use std::time::Duration;
 
 use amane::{
     Align, Apps, Color, Column, DesktopApp, Horizontal, Image, Key, Keyboard, Layer, LayerWindow,
-    Padding, Parent, Pointer, Rectangle, Row, Service, Text, TextInput, Vertical, Widget, Zone,
+    OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, TextInput, Vertical,
+    Widget, Zone,
 };
-use parking_lot::RwLock;
 
-use crate::config::ShellManifest;
+use crate::config::ConfigService;
 
 pub const GRID_COLS: usize = 3;
 pub const GRID_VISIBLE_ROWS: usize = 4;
@@ -36,13 +35,6 @@ impl Service for LauncherService {
     }
 }
 
-static CONFIG: LazyLock<RwLock<ShellManifest>> =
-    LazyLock::new(|| RwLock::new(ShellManifest::default()));
-
-pub fn set_config(manifest: ShellManifest) {
-    *CONFIG.write() = manifest;
-}
-
 pub fn toggle() {
     let mut launcher = LauncherService::write();
     launcher.open = !launcher.open;
@@ -63,7 +55,7 @@ pub fn close() {
 }
 
 pub fn launcher_overlay() -> LayerWindow {
-    let manifest = CONFIG.read().clone();
+    let manifest = ConfigService::read().manifest.clone();
     let launcher = LauncherService::read();
 
     let is_visible = launcher.open && manifest.launcher.enabled;
@@ -72,6 +64,7 @@ pub fn launcher_overlay() -> LayerWindow {
             .width(1.0)
             .height(1.0)
             .visible(false)
+            .target_output(OutputTarget::Active)
             .namespace("dotfield-shell-launcher");
     }
 
@@ -417,6 +410,7 @@ pub fn launcher_overlay() -> LayerWindow {
     LayerWindow::new()
         .width(660.0)
         .height(460.0)
+        .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Middle)
         .anchor_horizontal(Horizontal::Middle)
         .layer(Layer::Overlay)

@@ -1,23 +1,29 @@
 #!/usr/bin/env bash
 # Dotfield Interactive Display Configurator
-# Controlled Chaos display management via Fuzzel, wlr-randr, and Kanshi
+# Controlled Chaos display management via Fuzzel, Sway/wlr-randr, and Kanshi
 # Void Black · Crimson · Industrial Amber · Steel
 
 set -euo pipefail
 
-# If amane is active under Niri, summon the native Wayland Display Configurator
-SHELL_BIN=$(command -v amane 2>/dev/null || {
-    [[ -x "${HOME}/.local/bin/amane" ]] && echo "${HOME}/.local/bin/amane"
-} || command -v dotfield-shell 2>/dev/null || {
-    [[ -x "${HOME}/.local/bin/dotfield-shell" ]] && echo "${HOME}/.local/bin/dotfield-shell"
-} || true)
-
-# In Sway, strictly bypass amane and use Fuzzel
-if [[ -z "${SWAYSOCK:-}" ]] && [[ -n "${SHELL_BIN}" ]] && { pgrep -x amane >/dev/null 2>&1 || pgrep -x dotfield-shell >/dev/null 2>&1; }; then
-    "${SHELL_BIN}" --display-config
-    exit 0
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${SCRIPT_DIR}/lib/env.sh" ]]; then
+    # shellcheck source=lib/env.sh
+    source "${SCRIPT_DIR}/lib/env.sh"
+elif [[ -f "${HOME}/.config/dotfield/scripts/lib/env.sh" ]]; then
+    source "${HOME}/.config/dotfield/scripts/lib/env.sh"
 fi
 
+# If running under Niri with amane active, summon the native Wayland Display Configurator
+if ! is_sway; then
+    SHELL_BIN=$(get_amane_bin)
+
+    if [[ -n "${SHELL_BIN}" ]] && is_amane_running; then
+        "${SHELL_BIN}" --display-config
+        exit 0
+    fi
+fi
+
+# Under Sway (or standalone fallback), present the Fuzzel dmenu interface
 MENU=$(cat << 'EOF'
 󰍹  eDP-1: 1920x1080 @ 144Hz (High Performance)
 󰌢  eDP-1: 1920x1080 @ 60Hz (Battery Saver)
@@ -42,48 +48,88 @@ notify() {
     fi
 }
 
+detect_external() {
+    local ext=""
+    if is_sway && command -v swaymsg >/dev/null 2>&1; then
+        ext=$(swaymsg -t get_outputs 2>/dev/null | jq -r '.[].name' 2>/dev/null | grep -v 'eDP-1' | head -n 1 || true)
+    fi
+    if [[ -z "${ext:-}" ]] && command -v wlr-randr >/dev/null 2>&1; then
+        ext=$(wlr-randr 2>/dev/null | grep -E '^[a-zA-Z0-9_-]+' | awk '{print $1}' | grep -v 'eDP-1' | head -n 1 || true)
+    fi
+    echo "${ext:-}"
+}
+
+apply_mode() {
+    local output="$1"
+    local mode="$2"
+    if is_sway && command -v swaymsg >/dev/null 2>&1; then
+        swaymsg output "$output" mode "$mode" >/dev/null 2>&1 || true
+    fi
+    if command -v wlr-randr >/dev/null 2>&1; then
+        wlr-randr --output "$output" --mode "$mode" >/dev/null 2>&1 || true
+    fi
+}
+
 case "$CHOICE" in
     *"144Hz"*)
-        if command -v wlr-randr >/dev/null 2>&1; then
-            wlr-randr --output eDP-1 --mode 1920x1080@144.003Hz
-            notify "eDP-1 set to 1920x1080 @ 144Hz (High Performance)"
-        fi
+        apply_mode "eDP-1" "1920x1080@144.003Hz"
+        notify "eDP-1 set to 1920x1080 @ 144Hz (High Performance)"
         ;;
     *"60Hz"*)
-        if command -v wlr-randr >/dev/null 2>&1; then
-            wlr-randr --output eDP-1 --mode 1920x1080@60.001Hz
-            notify "eDP-1 set to 1920x1080 @ 60Hz (Power Saving)"
-        fi
+        apply_mode "eDP-1" "1920x1080@60.001Hz"
+        notify "eDP-1 set to 1920x1080 @ 60Hz (Power Saving)"
         ;;
     *"Extend Right"*)
-        EXT=$(wlr-randr 2>/dev/null | grep -E '^[a-zA-Z0-9_-]+' | grep -v 'eDP-1' | head -n 1 | awk '{print $1}')
+        EXT=$(detect_external)
         if [[ -n "${EXT:-}" ]]; then
-            wlr-randr --output eDP-1 --pos 0,0 --output "$EXT" --pos 1920,0
+            if is_sway && command -v swaymsg >/dev/null 2>&1; then
+                swaymsg output eDP-1 enable pos 0 0 output "$EXT" enable pos 1920 0 >/dev/null 2>&1 || true
+            fi
+            if command -v wlr-randr >/dev/null 2>&1; then
+                wlr-randr --output eDP-1 --pos 0,0 --output "$EXT" --pos 1920,0 >/dev/null 2>&1 || true
+            fi
             notify "Extended display to $EXT on the right"
         else
             notify "No external display detected"
         fi
         ;;
     *"Mirror"*)
-        EXT=$(wlr-randr 2>/dev/null | grep -E '^[a-zA-Z0-9_-]+' | grep -v 'eDP-1' | head -n 1 | awk '{print $1}')
+        EXT=$(detect_external)
         if [[ -n "${EXT:-}" ]]; then
-            wlr-randr --output eDP-1 --pos 0,0 --output "$EXT" --pos 0,0
+            if is_sway && command -v swaymsg >/dev/null 2>&1; then
+                swaymsg output eDP-1 enable pos 0 0 output "$EXT" enable pos 0 0 >/dev/null 2>&1 || true
+            fi
+            if command -v wlr-randr >/dev/null 2>&1; then
+                wlr-randr --output eDP-1 --pos 0,0 --output "$EXT" --pos 0,0 >/dev/null 2>&1 || true
+            fi
             notify "Mirrored display with $EXT"
         else
             notify "No external display detected"
         fi
         ;;
     *"Laptop Display Only"*)
-        EXT=$(wlr-randr 2>/dev/null | grep -E '^[a-zA-Z0-9_-]+' | grep -v 'eDP-1' | head -n 1 | awk '{print $1}')
+        EXT=$(detect_external)
         if [[ -n "${EXT:-}" ]]; then
-            wlr-randr --output eDP-1 --on --output "$EXT" --off
+            if is_sway && command -v swaymsg >/dev/null 2>&1; then
+                swaymsg output eDP-1 enable output "$EXT" disable >/dev/null 2>&1 || true
+            fi
+            if command -v wlr-randr >/dev/null 2>&1; then
+                wlr-randr --output eDP-1 --on --output "$EXT" --off >/dev/null 2>&1 || true
+            fi
             notify "External display $EXT turned off"
+        else
+            notify "No external display detected"
         fi
         ;;
     *"External Display Only"*)
-        EXT=$(wlr-randr 2>/dev/null | grep -E '^[a-zA-Z0-9_-]+' | grep -v 'eDP-1' | head -n 1 | awk '{print $1}')
+        EXT=$(detect_external)
         if [[ -n "${EXT:-}" ]]; then
-            wlr-randr --output "$EXT" --on --pos 0,0 --output eDP-1 --off
+            if is_sway && command -v swaymsg >/dev/null 2>&1; then
+                swaymsg output "$EXT" enable pos 0 0 output eDP-1 disable >/dev/null 2>&1 || true
+            fi
+            if command -v wlr-randr >/dev/null 2>&1; then
+                wlr-randr --output "$EXT" --on --pos 0,0 --output eDP-1 --off >/dev/null 2>&1 || true
+            fi
             notify "Switched to external display $EXT (Clamshell Mode)"
         else
             notify "No external display detected"

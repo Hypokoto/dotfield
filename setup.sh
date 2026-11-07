@@ -642,13 +642,13 @@ if [[ ! -d "${FZF_TAB_DIR}/.git" ]]; then
         info "Installing fzf-tab …"
         mkdir -p "$(dirname "${FZF_TAB_DIR}")"
         if git clone --depth=1 https://github.com/Aloxaf/fzf-tab "${FZF_TAB_DIR}" 2>/dev/null; then
-            ok "fzf-tab installed at ${FZF_TAB_DIR}"
+            success "fzf-tab installed at ${FZF_TAB_DIR}"
         else
             warn "fzf-tab clone failed — Tab completions will fall back to standard menu"
         fi
     fi
 else
-    ok "fzf-tab already present at ${FZF_TAB_DIR}"
+    success "fzf-tab already present at ${FZF_TAB_DIR}"
 fi
 
 # Pre-compile zshrc if zsh is available

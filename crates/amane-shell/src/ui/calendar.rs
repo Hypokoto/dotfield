@@ -1,14 +1,12 @@
 use chrono::{Datelike, Local, NaiveDate};
-use parking_lot::RwLock;
-use std::sync::LazyLock;
 use std::time::Duration;
 
 use amane::{
     Align, Center, Color, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin,
-    Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
+    OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
 };
 
-use crate::config::ShellManifest;
+use crate::config::ConfigService;
 
 pub struct CalendarService {
     pub open: bool,
@@ -31,13 +29,6 @@ impl Service for CalendarService {
     fn interval() -> Duration {
         Duration::from_secs(3600)
     }
-}
-
-static CONFIG: LazyLock<RwLock<ShellManifest>> =
-    LazyLock::new(|| RwLock::new(ShellManifest::default()));
-
-pub fn set_config(manifest: ShellManifest) {
-    *CONFIG.write() = manifest;
 }
 
 pub fn toggle() {
@@ -97,7 +88,7 @@ pub fn reset_today() {
 
 /// Renders the interactive monthly Calendar drawer overlay.
 pub fn calendar_overlay() -> LayerWindow {
-    let manifest = CONFIG.read().clone();
+    let manifest = ConfigService::read().manifest.clone();
     let cal = CalendarService::read();
 
     let is_visible = cal.open;
@@ -105,6 +96,7 @@ pub fn calendar_overlay() -> LayerWindow {
         return LayerWindow::new()
             .width(1.0)
             .height(1.0)
+            .target_output(OutputTarget::Active)
             .visible(false)
             .namespace("dotfield-shell-calendar");
     }
@@ -411,6 +403,7 @@ pub fn calendar_overlay() -> LayerWindow {
     LayerWindow::new()
         .width(320.0)
         .height(350.0)
+        .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Top)
         .anchor_horizontal(Horizontal::Right)
         .margin(Margin {

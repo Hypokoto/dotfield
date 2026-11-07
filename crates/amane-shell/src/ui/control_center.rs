@@ -1,14 +1,12 @@
-use parking_lot::RwLock;
-use std::sync::LazyLock;
 use std::time::Duration;
 
 use amane::{
     Align, Audio, Battery, Bluetooth, Brightness, Center, Color, Column, Cpu, Horizontal, Justify,
-    Layer, LayerWindow, Margin, Media, Memory, Network, Notifications, Padding, Parent, Pointer,
-    Rectangle, Row, Scroll, Service, Stack, Text, Vertical, Widget, Zone,
+    Layer, LayerWindow, Margin, Media, Memory, Network, Notifications, OutputTarget, Padding,
+    Parent, Pointer, Rectangle, Row, Scroll, Service, Stack, Text, Vertical, Widget, Zone,
 };
 
-use crate::config::ShellManifest;
+use crate::config::{ConfigService, ShellManifest};
 use crate::services::niri::NiriService;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -41,13 +39,6 @@ impl Service for ControlCenterService {
     }
 }
 
-static CONFIG: LazyLock<RwLock<ShellManifest>> =
-    LazyLock::new(|| RwLock::new(ShellManifest::default()));
-
-pub fn set_config(manifest: ShellManifest) {
-    *CONFIG.write() = manifest;
-}
-
 pub fn toggle() {
     let mut cc = ControlCenterService::write();
     cc.open = !cc.open;
@@ -69,7 +60,7 @@ pub fn close() {
 }
 
 pub fn control_center_panel() -> LayerWindow {
-    let manifest = CONFIG.read().clone();
+    let manifest = ConfigService::read().manifest.clone();
     let cc = ControlCenterService::read();
 
     let is_visible = cc.open && manifest.control_center.enabled;
@@ -77,6 +68,7 @@ pub fn control_center_panel() -> LayerWindow {
         return LayerWindow::new()
             .width(1.0)
             .height(1.0)
+            .target_output(OutputTarget::Active)
             .visible(false)
             .namespace("dotfield-shell-control-center");
     }
@@ -179,6 +171,7 @@ pub fn control_center_panel() -> LayerWindow {
     LayerWindow::new()
         .width(380.0)
         .height(panel_height)
+        .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Top)
         .anchor_horizontal(Horizontal::Right)
         .margin(Margin {

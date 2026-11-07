@@ -1,15 +1,13 @@
 use std::path::PathBuf;
 use std::process::Command;
-use std::sync::LazyLock;
 use std::time::Duration;
 
 use amane::{
-    Align, Color, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin, Padding,
-    Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
+    Align, Color, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin,
+    OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
 };
-use parking_lot::RwLock;
 
-use crate::config::ShellManifest;
+use crate::config::{ConfigService, ShellManifest};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LaunchMode {
@@ -103,13 +101,6 @@ impl Service for TerminalManagerService {
     }
 }
 
-static CONFIG: LazyLock<RwLock<ShellManifest>> =
-    LazyLock::new(|| RwLock::new(ShellManifest::default()));
-
-pub fn set_config(manifest: ShellManifest) {
-    *CONFIG.write() = manifest;
-}
-
 pub fn toggle() {
     let mut svc = TerminalManagerService::write();
     svc.open = !svc.open;
@@ -148,9 +139,9 @@ pub fn is_installed(bin: &str) -> bool {
 }
 
 fn detect_default_terminal() -> String {
-    let conf = CONFIG.read();
-    if !conf.terminal.default.is_empty() {
-        return conf.terminal.default.clone();
+    let conf = ConfigService::read();
+    if !conf.manifest.terminal.default.is_empty() {
+        return conf.manifest.terminal.default.clone();
     }
     drop(conf);
 
@@ -175,7 +166,7 @@ pub fn set_default_terminal(index: usize) {
         drop(svc);
 
         // Update active in-memory config
-        CONFIG.write().terminal.default = term_id.to_string();
+        ConfigService::write().manifest.terminal.default = term_id.to_string();
 
         // Update ~/.config/dotfield/shell.toml
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
@@ -253,7 +244,7 @@ pub fn launch_preset(index: usize, mode: LaunchMode) {
 }
 
 pub fn terminal_manager_overlay() -> LayerWindow {
-    let manifest = CONFIG.read().clone();
+    let manifest = ConfigService::read().manifest.clone();
     let svc = TerminalManagerService::read();
 
     let is_visible = svc.open;
@@ -261,6 +252,7 @@ pub fn terminal_manager_overlay() -> LayerWindow {
         return LayerWindow::new()
             .width(1.0)
             .height(1.0)
+            .target_output(OutputTarget::Active)
             .visible(false)
             .namespace("dotfield-shell-terminal-manager");
     }
@@ -767,6 +759,7 @@ pub fn terminal_manager_overlay() -> LayerWindow {
     LayerWindow::new()
         .width(520.0)
         .height(340.0)
+        .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Middle)
         .anchor_horizontal(Horizontal::Middle)
         .margin(Margin {

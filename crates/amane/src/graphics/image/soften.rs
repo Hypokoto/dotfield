@@ -40,8 +40,8 @@ fn pass(image: &Bitmap, radius: u32, step_x: u32, step_y: u32) -> Vec<u8> {
 
                 let index = ((sample_y * width + sample_x) * 4) as usize;
 
-                for channel in 0..4 {
-                    total[channel] += u32::from(image.pixels[index + channel]);
+                for (channel, sum) in total.iter_mut().enumerate() {
+                    *sum += u32::from(image.pixels[index + channel]);
                 }
 
                 count += 1;

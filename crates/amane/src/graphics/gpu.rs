@@ -40,8 +40,8 @@ use vello::wgpu::{
     TextureFormat,
 };
 
-use crate::graphics::image::forget;
 use crate::graphics::image::Bitmap;
+use crate::graphics::image::forget;
 
 use pass::Pass;
 use shader::Shader;

@@ -26,10 +26,8 @@ impl KeyboardHandler for WaylandState {
         self.keyboard_focus = Some(surface.clone());
 
         // track which output has focus so overlays open on the right monitor
-        if let Some(window) = self.window(surface) {
-            if let Some(output) = window.output.clone() {
-                self.focused_output = Some(output);
-            }
+        if let Some(output) = self.window(surface).and_then(|window| window.output.clone()) {
+            self.focused_output = Some(output);
         }
     }
 

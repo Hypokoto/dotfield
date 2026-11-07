@@ -7,7 +7,11 @@ use crate::config::ShellManifest;
 use crate::services::tray::TrayService;
 
 /// Renders the compact Status Tray pill for the top bar.
-pub fn render_tray_pill(manifest: &ShellManifest, font: &str) -> Box<dyn Widget> {
+pub fn render_tray_pill(
+    manifest: &ShellManifest,
+    font: &str,
+    monitor_name: Option<&str>,
+) -> Box<dyn Widget> {
     let surface_color = Color::from(manifest.palette.surface.as_str());
     let amber_color = Color::from(manifest.palette.highlight.as_str());
     let border_color = Color::from(manifest.palette.border.as_str());
@@ -18,6 +22,7 @@ pub fn render_tray_pill(manifest: &ShellManifest, font: &str) -> Box<dyn Widget>
     // 1. External SNI App Items (Discord, Steam, Telegram, OBS, etc.)
     for (idx, item) in tray.items.iter().enumerate().take(6) {
         let glyph = item.glyph();
+        let mon = monitor_name.map(String::from);
         let app_pill = Rectangle::new()
             .width(22.0)
             .height(22.0)
@@ -27,6 +32,9 @@ pub fn render_tray_pill(manifest: &ShellManifest, font: &str) -> Box<dyn Widget>
             .cursor(Pointer)
             .align_child(Center, Center)
             .on_click(move |btn| {
+                if let Some(ref name) = mon {
+                    amane::focus_monitor(name);
+                }
                 if btn == amane::Button::Right {
                     TrayService::quit(idx);
                 } else {
@@ -51,6 +59,7 @@ pub fn render_tray_pill(manifest: &ShellManifest, font: &str) -> Box<dyn Widget>
         (items.len() as f32 * 26.0) + 12.0
     };
 
+    let mon_tray = monitor_name.map(String::from);
     let tray_container = Rectangle::new()
         .width(pill_w)
         .height(26.0)
@@ -65,7 +74,10 @@ pub fn render_tray_pill(manifest: &ShellManifest, font: &str) -> Box<dyn Widget>
             right: 6.0,
         })
         .align_child(Center, Center)
-        .on_click(|_| {
+        .on_click(move |_| {
+            if let Some(ref name) = mon_tray {
+                amane::focus_monitor(name);
+            }
             crate::ui::control_center::open_view(crate::ui::control_center::ActiveView::Tray);
         })
         .child(Row::new(items).gap(4.0).align(Align::Center));

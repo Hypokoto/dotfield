@@ -140,9 +140,7 @@ pub fn set_muted(device: Device, muted: bool) {
 }
 
 pub fn read_sinks() -> Vec<SinkInfo> {
-    with_connection(|connection| {
-        connection.sinks()
-    })
+    with_connection(|connection| connection.sinks())
 }
 
 pub fn set_default_sink(name: &str) {
@@ -298,9 +296,16 @@ impl Connection {
 
             let sink_type = if lower_name.contains("bluez") || lower_desc.contains("bluetooth") {
                 SinkType::Bluetooth
-            } else if lower_name.contains("hdmi") || lower_desc.contains("hdmi") || lower_name.contains("displayport") || lower_desc.contains("displayport") {
+            } else if lower_name.contains("hdmi")
+                || lower_desc.contains("hdmi")
+                || lower_name.contains("displayport")
+                || lower_desc.contains("displayport")
+            {
                 SinkType::Hdmi
-            } else if lower_name.contains("headphone") || lower_desc.contains("headphone") || lower_desc.contains("headset") {
+            } else if lower_name.contains("headphone")
+                || lower_desc.contains("headphone")
+                || lower_desc.contains("headset")
+            {
                 SinkType::Headphones
             } else if lower_name.contains("usb") || lower_desc.contains("usb") {
                 SinkType::Usb

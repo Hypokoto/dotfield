@@ -40,8 +40,7 @@ pub fn send(key: Key) -> bool {
     // left and right move the text cursor but also reach the window's on_key
     // so the launcher grid can be navigated even while there is search text
     if matches!(key, Key::Left | Key::Right) {
-        let on_key =
-            FOCUS.with_borrow(|focus| focus.as_ref().map(|focus| focus.on_key.clone()));
+        let on_key = FOCUS.with_borrow(|focus| focus.as_ref().map(|focus| focus.on_key.clone()));
         if let Some(on_key) = on_key {
             on_key(key);
         }

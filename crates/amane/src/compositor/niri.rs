@@ -70,6 +70,38 @@ pub fn focus_workspace(id: i64) {
     let _ = BufReader::new(stream).read_line(&mut reply);
 }
 
+pub fn parse_focused_output(reply: &str) -> Option<String> {
+    let val: Value = serde_json::from_str(reply).ok()?;
+    val["Ok"]["FocusedOutput"]["name"]
+        .as_str()
+        .map(String::from)
+}
+
+pub fn focused_output() -> Option<String> {
+    let stream = send("\"FocusedOutput\"")?;
+    let mut reader = BufReader::new(stream);
+    let mut reply = String::new();
+    reader.read_line(&mut reply).ok()?;
+    parse_focused_output(&reply)
+}
+
+pub fn focus_monitor(name: &str) {
+    let request = json!({
+        "Action": {
+            "FocusMonitor": {
+                "output": name
+            }
+        }
+    });
+
+    let Some(stream) = send(&request.to_string()) else {
+        return;
+    };
+
+    let mut reply = String::new();
+    let _ = BufReader::new(stream).read_line(&mut reply);
+}
+
 // follows niri's events until niri exits, handing over the full list after each one
 pub fn listen(mut on_change: impl FnMut(Vec<Workspace>)) {
     let Some(stream) = send("\"EventStream\"") else {
@@ -287,5 +319,14 @@ mod tests {
             )
             .is_none()
         );
+    }
+
+    #[test]
+    fn parses_focused_output_reply() {
+        let reply = r#"{"Ok":{"FocusedOutput":{"name":"HDMI-A-1"}}}"#;
+        assert_eq!(parse_focused_output(reply), Some("HDMI-A-1".to_string()));
+
+        let err_reply = r#"{"Err":"No focused output"}"#;
+        assert_eq!(parse_focused_output(err_reply), None);
     }
 }

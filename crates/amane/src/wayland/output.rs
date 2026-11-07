@@ -34,7 +34,10 @@ impl OutputHandler for WaylandState {
         let plain_views = self.plain_views.clone();
         for (id, plain) in plain_views.into_iter().enumerate() {
             let already_open = self.windows.iter().any(|w| {
-                if let View::Plain { id: existing_id, .. } = w.view {
+                if let View::Plain {
+                    id: existing_id, ..
+                } = w.view
+                {
                     existing_id == id
                 } else {
                     false

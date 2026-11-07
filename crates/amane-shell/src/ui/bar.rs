@@ -9,11 +9,15 @@ use amane::{
 use crate::config::{ConfigService, ShellManifest};
 use crate::services::niri::NiriWindowService;
 
-pub fn top_bar_monitor(_monitor: &amane::Monitor) -> LayerWindow {
-    top_bar()
+pub fn top_bar_monitor(monitor: &amane::Monitor) -> LayerWindow {
+    build_top_bar(Some(&monitor.name))
 }
 
 pub fn top_bar() -> LayerWindow {
+    build_top_bar(None)
+}
+
+fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
     let bar_cfg = &manifest.bar;
 
@@ -25,7 +29,7 @@ pub fn top_bar() -> LayerWindow {
     // 1. Left section: Workspace Radar & Active Window Title grouped together
     let mut left_items: Vec<Box<dyn Widget>> = Vec::new();
     if bar_cfg.show_workspaces {
-        left_items.push(Box::new(render_workspaces(&manifest)));
+        left_items.push(Box::new(render_workspaces(&manifest, monitor_name)));
     }
     if bar_cfg.show_title {
         left_items.push(Box::new(render_title(&manifest)));
@@ -38,7 +42,7 @@ pub fn top_bar() -> LayerWindow {
 
     // 2. Right section: System Telemetry (CPU, Mem, Audio, Battery, Network, Bluetooth, Tray, Clock, Powermenu)
     if bar_cfg.show_telemetry {
-        sections.push(Box::new(render_telemetry(&manifest)));
+        sections.push(Box::new(render_telemetry(&manifest, monitor_name)));
     }
 
     let content_row = Row::new(sections)
@@ -69,7 +73,7 @@ pub fn top_bar() -> LayerWindow {
         .child(background_container)
 }
 
-fn render_workspaces(manifest: &ShellManifest) -> Rectangle {
+fn render_workspaces(manifest: &ShellManifest, monitor_name: Option<&str>) -> Rectangle {
     let workspaces = Workspaces::read();
     let focused_color = Color::from(manifest.palette.highlight.as_str()); // Amber #FFB000
     let urgent_color = Color::from(manifest.palette.accent.as_str()); // Crimson #E63946
@@ -81,7 +85,19 @@ fn render_workspaces(manifest: &ShellManifest) -> Rectangle {
 
     let mut buttons: Vec<Box<dyn Widget>> = Vec::new();
 
-    for ws in workspaces.list() {
+    let all_workspaces = workspaces.list();
+    let relevant_workspaces: Vec<_> = all_workspaces
+        .iter()
+        .filter(|ws| {
+            if let Some(m) = monitor_name {
+                ws.output() == Some(m) || ws.output().is_none()
+            } else {
+                true
+            }
+        })
+        .collect();
+
+    for ws in relevant_workspaces {
         let id = ws.id();
         let idx = ws.index();
         let label = format!("{idx}");
@@ -105,6 +121,7 @@ fn render_workspaces(manifest: &ShellManifest) -> Rectangle {
         };
 
         let text_color = if ws.focused() { Color::BLACK } else { fg_color };
+        let mon = monitor_name.map(String::from);
 
         let tile = Rectangle::new()
             .width(28.0)
@@ -114,7 +131,12 @@ fn render_workspaces(manifest: &ShellManifest) -> Rectangle {
             .border(1.0, tile_border)
             .cursor(Pointer)
             .align_child(Center, Center)
-            .on_click(move |_| Workspaces::focus(id))
+            .on_click(move |_| {
+                if let Some(ref name) = mon {
+                    amane::focus_monitor(name);
+                }
+                Workspaces::focus(id);
+            })
             .child(Text::new(label).size(11.0).color(text_color).font(font));
 
         buttons.push(Box::new(tile));
@@ -187,7 +209,7 @@ fn render_title(manifest: &ShellManifest) -> Rectangle {
         )
 }
 
-fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
+fn render_telemetry(manifest: &ShellManifest, monitor_name: Option<&str>) -> Rectangle {
     let fg_color = Color::from(manifest.palette.foreground.as_str());
     let amber_color = Color::from(manifest.palette.highlight.as_str());
     let crimson_color = Color::from(manifest.palette.accent.as_str());
@@ -267,6 +289,7 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
     } else {
         format!("󰕾 {}%", audio.volume())
     };
+    let mon_audio = monitor_name.map(String::from);
     let vol_pill = Rectangle::new()
         .width(88.0)
         .height(26.0)
@@ -287,7 +310,10 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
             left: 8.0,
             right: 8.0,
         })
-        .on_click(|_| {
+        .on_click(move |_| {
+            if let Some(ref name) = mon_audio {
+                amane::focus_monitor(name);
+            }
             crate::ui::control_center::open_view(crate::ui::control_center::ActiveView::Audio);
         })
         .on_scroll(|scroll: Scroll| {
@@ -358,6 +384,7 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
     } else {
         "󰤭 Offline".to_string()
     };
+    let mon_net = monitor_name.map(String::from);
     let net_pill = Rectangle::new()
         .width(96.0)
         .height(26.0)
@@ -372,7 +399,10 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
             right: 8.0,
         })
         .align_child(Center, Center)
-        .on_click(|_| {
+        .on_click(move |_| {
+            if let Some(ref name) = mon_net {
+                amane::focus_monitor(name);
+            }
             crate::ui::control_center::open_view(crate::ui::control_center::ActiveView::Network);
         })
         .child(
@@ -399,6 +429,7 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
         } else {
             "󰂯 On".to_string()
         };
+        let mon_bt = monitor_name.map(String::from);
         let bt_pill = Rectangle::new()
             .width(62.0)
             .height(26.0)
@@ -420,7 +451,10 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
                 right: 6.0,
             })
             .align_child(Center, Center)
-            .on_click(|_| {
+            .on_click(move |_| {
+                if let Some(ref name) = mon_bt {
+                    amane::focus_monitor(name);
+                }
                 crate::ui::control_center::open_view(
                     crate::ui::control_center::ActiveView::Bluetooth,
                 );
@@ -444,6 +478,7 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
     let notifs = Notifications::read();
     let notifs_count = notifs.list().len();
     if notifs_count > 0 {
+        let mon_notif = monitor_name.map(String::from);
         let notif_pill = Rectangle::new()
             .width(52.0)
             .height(26.0)
@@ -458,7 +493,10 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
                 right: 8.0,
             })
             .align_child(Center, Center)
-            .on_click(|_| {
+            .on_click(move |_| {
+                if let Some(ref name) = mon_notif {
+                    amane::focus_monitor(name);
+                }
                 crate::ui::control_center::toggle();
             })
             .child(
@@ -471,7 +509,11 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
     }
 
     // System Tray (StatusNotifierItem applications & status cluster)
-    pills.push(crate::ui::tray::render_tray_pill(manifest, font));
+    pills.push(crate::ui::tray::render_tray_pill(
+        manifest,
+        font,
+        monitor_name,
+    ));
 
     // Active Screen Recording indicator (Crimson with timer, click to open recorder overlay)
     let is_recording = crate::ui::screen_record::ScreenRecordService::read().is_recording;
@@ -483,6 +525,7 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
         let mins = rec_elapsed / 60;
         let secs = rec_elapsed % 60;
         let rec_text = format!("󰑋 REC {mins:02}:{secs:02}");
+        let mon_rec = monitor_name.map(String::from);
         let rec_pill = Rectangle::new()
             .width(108.0)
             .height(26.0)
@@ -497,7 +540,10 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
                 right: 8.0,
             })
             .align_child(Center, Center)
-            .on_click(|_| {
+            .on_click(move |_| {
+                if let Some(ref name) = mon_rec {
+                    amane::focus_monitor(name);
+                }
                 crate::ui::screen_record::toggle();
             })
             .child(
@@ -511,6 +557,7 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
 
     // Clock (clickable: toggles interactive monthly Calendar)
     let now = Local::now().format("%a %b %d  %H:%M").to_string();
+    let mon_clock = monitor_name.map(String::from);
     let clock_pill = Rectangle::new()
         .width(162.0)
         .height(26.0)
@@ -525,13 +572,17 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
             right: 8.0,
         })
         .align_child(Center, Center)
-        .on_click(|_| {
+        .on_click(move |_| {
+            if let Some(ref name) = mon_clock {
+                amane::focus_monitor(name);
+            }
             crate::ui::calendar::toggle();
         })
         .child(Text::new(now).size(11.0).color(amber_color).font(font));
     pills.push(Box::new(clock_pill));
 
     // Powermenu icon button (Crimson #E63946)
+    let mon_power = monitor_name.map(String::from);
     let power_pill = Rectangle::new()
         .width(28.0)
         .height(26.0)
@@ -540,7 +591,10 @@ fn render_telemetry(manifest: &ShellManifest) -> Rectangle {
         .border(1.0, border_color)
         .cursor(Pointer)
         .align_child(Center, Center)
-        .on_click(|_| {
+        .on_click(move |_| {
+            if let Some(ref name) = mon_power {
+                amane::focus_monitor(name);
+            }
             crate::ui::powermenu::toggle();
         })
         .child(Text::new("󰐥").size(12.0).color(crimson_color).font(font));

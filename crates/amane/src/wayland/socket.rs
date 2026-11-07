@@ -20,6 +20,7 @@ pub fn insert(handle: &LoopHandle<'static, WaylandState>, handlers: IpcHandlers)
             if let Ok((stream, _)) = listener.accept() {
                 answer(stream, &handlers);
 
+                state.relocate_plain_overlays();
                 state.request_frames();
             }
 

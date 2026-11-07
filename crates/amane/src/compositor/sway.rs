@@ -11,6 +11,7 @@ use crate::Workspace;
 const RUN_COMMAND: u32 = 0;
 const GET_WORKSPACES: u32 = 1;
 const SUBSCRIBE: u32 = 2;
+const GET_OUTPUTS: u32 = 3;
 const GET_TREE: u32 = 4;
 
 fn connect() -> Option<UnixStream> {
@@ -64,6 +65,26 @@ pub fn focus_workspace(id: i64) {
     // quotes keep a name with spaces in one piece
     let command = format!("workspace \"{}\"", name.replace('"', "\\\""));
 
+    let _ = request(RUN_COMMAND, &command);
+}
+
+pub fn parse_focused_output(reply: &str) -> Option<String> {
+    let outputs: Value = serde_json::from_str(reply).ok()?;
+    for output in outputs.as_array()? {
+        if output["focused"].as_bool() == Some(true) {
+            return output["name"].as_str().map(String::from);
+        }
+    }
+    None
+}
+
+pub fn focused_output() -> Option<String> {
+    let reply = request(GET_OUTPUTS, "")?;
+    parse_focused_output(&reply)
+}
+
+pub fn focus_monitor(name: &str) {
+    let command = format!("focus output \"{}\"", name.replace('"', "\\\""));
     let _ = request(RUN_COMMAND, &command);
 }
 
@@ -228,5 +249,20 @@ mod tests {
         assert_eq!(list[1].name.as_deref(), Some("3:web"));
         assert_eq!(list[1].windows, 0);
         assert!(list[1].urgent);
+    }
+
+    #[test]
+    fn parses_focused_output_from_outputs_json() {
+        let outputs = r#"[
+            {"name":"eDP-1","active":true,"focused":false},
+            {"name":"HDMI-A-1","active":true,"focused":true}
+        ]"#;
+
+        assert_eq!(parse_focused_output(outputs), Some("HDMI-A-1".to_string()));
+
+        let none_focused = r#"[
+            {"name":"eDP-1","active":true,"focused":false}
+        ]"#;
+        assert_eq!(parse_focused_output(none_focused), None);
     }
 }

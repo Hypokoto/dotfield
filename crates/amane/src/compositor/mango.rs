@@ -32,6 +32,27 @@ pub fn focus_workspace(id: i64) {
     let _ = focus(id, request);
 }
 
+pub fn parse_focused_output(reply: &str) -> Option<String> {
+    let confirmed: Value = serde_json::from_str(reply).ok()?;
+    for monitor in confirmed["monitors"].as_array()? {
+        if monitor["focused"].as_bool() == Some(true) {
+            return monitor["name"].as_str().map(String::from);
+        }
+    }
+    None
+}
+
+pub fn focused_output() -> Option<String> {
+    let reply = request("get all-monitors")?;
+    parse_focused_output(&reply)
+}
+
+pub fn focus_monitor(name: &str) {
+    if let Some(selector) = monitor_selector(name) {
+        let _ = request(&format!("dispatch focusmon,{selector}"));
+    }
+}
+
 fn focus(id: i64, mut request: impl FnMut(&str) -> Option<String>) -> Option<()> {
     let list = snapshot(&request("get all-monitors")?)?;
     let (index, output, selector) = focus_target(id, &list)?;

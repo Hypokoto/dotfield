@@ -34,6 +34,8 @@ impl PointerHandler for WaylandState {
         for surface in handled_on {
             self.request_frame_on(&surface);
         }
+
+        self.relocate_plain_overlays();
     }
 }
 

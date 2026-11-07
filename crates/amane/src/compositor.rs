@@ -64,3 +64,27 @@ pub fn focus_workspace(id: i64) {
         Compositor::Mango => mango::focus_workspace(id),
     }
 }
+
+pub fn focused_output() -> Option<String> {
+    let compositor = running()?;
+
+    match compositor {
+        Compositor::Niri => niri::focused_output(),
+        Compositor::Hyprland => hyprland::focused_output(),
+        Compositor::Sway => sway::focused_output(),
+        Compositor::Mango => mango::focused_output(),
+    }
+}
+
+pub fn focus_monitor(name: &str) {
+    let Some(compositor) = running() else {
+        return;
+    };
+
+    match compositor {
+        Compositor::Niri => niri::focus_monitor(name),
+        Compositor::Hyprland => hyprland::focus_monitor(name),
+        Compositor::Sway => sway::focus_monitor(name),
+        Compositor::Mango => mango::focus_monitor(name),
+    }
+}

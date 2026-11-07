@@ -7,7 +7,7 @@ use wayland_client::{
 
 use crate::graphics::Gpu;
 use crate::input::Pointer;
-use crate::{changes, frame, LayerWindow, OutputTarget, Service};
+use crate::{LayerWindow, OutputTarget, Service, changes, frame};
 
 use super::{
     WaylandState,
@@ -138,7 +138,8 @@ impl WaylandState {
     }
 
     pub fn close(&mut self, surface: &WlSurface) {
-        let closed_window = self.windows
+        let closed_window = self
+            .windows
             .iter()
             .find(|w| w.role.wl_surface() == surface)
             .map(|w| (w.view.clone(), w.output.clone()));
@@ -157,7 +158,11 @@ impl WaylandState {
 
         // windows made per monitor or plain views come back when a monitor is plugged in again.
         // A shell daemon with IPC also keeps running.
-        if self.windows.is_empty() && self.per_monitor.is_empty() && self.plain_views.is_empty() && !self.has_ipc {
+        if self.windows.is_empty()
+            && self.per_monitor.is_empty()
+            && self.plain_views.is_empty()
+            && !self.has_ipc
+        {
             self.running = false;
         }
 
@@ -167,14 +172,17 @@ impl WaylandState {
     }
 
     /// Returns the currently active output for placing overlays:
-    /// 1. The output tracked from recent pointer/keyboard interaction on an Amane window (e.g. top bar).
+    /// 1. The output actively focused by the Wayland compositor (Niri, Sway, Hyprland).
     /// 2. If none, the output corresponding to the compositor's currently focused workspace.
-    /// 3. If neither is available, falls back to the first available output.
+    /// 3. The output tracked from recent pointer/keyboard interaction on an Amane window.
+    /// 4. If neither is available, falls back to the first available output.
     pub fn current_focused_output(&self) -> Option<WlOutput> {
-        if let Some(focused) = &self.focused_output {
-            if self.output.outputs().any(|o| &o == focused) {
-                return Some(focused.clone());
-            }
+        if let Some(matched) = crate::compositor::focused_output().and_then(|comp_output| {
+            self.output
+                .outputs()
+                .find(|out| self.output.info(out).and_then(|i| i.name).as_deref() == Some(&comp_output))
+        }) {
+            return Some(matched);
         }
 
         let focused_ws_output = crate::Workspaces::read()
@@ -183,12 +191,20 @@ impl WaylandState {
             .find(|ws| ws.focused())
             .and_then(|ws| ws.output().map(String::from));
 
-        if let Some(ws_name) = focused_ws_output {
-            if let Some(matched) = self.output.outputs().find(|out| {
-                self.output.info(out).and_then(|i| i.name) == Some(ws_name.clone())
-            }) {
-                return Some(matched);
-            }
+        if let Some(matched) = focused_ws_output.and_then(|ws_name| {
+            self.output
+                .outputs()
+                .find(|out| self.output.info(out).and_then(|i| i.name).as_deref() == Some(&ws_name))
+        }) {
+            return Some(matched);
+        }
+
+        if let Some(focused) = self
+            .focused_output
+            .as_ref()
+            .filter(|f| self.output.outputs().any(|o| &o == *f))
+        {
+            return Some(focused.clone());
         }
 
         self.output.outputs().next()
@@ -201,8 +217,10 @@ impl WaylandState {
             return;
         };
 
+        type PlainMoveTarget = (usize, fn() -> LayerWindow, WlOutput);
+
         // collect plain windows that are visible and on a different output than targeted
-        let to_move: Vec<(usize, fn() -> LayerWindow, WlOutput)> = self
+        let to_move: Vec<PlainMoveTarget> = self
             .windows
             .iter()
             .filter_map(|w| {
@@ -218,11 +236,9 @@ impl WaylandState {
 
                 let target_output = match settings.target_output {
                     OutputTarget::Active => active.clone(),
-                    OutputTarget::Named(name) => {
-                        self.output.outputs().find(|out| {
-                            self.output.info(out).and_then(|i| i.name) == Some(name.to_string())
-                        })?
-                    }
+                    OutputTarget::Named(name) => self.output.outputs().find(|out| {
+                        self.output.info(out).and_then(|i| i.name) == Some(name.to_string())
+                    })?,
                     OutputTarget::Default => return None,
                 };
 

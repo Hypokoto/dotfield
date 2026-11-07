@@ -36,7 +36,9 @@ pub fn read(path: &Path, icon_folders: &[Vec<PathBuf>]) -> Option<DesktopApp> {
 
     let icon = fields.get("Icon").map(|icon| icon.to_string());
 
-    let icon_path = icon.as_deref().and_then(|icon| find_icon(icon, icon_folders));
+    let icon_path = icon
+        .as_deref()
+        .and_then(|icon| find_icon(icon, icon_folders));
 
     let description = fields
         .get("Comment")

@@ -62,7 +62,9 @@ pub fn focus_workspace(id: i64) {
                  * only gets a syntax error back; {:?} quotes the target as a string
                  * with escapes lua reads the same way
                  */
-                let _ = request(&format!("dispatch hl.dsp.focus({{ workspace = {target:?} }})"));
+                let _ = request(&format!(
+                    "dispatch hl.dsp.focus({{ workspace = {target:?} }})"
+                ));
             }
         }
         return;
@@ -78,7 +80,9 @@ pub fn focus_workspace(id: i64) {
         }
         _ => {
             // the legacy form failed, so ask in lua and keep it only if hyprland accepts
-            let lua_reply = request(&format!("dispatch hl.dsp.focus({{ workspace = {target:?} }})"));
+            let lua_reply = request(&format!(
+                "dispatch hl.dsp.focus({{ workspace = {target:?} }})"
+            ));
 
             let accepted = lua_reply.is_some_and(|text| text.starts_with("ok"));
 
@@ -92,6 +96,25 @@ pub fn focus_workspace(id: i64) {
     };
 
     let _ = HYPRLAND_CONFIG_PROVIDER.set(provider);
+}
+
+pub fn parse_focused_output(reply: &str) -> Option<String> {
+    let monitors: Value = serde_json::from_str(reply).ok()?;
+    for monitor in monitors.as_array()? {
+        if monitor["focused"].as_bool() == Some(true) {
+            return monitor["name"].as_str().map(String::from);
+        }
+    }
+    None
+}
+
+pub fn focused_output() -> Option<String> {
+    let reply = request("j/monitors")?;
+    parse_focused_output(&reply)
+}
+
+pub fn focus_monitor(name: &str) {
+    let _ = request(&format!("dispatch focusmonitor {name}"));
 }
 
 // what both dispatch forms accept, a number or name:<name>

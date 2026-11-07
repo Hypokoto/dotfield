@@ -26,6 +26,7 @@ mod window;
 
 pub use animation::{Animation, Blend, Easing, request_frame};
 pub use app::App;
+pub use compositor::{focus_monitor, focus_workspace, focused_output};
 pub use dbus::{Argument, Bus, Method, Signal, Value};
 pub use files::watch_file;
 pub use full::Full;
@@ -38,8 +39,8 @@ pub use input::cursor_names::{
 pub use input::{Button, Cursor, Key, Point, Scroll};
 pub use ipc::{IpcCall, ipc_socket};
 pub use layer_window::{
-    Horizontal, InputArea, Keyboard, Layer, LayerWindow, Margin, OutputTarget, Vertical, WindowSize,
-    Zone,
+    Horizontal, InputArea, Keyboard, Layer, LayerWindow, Margin, OutputTarget, Vertical,
+    WindowSize, Zone,
 };
 pub use monitor::Monitor;
 pub use placement::{Align, Center, End, Justify, Padding, Size, Start};

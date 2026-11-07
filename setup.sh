@@ -526,12 +526,19 @@ if [[ "${DRY_RUN}" == true ]]; then
     info "[dry-run] mkdir -p ${SCRIPTS_DEST}"
     info "[dry-run] install -m 0755 scripts/*.sh ${SCRIPTS_DEST}/"
 else
-    mkdir -p "${SCRIPTS_DEST}"
+    mkdir -p "${SCRIPTS_DEST}/lib"
     for s in "${SCRIPT_DIR}/scripts"/*.sh; do
         if [[ -f "${s}" ]]; then
             install -m 0755 "${s}" "${SCRIPTS_DEST}/$(basename "${s}")"
         fi
     done
+    if [[ -d "${SCRIPT_DIR}/scripts/lib" ]]; then
+        for lib in "${SCRIPT_DIR}/scripts/lib"/*.sh; do
+            if [[ -f "${lib}" ]]; then
+                install -m 0755 "${lib}" "${SCRIPTS_DEST}/lib/$(basename "${lib}")"
+            fi
+        done
+    fi
     ln -sf "${SCRIPTS_DEST}/terminal-select.sh" "${PREFIX}/terminal-select"
     ln -sf "${SCRIPTS_DEST}/display-config.sh" "${PREFIX}/display-config"
     ln -sf "${SCRIPTS_DEST}/typecheck-terminals.sh" "${PREFIX}/typecheck-terminals"

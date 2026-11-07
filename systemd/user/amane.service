@@ -1,5 +1,6 @@
 [Unit]
 Description=Amane Wayland Desktop Shell Daemon for Niri
+ConditionEnvironment=XDG_CURRENT_DESKTOP=niri
 PartOf=graphical-session.target
 After=graphical-session.target
 StartLimitIntervalSec=0

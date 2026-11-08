@@ -584,11 +584,11 @@ ensure_config_link_or_dir() {
             success "Replaced base config (backed up to ${dest}.bak.${ts}): ${dest}"
         fi
     else
-        # Sync newly added and updated modular files and subdirectories with backup
+        # Add newly introduced files only; never overwrite existing user files without --force
         if [[ -d "${src}" ]]; then
-            cp -r --backup=numbered "${src}/." "${dest}/" 2>/dev/null || true
+            cp -rn "${src}/." "${dest}/" 2>/dev/null || true
         elif [[ -f "${src}" ]]; then
-            cp --backup=numbered "${src}" "${dest}" 2>/dev/null || true
+            cp -n "${src}" "${dest}" 2>/dev/null || true
         fi
     fi
 }

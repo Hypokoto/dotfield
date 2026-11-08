@@ -8,7 +8,7 @@ StartLimitIntervalSec=0
 [Service]
 Type=simple
 ExecStart=%h/.local/bin/amane --foreground
-Restart=always
+Restart=on-failure
 RestartSec=1
 Slice=session.slice
 

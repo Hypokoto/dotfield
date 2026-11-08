@@ -174,7 +174,6 @@ impl WaylandState {
     /// Ensures that all registered plain layer views (launcher, display config, control center, etc.)
     /// have an active window surface. Recreates any missing views on the active output.
     pub fn ensure_plain_windows(&mut self) {
-        let active = self.current_focused_output();
         let plain_views = self.plain_views.clone();
         for (id, plain) in plain_views.into_iter().enumerate() {
             let already_open = self.windows.iter().any(|w| {
@@ -188,7 +187,8 @@ impl WaylandState {
                 }
             });
             if !already_open {
-                self.open(View::Plain { id, view: plain }, active.clone());
+                let active = self.current_focused_output();
+                self.open(View::Plain { id, view: plain }, active);
             }
         }
     }

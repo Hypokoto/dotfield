@@ -294,7 +294,7 @@ pub fn apply_preset(index: usize) {
                 use std::os::unix::process::CommandExt;
                 let _ = Command::new("kanshictl").arg("reload").spawn();
                 let status = Command::new("pkill").args(["-HUP", "kanshi"]).status();
-                if status.is_err() || !status.unwrap().success() {
+                if !status.is_ok_and(|s| s.success()) {
                     let _ = Command::new("kanshi")
                         .process_group(0)
                         .stdin(std::process::Stdio::null())

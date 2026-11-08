@@ -1,5 +1,5 @@
 // Niri Floating Windows & Multi-Window Overlapping
-// Seamless floating management and dialog routing
+// Window rules for floating management and dialog routing
 
 binds {
     // Toggle focused window between floating and tiling

@@ -345,7 +345,7 @@ pub fn display_config_overlay() -> LayerWindow {
 
     let mut rows: Vec<Box<dyn Widget>> = Vec::new();
 
-    // 1. Header Box
+    // Header box
     let header_icon = Text::new("󰍹").size(16.0).color(amber_color).font(&font);
 
     let header_title = Text::new("Display Configurator")
@@ -390,7 +390,7 @@ pub fn display_config_overlay() -> LayerWindow {
 
     rows.push(Box::new(header_row));
 
-    // 2. Preset Options
+    // Preset options
     let total_presets = PRESETS.len();
     let mut preset_rows: Vec<Box<dyn Widget>> = Vec::new();
 
@@ -540,7 +540,7 @@ pub fn display_config_overlay() -> LayerWindow {
     let preset_list = Column::new(preset_rows).width(Parent).gap(6.0);
     rows.push(Box::new(preset_list));
 
-    // 3. Footer Bar with Navigation Hints
+    // Footer bar with navigation hints
     let footer_text = Text::new("[↑/↓] Navigate   [↵] Apply Preset   [Esc] Dismiss")
         .size(10.0)
         .color(muted_color)

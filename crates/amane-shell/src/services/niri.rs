@@ -115,7 +115,7 @@ impl NiriService {
 
         let mut windows: HashMap<u64, Window> = HashMap::new();
 
-        // 1. Seed initial focused window
+        // Seed initial focused window
         if let Ok(Ok(Response::FocusedWindow(Some(win)))) = socket.send(Request::FocusedWindow) {
             let title = win.title.clone().unwrap_or_default();
             let app_id = win.app_id.clone().unwrap_or_default();
@@ -123,7 +123,7 @@ impl NiriService {
             windows.insert(win.id, win);
         }
 
-        // 2. Seed initial window list
+        // Seed initial window list
         if let Ok(Ok(Response::Windows(wins))) = socket.send(Request::Windows) {
             let total = wins.len();
             for win in wins {
@@ -136,7 +136,7 @@ impl NiriService {
             }
         }
 
-        // 3. Subscribe to event stream
+        // Subscribe to event stream
         let reply = socket.send(Request::EventStream)?;
         if !matches!(reply, Ok(Response::Handled)) {
             return Err(std::io::Error::other(

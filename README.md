@@ -79,7 +79,7 @@ Dotfield natively supports two distinct Wayland compositor workflows:
   - **[Tmux](multiplexer/tmux)**: Harmonized with Zellij keybindings, Vi copy mode with rectangle selection, floating modal popups (`display-popup`), and dynamic prefix indicator.
 - **Editor ([Neovim](nvim))**:
   - Universal save on `Ctrl-s` across Normal, Insert, and Visual modes.
-  - Seamless window navigation (`<C-h>`, `<C-j>`, `<C-k>`, `<C-l>`).
+  - Unified window navigation (`<C-h>`, `<C-j>`, `<C-k>`, `<C-l>`).
   - Window resizing with `Ctrl-Arrow` keys.
   - Visual block moving with persistent indentation (`<` / `>`).
   - Dropbar VS Code style breadcrumbs and NvChad foundation.

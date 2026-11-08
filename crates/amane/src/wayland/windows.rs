@@ -280,7 +280,7 @@ impl WaylandState {
                     OutputTarget::Default => return None,
                 };
 
-                // already on the target output — nothing to do
+                // Target output already matches: nothing to do
                 if w.output.as_ref() == Some(&target_output) {
                     return None;
                 }

@@ -176,7 +176,7 @@ pub fn powermenu_overlay() -> LayerWindow {
     let steel_color = Color::from(manifest.palette.steel.as_str());
     let font = manifest.theme.font_family.clone();
 
-    // 1. Header with title, system info, and close button
+    // Header with title, system info, and close button
     let user_name = std::env::var("USER").unwrap_or_else(|_| "user".to_string());
     let host_name = std::fs::read_to_string("/etc/hostname")
         .unwrap_or_else(|_| "linux".to_string())
@@ -222,7 +222,7 @@ pub fn powermenu_overlay() -> LayerWindow {
     .justify(Justify::SpaceBetween)
     .align(Align::Center);
 
-    // 2. Action Buttons (5 cards in a horizontal row)
+    // Action buttons: 5 cards in a horizontal row
     let mut action_cards: Vec<Box<dyn Widget>> = Vec::new();
 
     for (idx, action) in ACTIONS.iter().enumerate() {
@@ -332,7 +332,7 @@ pub fn powermenu_overlay() -> LayerWindow {
         .justify(Justify::SpaceBetween)
         .align(Align::Center);
 
-    // 3. Footer with hotkey hints
+    // Footer with hotkey hints
     let footer_text = Row::new(vec![Box::new(
         Text::new("Use [←/→] or [h/l] to navigate • [Enter] to execute • [Esc] to cancel")
             .size(9.5)

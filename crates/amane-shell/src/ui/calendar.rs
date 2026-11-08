@@ -115,7 +115,7 @@ pub fn calendar_overlay() -> LayerWindow {
     let today_month = now.month();
     let today_day = now.day();
 
-    // 1. Digital Clock & Date Summary Header
+    // Digital Clock and Date Summary Header
     let time_str = now.format("%H:%M:%S").to_string();
     let full_date_str = now.format("%A, %B %d, %Y").to_string();
 
@@ -170,7 +170,7 @@ pub fn calendar_overlay() -> LayerWindow {
             .align(Align::Center),
         );
 
-    // 2. Month Navigation Bar: [ ❮ ] [ Month YYYY ] [ ❯ ] [ Today ]
+    // Month navigation bar
     let month_name = match cal.view_month {
         1 => "January",
         2 => "February",
@@ -248,7 +248,7 @@ pub fn calendar_overlay() -> LayerWindow {
     .justify(Justify::SpaceBetween)
     .align(Align::Center);
 
-    // 3. Day of Week Column Headers: Mo Tu We Th Fr Sa Su
+    // Weekday column headers
     let weekday_labels = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
     let mut weekday_pills: Vec<Box<dyn Widget>> = Vec::new();
     for label in weekday_labels {
@@ -264,7 +264,7 @@ pub fn calendar_overlay() -> LayerWindow {
         .justify(Justify::SpaceBetween)
         .align(Align::Center);
 
-    // 4. Calculate Calendar Days Grid (6 rows x 7 days)
+    // Calendar days grid: 6 rows x 7 days
     let first_day = NaiveDate::from_ymd_opt(cal.view_year, cal.view_month, 1)
         .unwrap_or_else(|| NaiveDate::from_ymd_opt(2026, 1, 1).unwrap());
     let start_col = first_day.weekday().num_days_from_monday() as usize; // 0 for Monday

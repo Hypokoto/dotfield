@@ -137,7 +137,7 @@ flowchart LR
 ---
 
 ## Phase 8: Non-Rust Desktop System Performance, Latency Optimization, and Productivity Hardening
-*Goal: Synchronize and optimize all non-Rust desktop configuration fragments, scripts, themes, and pipelines for sub-millisecond input latency, instantaneous shell prompt rendering, and seamless vi-mode navigation.*
+*Goal: Synchronize and optimize all non-Rust desktop configuration fragments, scripts, themes, and pipelines for sub-millisecond input latency, instantaneous shell prompt rendering, and unified vi-mode navigation.*
 
 - [x] **Compositors (`compositor/`)**:
   - **Sway (`compositor/sway/config`)**:

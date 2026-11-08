@@ -60,7 +60,7 @@ if [[ "$MODE" == "--select" || "$MODE" == "--menu" || "$MODE" == "-m" ]]; then
     exit 0
 fi
 
-# 2. Default behavior for Super+Return: Launch default terminal directly
+# Launch default terminal directly
 TARGET_BIN=""
 
 # Check dotfield shell manifest
@@ -92,7 +92,7 @@ if [[ -n "${TARGET_BIN}" ]]; then
     exit 0
 fi
 
-# Ultimate fallback
+# Final fallback
 if command -v xterm >/dev/null 2>&1; then
     setsid xterm </dev/null >/dev/null 2>&1 &
 fi

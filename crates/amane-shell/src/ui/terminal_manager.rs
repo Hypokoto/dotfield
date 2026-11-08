@@ -268,7 +268,7 @@ pub fn terminal_manager_overlay() -> LayerWindow {
 
     let mut rows: Vec<Box<dyn Widget>> = Vec::new();
 
-    // 1. Header Box
+    // Header box
     let header_icon = Text::new("󰞷").size(16.0).color(amber_color).font(&font);
 
     let header_title = Text::new("Terminal Manager")
@@ -333,7 +333,7 @@ pub fn terminal_manager_overlay() -> LayerWindow {
 
     rows.push(Box::new(header_row));
 
-    // 2. Terminal Preset Cards in a 2x2 Grid Box
+    // Terminal preset cards in a 2x2 grid
     let total_presets = TERMINAL_PRESETS.len();
     let mut cards: Vec<Box<dyn Widget>> = Vec::new();
 
@@ -599,7 +599,7 @@ pub fn terminal_manager_overlay() -> LayerWindow {
         rows.push(Box::new(grid_container));
     }
 
-    // 3. Status Message Banner
+    // Status message banner
     if let Some(ref msg) = svc.status_message {
         let status_box = Rectangle::new()
             .width(Parent)
@@ -612,7 +612,7 @@ pub fn terminal_manager_overlay() -> LayerWindow {
         rows.push(Box::new(status_box));
     }
 
-    // 4. Quick Actions Tray (Multiplexer, Scratchpad, Set Default)
+    // Quick actions tray (Multiplexer, Scratchpad, Set Default)
     let sel_preset = TERMINAL_PRESETS.get(selected_idx);
     let sel_name = sel_preset.map(|p| p.name).unwrap_or("Terminal");
 
@@ -683,7 +683,7 @@ pub fn terminal_manager_overlay() -> LayerWindow {
 
     rows.push(Box::new(actions_row));
 
-    // 5. Footer Navigation Key Hints
+    // Footer navigation key hints
     let footer_hints = Row::new(vec![
         Box::new(
             Text::new("[Arrows]")

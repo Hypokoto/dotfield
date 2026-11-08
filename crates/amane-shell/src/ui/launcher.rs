@@ -109,7 +109,7 @@ pub fn launcher_overlay() -> LayerWindow {
 
     let mut rows: Vec<Box<dyn Widget>> = Vec::new();
 
-    // 1. Search Bar with icon prefix and sleek border
+    // Search bar with icon prefix and subtle border
     let search_icon = Text::new("󰍉").size(15.0).color(amber_color).font(&font);
     let search_input = TextInput::new("launcher-search")
         .size(13.0)
@@ -161,7 +161,7 @@ pub fn launcher_overlay() -> LayerWindow {
 
     rows.push(Box::new(search_box));
 
-    // 2. Results Grid with 3 Columns x 4 Rows
+    // Results grid: 3 columns x 4 rows
     let hover_color = Color::from(manifest.palette.hover.as_str()); // Pale Amber #FFD166
     let steel_color = Color::from(manifest.palette.steel.as_str()); // Steel #8B949E
 
@@ -378,7 +378,7 @@ pub fn launcher_overlay() -> LayerWindow {
         rows.push(Box::new(empty_card));
     }
 
-    // 3. Footer Bar with Navigation Hints
+    // Footer bar with navigation hints
     let footer_text =
         Text::new("[Arrows] Navigate Grid   [PgUp/PgDn] Page   [↵] Launch   [Esc] Dismiss")
             .size(9.5)

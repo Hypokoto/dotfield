@@ -60,7 +60,7 @@ Phase 9 resolves these deficiencies across the entire desktop graphical stack, t
   1. Expand `crates/dotfield-gui/ui/palette.slint` with complete Controlled Chaos colors, typography scale, spacing tokens, and corner radii.
   2. Overhaul `crates/dotfield-gui/ui/hud.slint`: Add zero-match empty state, styled keyboard modifier chips (`Super`, `Return`), category badge pills, search bar focus ring, styled vector close button, and keyboard navigation hints.
   3. Overhaul `crates/dotfield-gui/ui/switcher.slint`: Add tactile `[1]`, `[2]`, `[3]` hotkey chips, interactive card hover elevations, discrete semantic metadata badges (Compositor, Apps, Security), tactile Apply button states, and rich generational status bar.
-  4. Update `crates/dotfield-gui/src/main.rs`: Ensure model bindings, search filtering, and state feedback seamlessly integrate with the new Slint properties.
+  4. Update `crates/dotfield-gui/src/main.rs`: Ensure model bindings, search filtering, and state feedback directly integrate with the new Slint properties.
   5. Refine Launchers (`launcher/fuzzel/fuzzel.ini`, `launcher/rofi/config.rasi`): 8px border radii, symmetric padding, matching Controlled Chaos tokens.
   6. Refine Notifications (`mako/config`): 8px radius, distinct urgency border levels (Amber, Iron, Crimson), readable typography.
   7. Refine Status Bar & Prompts (`i3-rust/config.toml`, `shell/starship/starship.toml`): Clean glyph spacing, vi-mode visual indicator states.

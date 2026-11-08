@@ -19,7 +19,7 @@ pub fn render_tray_pill(
     let tray = TrayService::read();
     let mut items: Vec<Box<dyn Widget>> = Vec::new();
 
-    // 1. External SNI App Items (Discord, Steam, Telegram, OBS, etc.)
+    // External SNI App Items (Discord, Steam, Telegram, OBS, etc.)
     for (idx, item) in tray.items.iter().enumerate().take(6) {
         let glyph = item.glyph();
         let mon = monitor_name.map(String::from);
@@ -100,7 +100,7 @@ pub fn render_tray_drawer(manifest: &ShellManifest, font: &str) -> Box<dyn Widge
 
     let mut elements: Vec<Box<dyn Widget>> = Vec::new();
 
-    // 1. D-Bus Watcher Status Banner
+    // D-Bus Watcher status banner
     let watcher_banner = Rectangle::new()
         .width(Parent)
         .height(30.0)
@@ -150,10 +150,10 @@ pub fn render_tray_drawer(manifest: &ShellManifest, font: &str) -> Box<dyn Widge
 
     elements.push(Box::new(watcher_banner));
 
-    // 2. Registered App Items Section
+    // Registered app items section
     let items_header = Row::new(vec![
         Box::new(
-            Text::new("STATUS NOTIFIER APPLICATIONS")
+            Text::new("Status Notifier Applications")
                 .size(10.0)
                 .color(amber_color)
                 .font(font),

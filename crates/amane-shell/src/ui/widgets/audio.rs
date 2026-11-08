@@ -24,7 +24,7 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
 
     let mut elements: Vec<Box<dyn Widget>> = Vec::new();
 
-    // 1. Master Output Section (Speaker / Headphones)
+    // Master Output Section (Speaker / Headphones)
     let output_header = Row::new(vec![
         Box::new(
             Row::new(vec![
@@ -159,7 +159,7 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
             .align(Align::Center),
     ));
 
-    // 2. Output Sinks (Devices) Selection Section
+    // Output sinks (devices) selection section
     let sinks = audio.sinks();
     if !sinks.is_empty() {
         let sinks_header = Row::new(vec![
@@ -291,7 +291,7 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
         elements.push(Box::new(Column::new(sink_cards).width(Parent).gap(4.0)));
     }
 
-    // 3. Microphone Input Section
+    // Microphone input section
     let mic_header = Row::new(vec![
         Box::new(
             Row::new(vec![
@@ -450,7 +450,7 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
         .align(Align::Center),
     ));
 
-    // 3. Audio Subsystem Telemetry Badge
+    // Audio subsystem telemetry badge
     let info_card = Rectangle::new()
         .width(Parent)
         .height(34.0)

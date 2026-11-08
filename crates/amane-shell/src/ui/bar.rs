@@ -26,7 +26,7 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
 
     let mut sections: Vec<Box<dyn Widget>> = Vec::new();
 
-    // 1. Left section: Workspace Radar & Active Window Title grouped together
+    // Left section: Workspace Radar and Active Window Title
     let mut left_items: Vec<Box<dyn Widget>> = Vec::new();
     if bar_cfg.show_workspaces {
         left_items.push(Box::new(render_workspaces(&manifest, monitor_name)));
@@ -40,7 +40,7 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
         ));
     }
 
-    // 2. Right section: System Telemetry (CPU, Mem, Audio, Battery, Network, Bluetooth, Tray, Clock, Powermenu)
+    // Right section: System Telemetry
     if bar_cfg.show_telemetry {
         sections.push(Box::new(render_telemetry(&manifest, monitor_name)));
     }

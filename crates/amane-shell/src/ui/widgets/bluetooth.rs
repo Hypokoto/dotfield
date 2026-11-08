@@ -23,7 +23,7 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
 
     let mut elements: Vec<Box<dyn Widget>> = Vec::new();
 
-    // 1. Controls Bar: Power toggle, Discovery/Scan button
+    // Controls Bar: Power toggle, Discovery/Scan button
     let power_btn = Rectangle::new()
         .width(110.0)
         .height(30.0)
@@ -122,11 +122,11 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
         .align(Align::Center),
     ));
 
-    // 2. Devices Section Header
+    // Devices section header
     let connected_count = bluetooth.devices().iter().filter(|d| d.connected()).count();
     let devices_header = Row::new(vec![
         Box::new(
-            Text::new("BLUETOOTH DEVICES")
+            Text::new("Bluetooth Devices")
                 .size(10.0)
                 .color(amber_color)
                 .font(font),
@@ -148,7 +148,7 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
 
     elements.push(Box::new(devices_header));
 
-    // 3. Devices List
+    // Devices list
     let mut dev_cards: Vec<Box<dyn Widget>> = Vec::new();
 
     if !is_available {

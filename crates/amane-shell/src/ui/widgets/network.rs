@@ -22,7 +22,7 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
 
     let mut elements: Vec<Box<dyn Widget>> = Vec::new();
 
-    // 1. Controls Bar: Radio toggle, Scan button, Disconnect button
+    // Controls Bar: Radio toggle, Scan button, Disconnect button
     let wifi_toggle_btn = Rectangle::new()
         .width(96.0)
         .height(30.0)
@@ -110,7 +110,7 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
         .align(Align::Center),
     ));
 
-    // 2. Active Connection Status Card
+    // Active connection status card
     let (status_icon, status_title, status_sub) = match network.link() {
         Link::Wired => (
             "󰈀",
@@ -202,10 +202,10 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
 
     elements.push(Box::new(active_card));
 
-    // 3. Available Access Points List
+    // Available access points list
     let ap_header = Row::new(vec![
         Box::new(
-            Text::new("AVAILABLE ACCESS POINTS")
+            Text::new("Available Access Points")
                 .size(10.0)
                 .color(amber_color)
                 .font(font),

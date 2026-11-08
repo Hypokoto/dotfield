@@ -424,7 +424,7 @@ if command -v starship >/dev/null 2>&1; then
     source "$STARSHIP_CACHE"
 fi
 
-### 10. Intelligent Plugins (Autosuggestions & Syntax Highlighting)
+### Plugins (Autosuggestions & Syntax Highlighting)
 # Fish-like autosuggestions
 if [[ -r /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
     source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh

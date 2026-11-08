@@ -584,11 +584,11 @@ ensure_config_link_or_dir() {
             success "Replaced base config (backed up to ${dest}.bak.${ts}): ${dest}"
         fi
     else
-        # Sync newly added and updated modular files and subdirectories
+        # Sync newly added and updated modular files and subdirectories with backup
         if [[ -d "${src}" ]]; then
-            cp -rf "${src}/." "${dest}/" 2>/dev/null || true
+            cp -r --backup=numbered "${src}/." "${dest}/" 2>/dev/null || true
         elif [[ -f "${src}" ]]; then
-            cp -f "${src}" "${dest}" 2>/dev/null || true
+            cp --backup=numbered "${src}" "${dest}" 2>/dev/null || true
         fi
     fi
 }
@@ -631,9 +631,14 @@ if [[ "${DRY_RUN}" != true && -f "${SCRIPT_DIR}/scripts/gtk-sync.sh" ]]; then
     bash "${SCRIPT_DIR}/scripts/gtk-sync.sh" || true
 fi
 
-# Deploy systemd user service for amane (Niri)
+# Deploy systemd user service and environment for amane (Niri)
 if [[ "${TARGET}" == "all" || "${TARGET}" == "niri" ]]; then
-    mkdir -p "${HOME}/.config/systemd/user" 2>/dev/null || true
+    mkdir -p "${HOME}/.config/systemd/user" "${HOME}/.config/environment.d" 2>/dev/null || true
+    if [[ ! -f "${HOME}/.config/environment.d/10-dotfield-path.conf" ]]; then
+        if [[ "${DRY_RUN}" != true ]]; then
+            echo 'PATH=${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}' > "${HOME}/.config/environment.d/10-dotfield-path.conf"
+        fi
+    fi
     ensure_config_link_or_dir "${SCRIPT_DIR}/systemd/user/amane.service" "${HOME}/.config/systemd/user/amane.service"
     if [[ ! -e "${HOME}/.config/systemd/user/dotfield-shell.service" || -L "${HOME}/.config/systemd/user/dotfield-shell.service" ]]; then
         if [[ "${DRY_RUN}" != true ]]; then

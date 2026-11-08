@@ -112,7 +112,11 @@ case "$CHOICE" in
         EXT=$(detect_external)
         if command -v kanshictl >/dev/null 2>&1; then
             if [[ -n "${EXT:-}" ]]; then
-                kanshictl switch docked-dual-60hz 2>/dev/null || true
+                PROFILE="docked-dual-60hz"
+                if [[ "$EXT" == DP* ]]; then
+                    PROFILE="docked-dp-60hz"
+                fi
+                kanshictl switch "$PROFILE" 2>/dev/null || true
             else
                 kanshictl switch undocked-60hz 2>/dev/null || true
             fi

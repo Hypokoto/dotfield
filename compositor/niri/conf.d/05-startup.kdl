@@ -1,10 +1,8 @@
 // Niri Startup Processes
 // Background daemons and visual engine autostart
 
-// Environment variable sync to systemd/dbus without deprecated bare import-environment
-spawn-at-startup "dbus-update-activation-environment" "--systemd" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP" "NIRI_SOCKET"
 spawn-at-startup "awww-daemon"
 spawn-at-startup "sh" "-c" "~/.config/dotfield/scripts/wallpaper.sh"
 spawn-at-startup "kanshi"
 spawn-at-startup "swayidle" "-w"
-spawn-at-startup "systemctl" "--user" "start" "amane.service"
+spawn-at-startup "sh" "-c" "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP NIRI_SOCKET && systemctl --user start amane.service"

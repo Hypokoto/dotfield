@@ -184,7 +184,7 @@ pub fn apply_preset(index: usize) {
                     .spawn();
                 if let Some(ext) = get_external_display() {
                     let profile = if ext.starts_with("DP") {
-                        "docked-dp"
+                        "docked-dp-60hz"
                     } else {
                         "docked-dual-60hz"
                     };

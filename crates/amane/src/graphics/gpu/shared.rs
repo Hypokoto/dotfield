@@ -104,7 +104,8 @@ fn open(instance: &Instance, surface: &Surface) -> Shared {
             return;
         }
 
-        eprintln!("amane: gpu device lost event ({message}), surface re-configuration will be attempted on next active frame");
+        eprintln!("amane: gpu device lost ({message}); exiting so supervisor restarts shell");
+        std::process::exit(1);
     });
 
     // area anti-aliasing matches how edges looked with the cpu renderer

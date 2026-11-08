@@ -22,6 +22,13 @@ if has_cmd makoctl; then
     makoctl mode -a locked 2>/dev/null || true
     # Background watcher: restore notifications as soon as the screen is unlocked
     (
+        # Wait up to 5s for the locker process to launch
+        for _ in {1..50}; do
+            if pgrep -x swaylock >/dev/null 2>&1 || pgrep -x hyprlock >/dev/null 2>&1 || pgrep -x gtklock >/dev/null 2>&1; then
+                break
+            fi
+            sleep 0.1
+        done
         while pgrep -x swaylock >/dev/null 2>&1 || pgrep -x hyprlock >/dev/null 2>&1 || pgrep -x gtklock >/dev/null 2>&1; do
             sleep 0.5
         done

@@ -204,8 +204,8 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
             };
 
             // Format friendly name: clean up alsa suffixes or display names
-            let display_name = if sink_desc.len() > 32 {
-                format!("{}…", &sink_desc[..31])
+            let display_name = if sink_desc.chars().count() > 32 {
+                format!("{}…", sink_desc.chars().take(31).collect::<String>())
             } else {
                 sink_desc.clone()
             };

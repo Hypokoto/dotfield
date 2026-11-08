@@ -36,7 +36,7 @@ pub fn render_tray_pill(
                     amane::focus_monitor(name);
                 }
                 if btn == amane::Button::Right {
-                    TrayService::quit(idx);
+                    TrayService::context_menu(idx);
                 } else {
                     TrayService::activate(idx);
                 }

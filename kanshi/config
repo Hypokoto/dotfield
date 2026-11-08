@@ -1,5 +1,5 @@
 # Kanshi Display Profile Configuration managed by Dotfield
-# Controlled Chaos Theme — Multi-Monitor Autoconfiguration
+# Controlled Chaos Theme: Multi-Monitor Autoconfiguration
 
 profile undocked {
     output eDP-1 enable mode 1920x1080@144.003 position 0,0
@@ -26,6 +26,12 @@ profile undocked-60hz {
 profile docked-dual-60hz {
     output eDP-1 enable mode 1920x1080@60.001 position 0,0
     output "HDMI-A-1" enable position 1920,0
+    exec ~/.config/dotfield/scripts/wallpaper.sh
+}
+
+profile docked-dp-60hz {
+    output eDP-1 enable mode 1920x1080@60.001 position 0,0
+    output "DP-1" enable position 1920,0
     exec ~/.config/dotfield/scripts/wallpaper.sh
 }
 

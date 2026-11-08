@@ -2,9 +2,6 @@
 // Declares standard Wayland session environment variables for child processes
 
 environment {
-    // Prepend ~/.local/bin so amane and other user-installed binaries are found
-    // when Niri spawns processes via keybinds (Niri's PATH omits ~/.local/bin)
-    PATH "/home/hypokoto/.local/bin:/home/hypokoto/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/var/lib/flatpak/exports/bin:/usr/lib/jvm/default/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/opt/rocm/bin:/usr/lib/rustup/bin"
     QT_QPA_PLATFORM "wayland"
     ELECTRON_OZONE_PLATFORM_HINT "auto"
     MOZ_ENABLE_WAYLAND "1"

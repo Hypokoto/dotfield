@@ -6,4 +6,5 @@ spawn-at-startup "dbus-update-activation-environment" "--systemd" "WAYLAND_DISPL
 spawn-at-startup "awww-daemon"
 spawn-at-startup "sh" "-c" "~/.config/dotfield/scripts/wallpaper.sh"
 spawn-at-startup "kanshi"
+spawn-at-startup "swayidle" "-w"
 spawn-at-startup "systemctl" "--user" "start" "amane.service"

@@ -10,6 +10,15 @@ set -euo pipefail
 TARGET="${1:-}"
 WP_DIR="${HOME}/.config/dotfield/background/Wallpapers"
 GIF_DIR="${HOME}/.config/dotfield/background/Gifs"
+CACHE_DIR="${HOME}/.cache/dotfield"
+
+cache_wallpaper() {
+    local wp="$1"
+    if [[ -n "${wp}" && -f "${wp}" ]]; then
+        mkdir -p "${CACHE_DIR}" 2>/dev/null || true
+        echo "${wp}" > "${CACHE_DIR}/current_wallpaper" 2>/dev/null || true
+    fi
+}
 
 is_niri() {
     [[ -n "${NIRI_SOCKET:-}" ]] || pgrep -x niri >/dev/null 2>&1 || [[ "${TARGET}" == "--niri" ]]
@@ -87,6 +96,12 @@ if is_niri; then
     fi
 
     if [[ -n "${NIRI_WALLPAPER}" && -f "${NIRI_WALLPAPER}" ]]; then
+        STATIC_FALLBACK=$(find_img || true)
+        if [[ -n "${TARGET}" && -f "${TARGET}" && "${TARGET}" =~ \.(png|jpe?g)$ ]]; then
+            cache_wallpaper "${TARGET}"
+        elif [[ -n "${STATIC_FALLBACK}" ]]; then
+            cache_wallpaper "${STATIC_FALLBACK}"
+        fi
         setsid awww img "${NIRI_WALLPAPER}" --resize crop --filter Bilinear --transition-type none </dev/null >/dev/null 2>&1 &
     else
         setsid awww clear 0A0A0C </dev/null >/dev/null 2>&1 &
@@ -104,6 +119,7 @@ fi
 
 # Explicit image path provided
 if [[ -n "${TARGET}" && -f "${TARGET}" ]]; then
+    cache_wallpaper "${TARGET}"
     setsid swaybg -i "${TARGET}" -m fill </dev/null >/dev/null 2>&1 &
     exit 0
 fi
@@ -121,6 +137,7 @@ fi
 # Default high-resolution Controlled Chaos image
 IMAGE=$(find_img || true)
 if [[ -n "${IMAGE}" && -f "${IMAGE}" ]]; then
+    cache_wallpaper "${IMAGE}"
     setsid swaybg -i "${IMAGE}" -m fill </dev/null >/dev/null 2>&1 &
 else
     # Fallback to Void Black canvas

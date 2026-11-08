@@ -1,12 +1,21 @@
 # Swayidle configuration managed by Dotfield
-# Graceful idle timeouts, screen blanking, and lock triggers.
-# Launch with: swayidle -w (the -w flag ensures before-sleep commands complete before suspend)
+# Graceful idle timeouts, multi-stage power saving, screen blanking, and lock triggers.
+# Launch with: swayidle -w (ensures before-sleep commands complete before suspend)
 
-# Lock screen before suspend/sleep
+# Stage 1: Dim display backlight to 15% after 150s (2.5 min) of inactivity
+timeout 150 'brightnessctl -s set 15% 2>/dev/null || true' resume 'brightnessctl -r 2>/dev/null || true'
+
+# Stage 2: Lock screen after 300s (5 min) of inactivity
+timeout 300 '~/.config/dotfield/scripts/lock.sh 2>/dev/null || swaylock -f'
+
+# Stage 3: Turn off displays (DPMS) after 330s (5.5 min)
+timeout 330 'swaymsg "output * power off" 2>/dev/null || niri msg action power-off-monitors 2>/dev/null || true' resume 'swaymsg "output * power on" 2>/dev/null || niri msg action power-on-monitors 2>/dev/null || true'
+
+# Stage 4: Suspend system after 900s (15 min) of inactivity
+timeout 900 'systemctl suspend'
+
+# Lock screen before suspend/sleep (laptop lid close or manual sleep)
 before-sleep '~/.config/dotfield/scripts/lock.sh 2>/dev/null || swaylock -f'
 
-# Lock screen after 290s (just before display blanking)
-timeout 290 '~/.config/dotfield/scripts/lock.sh 2>/dev/null || swaylock -f'
-
-# Turn off display after 300s (5m)
-timeout 300 'swaymsg "output * power off" 2>/dev/null || niri msg action power-off-monitors 2>/dev/null' resume 'swaymsg "output * power on" 2>/dev/null || niri msg action power-on-monitors 2>/dev/null || true'
+# Handle logind LockSession signal
+lock '~/.config/dotfield/scripts/lock.sh 2>/dev/null || swaylock -f'

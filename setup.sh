@@ -543,6 +543,7 @@ else
     ln -sf "${SCRIPTS_DEST}/display-config.sh" "${PREFIX}/display-config"
     ln -sf "${SCRIPTS_DEST}/typecheck-terminals.sh" "${PREFIX}/typecheck-terminals"
     ln -sf "${SCRIPTS_DEST}/lock.sh" "${PREFIX}/dotfield-lock" 2>/dev/null || true
+    ln -sf "${SCRIPTS_DEST}/gtk-sync.sh" "${PREFIX}/dotfield-gtk-sync" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/screenshot.sh" "${PREFIX}/dotfield-screenshot" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/screen-record.sh" "${PREFIX}/dotfield-record" 2>/dev/null || true
     success "Helper scripts deployed to ${SCRIPTS_DEST}"
@@ -583,10 +584,11 @@ ensure_config_link_or_dir() {
             success "Replaced base config (backed up to ${dest}.bak.${ts}): ${dest}"
         fi
     else
-        info "Config already exists: ${dest} (updating modular contents)"
-        # Sync newly added modular subdirectories (e.g. conf.d)
+        # Sync newly added and updated modular files and subdirectories
         if [[ -d "${src}" ]]; then
-            cp -rn "${src}/." "${dest}/" 2>/dev/null || true
+            cp -rf "${src}/." "${dest}/" 2>/dev/null || true
+        elif [[ -f "${src}" ]]; then
+            cp -f "${src}" "${dest}" 2>/dev/null || true
         fi
     fi
 }
@@ -613,6 +615,8 @@ ensure_config_link_or_dir "${SCRIPT_DIR}/osd/swayosd" "${HOME}/.config/swayosd"
 ensure_config_link_or_dir "${SCRIPT_DIR}/osd/avizo" "${HOME}/.config/avizo"
 ensure_config_link_or_dir "${SCRIPT_DIR}/osd/swaylock" "${HOME}/.config/swaylock"
 ensure_config_link_or_dir "${SCRIPT_DIR}/osd/swayidle" "${HOME}/.config/swayidle"
+ensure_config_link_or_dir "${SCRIPT_DIR}/gtk/gtk-3.0" "${HOME}/.config/gtk-3.0"
+ensure_config_link_or_dir "${SCRIPT_DIR}/gtk/gtk-4.0" "${HOME}/.config/gtk-4.0"
 ensure_config_link_or_dir "${SCRIPT_DIR}/ly" "${HOME}/.config/dotfield/ly"
 ensure_config_link_or_dir "${SCRIPT_DIR}/nvim" "${HOME}/.config/nvim"
 ensure_config_link_or_dir "${SCRIPT_DIR}/multiplexer/tmux" "${HOME}/.config/tmux"
@@ -621,6 +625,11 @@ ensure_config_link_or_dir "${SCRIPT_DIR}/wlogout" "${HOME}/.config/wlogout"
 ensure_config_link_or_dir "${SCRIPT_DIR}/fastfetch" "${HOME}/.config/fastfetch"
 ensure_config_link_or_dir "${SCRIPT_DIR}/shell/starship/starship.toml" "${HOME}/.config/starship.toml"
 ensure_config_link_or_dir "${SCRIPT_DIR}/shell/zsh/.zshrc" "${HOME}/.zshrc"
+
+# Synchronize GTK interface & dark mode preferences
+if [[ "${DRY_RUN}" != true && -f "${SCRIPT_DIR}/scripts/gtk-sync.sh" ]]; then
+    bash "${SCRIPT_DIR}/scripts/gtk-sync.sh" || true
+fi
 
 # Deploy systemd user service for amane (Niri)
 if [[ "${TARGET}" == "all" || "${TARGET}" == "niri" ]]; then
@@ -664,10 +673,12 @@ if [[ "${DRY_RUN}" != true ]] && command -v zsh >/dev/null 2>&1; then
 fi
 
 if [[ -d "${SCRIPT_DIR}/Wallpapers" ]]; then
-    ensure_config_link_or_dir "${SCRIPT_DIR}/Wallpapers" "${HOME}/.config/dotfield/background/Wallpapers"
+    mkdir -p "${HOME}/.config/dotfield/background"
+    ln -sfn "${SCRIPT_DIR}/Wallpapers" "${HOME}/.config/dotfield/background/Wallpapers"
 fi
 if [[ -d "${SCRIPT_DIR}/Wallpapers/Gifs" ]]; then
-    ensure_config_link_or_dir "${SCRIPT_DIR}/Wallpapers/Gifs" "${HOME}/.config/dotfield/background/Gifs"
+    mkdir -p "${HOME}/.config/dotfield/background"
+    ln -sfn "${SCRIPT_DIR}/Wallpapers/Gifs" "${HOME}/.config/dotfield/background/Gifs"
 fi
 
 # 6. Reload running desktop components

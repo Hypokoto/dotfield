@@ -1,0 +1,126 @@
+/* Dotfield Controlled Chaos Theme — GTK 3.0 CSS Overrides
+ * Void Black (#0A0A0C) · Obsidian (#121216) · Graphite (#1C1C23)
+ * Industrial Amber (#FFB000) · Crimson (#E63946) · Iron (#34343D)
+ */
+
+@define-color accent_color #FFB000;
+@define-color accent_bg_color #FFB000;
+@define-color accent_fg_color #0A0A0C;
+
+@define-color destructive_color #E63946;
+@define-color destructive_bg_color #E63946;
+@define-color destructive_fg_color #FFFFFF;
+
+@define-color success_color #2A9D8F;
+@define-color success_bg_color #2A9D8F;
+@define-color success_fg_color #0A0A0C;
+
+@define-color warning_color #FFD166;
+@define-color warning_bg_color #FFD166;
+@define-color warning_fg_color #0A0A0C;
+
+@define-color error_color #E63946;
+@define-color error_bg_color #E63946;
+@define-color error_fg_color #FFFFFF;
+
+@define-color window_bg_color #0A0A0C;
+@define-color window_fg_color #E8E6E3;
+
+@define-color view_bg_color #121216;
+@define-color view_fg_color #E8E6E3;
+
+@define-color headerbar_bg_color #121216;
+@define-color headerbar_fg_color #E8E6E3;
+@define-color headerbar_border_color #34343D;
+@define-color headerbar_backdrop_color #0A0A0C;
+
+@define-color card_bg_color #1C1C23;
+@define-color card_fg_color #E8E6E3;
+@define-color card_border_color #34343D;
+
+@define-color dialog_bg_color #121216;
+@define-color dialog_fg_color #E8E6E3;
+
+@define-color popover_bg_color #1C1C23;
+@define-color popover_fg_color #E8E6E3;
+
+@define-color theme_base_color #121216;
+@define-color theme_bg_color #0A0A0C;
+@define-color theme_fg_color #E8E6E3;
+@define-color theme_selected_bg_color #FFB000;
+@define-color theme_selected_fg_color #0A0A0C;
+
+@define-color borders #34343D;
+
+/* Global Window styling */
+window, .background {
+    background-color: @window_bg_color;
+    color: @window_fg_color;
+}
+
+/* Headerbar & Titlebar */
+headerbar {
+    background-color: @headerbar_bg_color;
+    color: @headerbar_fg_color;
+    border-bottom: 1px solid @headerbar_border_color;
+    box-shadow: none;
+}
+
+headerbar:backdrop {
+    background-color: @headerbar_backdrop_color;
+}
+
+/* Text Inputs, Entries, Textviews */
+entry, textview text {
+    background-color: @view_bg_color;
+    color: @view_fg_color;
+    border: 1px solid @borders;
+    border-radius: 4px;
+}
+
+entry:focus, textview text:focus {
+    border-color: @accent_color;
+    box-shadow: 0 0 0 1px @accent_color;
+}
+
+/* Buttons */
+button {
+    background-color: #1C1C23;
+    color: @window_fg_color;
+    border: 1px solid @borders;
+    border-radius: 4px;
+}
+
+button:hover {
+    background-color: #26262F;
+    border-color: @accent_color;
+}
+
+button:active, button:checked {
+    background-color: @accent_color;
+    color: @accent_fg_color;
+}
+
+button.suggested-action {
+    background-color: @accent_color;
+    color: @accent_fg_color;
+    border-color: #FFD166;
+}
+
+button.destructive-action {
+    background-color: @destructive_color;
+    color: @destructive_fg_color;
+    border-color: #FF6B76;
+}
+
+/* Scrollbars */
+scrollbar slider {
+    background-color: #34343D;
+    border-radius: 4px;
+    min-width: 6px;
+    min-height: 6px;
+}
+
+scrollbar slider:hover {
+    background-color: @accent_color;
+}

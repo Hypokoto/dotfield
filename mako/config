@@ -92,3 +92,7 @@ ignore-timeout=1
 # Do-Not-Disturb Mode
 [mode=do-not-disturb]
 invisible=1
+
+# Locked Mode (Privacy Mode: suppress notification popups while screen is locked)
+[mode=locked]
+invisible=1

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Dotfield Dependency & Package Installer
 # Installs system packages, toolchains, and desktop dependencies for Sway & Niri
-# Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
+# Controlled Chaos Theme: Void Black · Crimson · Industrial Amber · Steel
 
 set -euo pipefail
 
@@ -10,7 +10,6 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 AMBER='\033[0;33m'
 BLUE='\033[0;34m'
-STEEL='\033[0;90m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
@@ -190,10 +189,8 @@ if [[ -f /etc/os-release ]]; then
     # shellcheck source=/dev/null
     . /etc/os-release
     DISTRO_ID="${ID:-unknown}"
-    DISTRO_LIKE="${ID_LIKE:-}"
 else
     DISTRO_ID="unknown"
-    DISTRO_LIKE=""
 fi
 
 if command -v pacman >/dev/null 2>&1; then

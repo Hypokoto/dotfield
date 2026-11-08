@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Dotfield Screen Locking Utility
 # Instant privacy lock with Controlled Chaos palette, dynamic wallpaper tracking, and notification suppression
-# Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
+# Controlled Chaos Theme: Void Black · Crimson · Industrial Amber · Steel
 
 set -euo pipefail
 

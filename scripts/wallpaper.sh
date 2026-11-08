@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Dotfield Wallpaper & Background Controller
-# Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
+# Controlled Chaos Theme: Void Black · Crimson · Industrial Amber · Steel
 # Compositor aware:
 #   - Niri: Animated GIF engine via awww (defaults to L12.gif)
 #   - Sway: Low-latency tear-free canvas via swaybg (defaults to W1.jpeg)

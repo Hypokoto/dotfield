@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Dotfield Hardware Lid Switch Handler
 # Handles laptop lid close/open events for Niri and Sway compositors
-# Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
+# Controlled Chaos Theme: Void Black · Crimson · Industrial Amber · Steel
 
 set -euo pipefail
 

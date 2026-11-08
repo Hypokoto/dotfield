@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Dotfield GTK & Desktop Interface Synchronizer
 # Idempotently applies Controlled Chaos theme, icons, cursor, and typography to GSettings and GTK configs
-# Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
+# Controlled Chaos Theme: Void Black · Crimson · Industrial Amber · Steel
 
 set -euo pipefail
 

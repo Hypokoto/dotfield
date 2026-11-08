@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Dotfield Terminal Selector & Dispatcher
 # Launches configured default terminal directly or presents selector menu
-# Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
+# Controlled Chaos Theme: Void Black · Crimson · Industrial Amber · Steel
 
 set -euo pipefail
 

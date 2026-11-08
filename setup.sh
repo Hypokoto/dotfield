@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Dotfield Environment Setup & Deployment Script
 # Idempotent bootstrap for Sway, Niri, Amane Shell, and desktop tools
-# Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
+# Controlled Chaos Theme: Void Black · Crimson · Industrial Amber · Steel
 
 set -euo pipefail
 
@@ -649,7 +649,7 @@ if [[ ! -e "${HOME}/.tmux.conf" || -L "${HOME}/.tmux.conf" ]]; then
     fi
 fi
 
-# Install fzf-tab (Tab completion via fzf — no prompt-jumping, themed popup)
+# Install fzf-tab (Tab completion via fzf: no prompt-jumping, themed popup)
 FZF_TAB_DIR="${HOME}/.local/share/zsh/plugins/fzf-tab"
 if [[ ! -d "${FZF_TAB_DIR}/.git" ]]; then
     if [[ "${DRY_RUN}" == true ]]; then
@@ -660,7 +660,7 @@ if [[ ! -d "${FZF_TAB_DIR}/.git" ]]; then
         if git clone --depth=1 https://github.com/Aloxaf/fzf-tab "${FZF_TAB_DIR}" 2>/dev/null; then
             success "fzf-tab installed at ${FZF_TAB_DIR}"
         else
-            warn "fzf-tab clone failed — Tab completions will fall back to standard menu"
+            warn "fzf-tab clone failed: Tab completions will fall back to standard menu"
         fi
     fi
 else
@@ -701,7 +701,7 @@ if [[ "${DRY_RUN}" != true ]]; then
 
     if [[ "${TARGET}" == "all" || "${TARGET}" == "sway" ]]; then
         if command -v swaymsg >/dev/null 2>&1 && pgrep -x sway >/dev/null 2>&1; then
-            SWAYSOCK=$(ls /run/user/$(id -u)/sway-ipc.*.sock 2>/dev/null | head -n 1) swaymsg reload >/dev/null 2>&1 || true
+            SWAYSOCK="${SWAYSOCK:-$(find "/run/user/$(id -u)" -maxdepth 1 -name "sway-ipc.*.sock" 2>/dev/null | head -n 1)}" swaymsg reload >/dev/null 2>&1 || true
             info "Reloaded Sway configuration"
         fi
     fi

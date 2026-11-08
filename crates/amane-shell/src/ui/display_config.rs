@@ -115,6 +115,34 @@ pub fn close() {
 }
 
 fn get_external_display() -> Option<String> {
+    // 1. Check native Niri IPC outputs first
+    if let Ok(output) = Command::new("niri").args(["msg", "-j", "outputs"]).output()
+        && let Ok(val) = serde_json::from_slice::<serde_json::Value>(&output.stdout)
+        && let Some(map) = val.as_object()
+    {
+        for key in map.keys() {
+            if !key.starts_with("eDP") && !key.starts_with("Writeback") {
+                return Some(key.clone());
+            }
+        }
+    }
+
+    // 2. Check Sway outputs
+    if let Ok(output) = Command::new("swaymsg").args(["-t", "get_outputs"]).output()
+        && let Ok(val) = serde_json::from_slice::<serde_json::Value>(&output.stdout)
+        && let Some(arr) = val.as_array()
+    {
+        for item in arr {
+            if let Some(name) = item.get("name").and_then(|n| n.as_str())
+                && !name.starts_with("eDP")
+                && !name.starts_with("Writeback")
+            {
+                return Some(name.to_string());
+            }
+        }
+    }
+
+    // 3. Check wlr-randr outputs
     if let Ok(output) = Command::new("wlr-randr").output() {
         let text = String::from_utf8_lossy(&output.stdout);
         for line in text.lines() {
@@ -130,7 +158,7 @@ fn get_external_display() -> Option<String> {
         }
     }
 
-    // Direct DRM sysfs fallback for connected displays that might be unmapped
+    // 4. Direct DRM sysfs fallback for connected displays that might be unmapped
     if let Ok(entries) = std::fs::read_dir("/sys/class/drm") {
         for entry in entries.flatten() {
             let path = entry.path();
@@ -158,41 +186,47 @@ pub fn apply_preset(index: usize) {
             "144hz" => {
                 let _ = Command::new("niri")
                     .args(["msg", "output", "eDP-1", "mode", "1920x1080@144.003"])
-                    .spawn();
+                    .status();
+                let _ = Command::new("swaymsg")
+                    .args(["output", "eDP-1", "mode", "1920x1080@144.003Hz"])
+                    .status();
                 let _ = Command::new("wlr-randr")
                     .args(["--output", "eDP-1", "--mode", "1920x1080@144.003Hz"])
-                    .spawn();
+                    .status();
                 if let Some(ext) = get_external_display() {
                     let profile = if ext.starts_with("DP") {
                         "docked-dp"
                     } else {
                         "docked-dual"
                     };
-                    let _ = Command::new("kanshictl").args(["switch", profile]).spawn();
+                    let _ = Command::new("kanshictl").args(["switch", profile]).status();
                 } else {
                     let _ = Command::new("kanshictl")
                         .args(["switch", "undocked"])
-                        .spawn();
+                        .status();
                 }
             }
             "60hz" => {
                 let _ = Command::new("niri")
                     .args(["msg", "output", "eDP-1", "mode", "1920x1080@60.001"])
-                    .spawn();
+                    .status();
+                let _ = Command::new("swaymsg")
+                    .args(["output", "eDP-1", "mode", "1920x1080@60.001Hz"])
+                    .status();
                 let _ = Command::new("wlr-randr")
                     .args(["--output", "eDP-1", "--mode", "1920x1080@60.001Hz"])
-                    .spawn();
+                    .status();
                 if let Some(ext) = get_external_display() {
                     let profile = if ext.starts_with("DP") {
                         "docked-dp-60hz"
                     } else {
                         "docked-dual-60hz"
                     };
-                    let _ = Command::new("kanshictl").args(["switch", profile]).spawn();
+                    let _ = Command::new("kanshictl").args(["switch", profile]).status();
                 } else {
                     let _ = Command::new("kanshictl")
                         .args(["switch", "undocked-60hz"])
-                        .spawn();
+                        .status();
                 }
             }
             "extend-right" => {
@@ -202,25 +236,31 @@ pub fn apply_preset(index: usize) {
                     } else {
                         "docked-dual"
                     };
-                    let _ = Command::new("kanshictl").args(["switch", profile]).spawn();
+                    let _ = Command::new("kanshictl").args(["switch", profile]).status();
                     let _ = Command::new("niri")
                         .args(["msg", "output", "eDP-1", "on"])
-                        .spawn();
+                        .status();
                     let _ = Command::new("niri")
                         .args(["msg", "output", "eDP-1", "position", "set", "0", "0"])
-                        .spawn();
+                        .status();
                     let _ = Command::new("niri")
                         .args(["msg", "output", &ext, "on"])
-                        .spawn();
+                        .status();
                     let _ = Command::new("niri")
                         .args(["msg", "output", &ext, "position", "set", "1920", "0"])
-                        .spawn();
+                        .status();
+                    let _ = Command::new("swaymsg")
+                        .args(["output", "eDP-1", "enable", "pos", "0", "0"])
+                        .status();
+                    let _ = Command::new("swaymsg")
+                        .args(["output", &ext, "enable", "pos", "1920", "0"])
+                        .status();
                     let _ = Command::new("wlr-randr")
                         .args([
                             "--output", "eDP-1", "--pos", "0,0", "--output", &ext, "--pos",
                             "1920,0",
                         ])
-                        .spawn();
+                        .status();
                 }
             }
             "mirror" => {
@@ -230,40 +270,56 @@ pub fn apply_preset(index: usize) {
                     } else {
                         "docked-mirror-hdmi"
                     };
-                    let _ = Command::new("kanshictl").args(["switch", profile]).spawn();
+                    let _ = Command::new("kanshictl").args(["switch", profile]).status();
                     let _ = Command::new("niri")
                         .args(["msg", "output", "eDP-1", "on"])
-                        .spawn();
+                        .status();
                     let _ = Command::new("niri")
                         .args(["msg", "output", "eDP-1", "position", "set", "0", "0"])
-                        .spawn();
+                        .status();
                     let _ = Command::new("niri")
                         .args(["msg", "output", &ext, "on"])
-                        .spawn();
+                        .status();
                     let _ = Command::new("niri")
                         .args(["msg", "output", &ext, "position", "set", "0", "0"])
-                        .spawn();
+                        .status();
+                    let _ = Command::new("swaymsg")
+                        .args(["output", "eDP-1", "enable", "pos", "0", "0"])
+                        .status();
+                    let _ = Command::new("swaymsg")
+                        .args(["output", &ext, "enable", "pos", "0", "0"])
+                        .status();
                     let _ = Command::new("wlr-randr")
                         .args([
                             "--output", "eDP-1", "--pos", "0,0", "--output", &ext, "--pos", "0,0",
                         ])
-                        .spawn();
+                        .status();
                 }
             }
             "laptop-only" => {
+                let _ = Command::new("kanshictl")
+                    .args(["switch", "undocked"])
+                    .status();
+                // Ensure internal display is on before powering down external
+                let _ = Command::new("niri")
+                    .args(["msg", "output", "eDP-1", "on"])
+                    .status();
+                let _ = Command::new("swaymsg")
+                    .args(["output", "eDP-1", "enable"])
+                    .status();
+                let _ = Command::new("wlr-randr")
+                    .args(["--output", "eDP-1", "--on"])
+                    .status();
                 if let Some(ext) = get_external_display() {
-                    let _ = Command::new("kanshictl")
-                        .args(["switch", "undocked"])
-                        .spawn();
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", "eDP-1", "on"])
-                        .spawn();
                     let _ = Command::new("niri")
                         .args(["msg", "output", &ext, "off"])
-                        .spawn();
+                        .status();
+                    let _ = Command::new("swaymsg")
+                        .args(["output", &ext, "disable"])
+                        .status();
                     let _ = Command::new("wlr-randr")
-                        .args(["--output", "eDP-1", "--on", "--output", &ext, "--off"])
-                        .spawn();
+                        .args(["--output", &ext, "--off"])
+                        .status();
                 }
             }
             "clamshell" => {
@@ -273,26 +329,35 @@ pub fn apply_preset(index: usize) {
                     } else {
                         "clamshell-hdmi"
                     };
-                    let _ = Command::new("kanshictl").args(["switch", profile]).spawn();
+                    let _ = Command::new("kanshictl").args(["switch", profile]).status();
+                    // Enable external display before disabling eDP-1 to prevent transient zero-output compositor state.
                     let _ = Command::new("niri")
                         .args(["msg", "output", &ext, "on"])
-                        .spawn();
+                        .status();
                     let _ = Command::new("niri")
                         .args(["msg", "output", &ext, "position", "set", "0", "0"])
-                        .spawn();
+                        .status();
+                    let _ = Command::new("swaymsg")
+                        .args(["output", &ext, "enable", "pos", "0", "0"])
+                        .status();
+                    let _ = Command::new("wlr-randr")
+                        .args(["--output", &ext, "--on", "--pos", "0,0"])
+                        .status();
+
                     let _ = Command::new("niri")
                         .args(["msg", "output", "eDP-1", "off"])
-                        .spawn();
+                        .status();
+                    let _ = Command::new("swaymsg")
+                        .args(["output", "eDP-1", "disable"])
+                        .status();
                     let _ = Command::new("wlr-randr")
-                        .args([
-                            "--output", &ext, "--on", "--pos", "0,0", "--output", "eDP-1", "--off",
-                        ])
-                        .spawn();
+                        .args(["--output", "eDP-1", "--off"])
+                        .status();
                 }
             }
             "kanshi" => {
                 use std::os::unix::process::CommandExt;
-                let _ = Command::new("kanshictl").arg("reload").spawn();
+                let _ = Command::new("kanshictl").arg("reload").status();
                 let status = Command::new("pkill").args(["-HUP", "kanshi"]).status();
                 if !status.is_ok_and(|s| s.success()) {
                     let _ = Command::new("kanshi")
@@ -304,6 +369,13 @@ pub fn apply_preset(index: usize) {
                 }
             }
             _ => {}
+        }
+
+        // Trigger wallpaper refresh for newly configured active displays
+        let home = std::env::var("HOME").unwrap_or_default();
+        let wp_script = format!("{home}/.config/dotfield/scripts/wallpaper.sh");
+        if std::path::Path::new(&wp_script).exists() {
+            let _ = Command::new(wp_script).spawn();
         }
 
         let _ = Command::new("notify-send")

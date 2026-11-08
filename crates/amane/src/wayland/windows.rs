@@ -17,6 +17,18 @@ use super::{
 
 impl WaylandState {
     pub fn open(&mut self, view: View, output: Option<WlOutput>) {
+        let output = match output {
+            Some(o) => Some(o),
+            None => match self.current_focused_output() {
+                Some(o) => Some(o),
+                None => {
+                    // Compositor has no active outputs (e.g. DPMS monitor power off or sleep).
+                    // Cannot create layer surfaces on Niri without an output.
+                    return;
+                }
+            },
+        };
+
         let surface = self.compositor.create_surface(&self.qh);
 
         /*
@@ -150,7 +162,7 @@ impl WaylandState {
         // If a plain layer window was closed by the compositor (e.g. output renegotiation/sleep),
         // and an active output is still available, recreate the window so overlays are never lost
         if let Some((View::Plain { id, view }, _)) = closed_window {
-            let active_output = self.output.outputs().next();
+            let active_output = self.current_focused_output();
             if let Some(output) = active_output {
                 self.open(View::Plain { id, view }, Some(output));
             }
@@ -174,6 +186,13 @@ impl WaylandState {
     /// Ensures that all registered plain layer views (launcher, display config, control center, etc.)
     /// have an active window surface. Recreates any missing views on the active output.
     pub fn ensure_plain_windows(&mut self) {
+        // If there are no active outputs (e.g. during monitor power-off, sleep, or DPMS),
+        // do not attempt to create layer surfaces without an output. Niri and other compositors
+        // will immediately reject and close them.
+        let Some(active) = self.current_focused_output() else {
+            return;
+        };
+
         let plain_views = self.plain_views.clone();
         for (id, plain) in plain_views.into_iter().enumerate() {
             let already_open = self.windows.iter().any(|w| {
@@ -187,8 +206,7 @@ impl WaylandState {
                 }
             });
             if !already_open {
-                let active = self.current_focused_output();
-                self.open(View::Plain { id, view: plain }, active);
+                self.open(View::Plain { id, view: plain }, Some(active.clone()));
             }
         }
     }

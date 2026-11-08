@@ -216,8 +216,10 @@ case "$CHOICE" in
                 niri msg output "$EXT" position set 0 0 >/dev/null 2>&1 || true
                 niri msg output eDP-1 off >/dev/null 2>&1 || true
             fi
-            if command -v wlr-randr >/dev/null 2>&1; then
-                wlr-randr --output "$EXT" --on --pos 0,0 --output eDP-1 --off >/dev/null 2>&1 || true
+            if [[ -x "${SCRIPT_DIR}/wallpaper.sh" ]]; then
+                "${SCRIPT_DIR}/wallpaper.sh" >/dev/null 2>&1 &
+            elif [[ -x "${HOME}/.config/dotfield/scripts/wallpaper.sh" ]]; then
+                "${HOME}/.config/dotfield/scripts/wallpaper.sh" >/dev/null 2>&1 &
             fi
             notify "Switched to external display $EXT (Clamshell Mode)"
         else

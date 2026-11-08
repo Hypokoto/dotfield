@@ -105,7 +105,7 @@ Approach A: Comprehensive End-to-End Visual Craft & Token System. It delivers co
 
 ## Distribution Plan
 - Existing repository structure, `dotfield-gui` binary, and `./setup.sh` installer cover deployment.
-- Committable to git and installable via `cargo build --release` or `dotfield apply`.
+- Committable to git and installable via `cargo build --release` or `./setup.sh`.
 
 ## Next Steps
 1. **Design System Token Expansion**:

@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust-checks:
+    name: Rust Quality Gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libxkbcommon-dev \
+            libwayland-dev \
+            wayland-protocols \
+            libvulkan-dev
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check code formatting
+        run: cargo fmt -- --check
+
+      - name: Typecheck workspace
+        run: cargo check --workspace
+
+      - name: Run unit and integration tests
+        run: cargo test --workspace
+
+      - name: Run clippy linter
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  security-and-lint:
+    name: Security & Shell Auditing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository (full git history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: ShellCheck validation
+        run: shellcheck scripts/*.sh setup.sh install.sh
+
+      - name: Run Gitleaks secret audit
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Semgrep & pre-commit
+        run: pip install semgrep pre-commit
+
+      - name: Run Semgrep static analysis
+        run: semgrep --config=.semgrep.yml --error .
+
+      - name: Run pre-commit hooks
+        run: pre-commit run --all-files

@@ -24,7 +24,7 @@ Detailed architectural blueprints for specific system capabilities:
 - **[Phase 5: Security Sandboxing Profiles](designs/phase-5-security-profiles.md)**: Firejail, AppArmor, Flatpak, and NFTables rulesets.
 - **[Phase 6: Native Core CLI Engine](designs/phase-6-native-core-cli-engine.md)**: Rust AST compiler and diff engine.
 - **[Phase 7: GUI Utilities & Daemon](designs/phase-7-gui-utilities-daemon.md)**: Daemon IPC and overlay management.
-- **[Phase 8: Non-Rust Latency & Productivity](designs/phase-8-non-rust-latency-productivity.md)**: Sub-15ms Zsh, Starship caching, and FZF.
+- **[Phase 8: Non-Rust Latency & Productivity](designs/phase-8-non-rust-latency-productivity.md)**: Optimized Zsh latency, Starship caching, and FZF.
 - **[Phase 9: UI/UX Aesthetic Enhancements](designs/phase-9-ui-ux-enhancement.md)**: Controlled Chaos colorways and Ly display manager.
 - **[Live Desktop Compiler Architecture](designs/live-desktop-compiler-architecture.md)**: Dynamic reloads and zero-lag reconfiguration.
 

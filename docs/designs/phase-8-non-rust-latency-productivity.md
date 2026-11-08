@@ -68,7 +68,7 @@ Approach A: Comprehensive Low-Latency Stack Alignment. It addresses every link i
 
 ## Distribution Plan
 - Existing repository structure and `./setup.sh` installer cover deployment.
-- Changes are committable to git and deployed via `dotfield apply` or `./setup.sh`.
+- Changes are committable to git and deployed via `./setup.sh`.
 
 ## Next Steps
 1. **Compositors**:

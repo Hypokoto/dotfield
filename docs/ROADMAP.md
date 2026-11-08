@@ -150,7 +150,7 @@ flowchart LR
 - [x] **Shell & Prompt (`shell/`)**:
   - **Zsh (`shell/zsh/.zshrc`)**:
     - Eliminate vi-mode mode switch lag with `export KEYTIMEOUT=1` (10ms).
-    - Implement 24-hour timestamp check for `compinit -C` to achieve sub-15ms shell startup.
+    - Implement 24-hour timestamp check for `compinit -C` to accelerate shell startup.
     - Add `AUTO_CD`, `AUTO_PUSHD`, and completion caching rules.
   - **Starship (`shell/starship/starship.toml`)**:
     - Enforce sub-10ms prompt rendering with `scan_timeout = 10` and `command_timeout = 150`.

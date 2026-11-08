@@ -84,7 +84,7 @@ Dotfield natively supports two distinct Wayland compositor workflows:
   - Visual block moving with persistent indentation (`<` / `>`).
   - Dropbar VS Code style breadcrumbs and NvChad foundation.
 - **Shell Environment**:
-  - **[Zsh](shell/zsh)**: Sub-15ms startup, cached bytecode compilation (`.zwc`), secret interception hook (`zshaddhistory`) preventing API keys/passwords from logging to disk, safe file deletion with `trash-cli`, and directory stack navigation.
+  - **[Zsh](shell/zsh)**: Fast interactive startup (~60ms measured, see [docs/BENCHMARKS.md](docs/BENCHMARKS.md)), cached bytecode compilation (`.zwc`), secret interception hook (`zshaddhistory`) preventing API keys/passwords from logging to disk, safe file deletion with `trash-cli`, and directory stack navigation.
   - **[Starship](shell/starship)**: Fast prompt themed with Controlled Chaos tokens.
   - **FZF**: Configured with the Controlled Chaos palette and backed by `fd`.
   - **Modern CLI**: `eza`, `bat`, `ripgrep`, `fd`, `dust`, `duf`, `btop`, `xh`, `doggo`, `zoxide`, `direnv`.
@@ -227,8 +227,8 @@ Before committing, all verification gates must pass:
 # 1. Pre-commit hooks
 pre-commit run --all-files
 
-# 2. Secret audit
-gitleaks detect --no-git --redact -v
+# 2. Secret audit (use --no-git only for untracked worktrees)
+gitleaks detect -v
 
 # 3. Static security analysis
 semgrep --config=.semgrep.yml --error .

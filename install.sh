@@ -226,7 +226,7 @@ case "${PKG_MANAGER}" in
             foot kitty alacritty fuzzel kanshi tmux zellij neovim zsh starship fastfetch
             mako swaylock swayidle grim slurp wl-clipboard wlr-randr wlogout
             wf-recorder eza bat ripgrep fd dust duf btop doggo xh trash-cli
-            zoxide direnv ttf-jetbrains-mono-nerd papirus-icon-theme playerctl
+            zoxide direnv ttf-jetbrains-mono-nerd papirus-icon-theme playerctl bubblewrap
         )
         SWAY_PKGS=(sway swaybg swaynag)
         NIRI_PKGS=(rust vulkan-headers vulkan-icd-loader libxkbcommon wayland-protocols)
@@ -236,7 +236,7 @@ case "${PKG_MANAGER}" in
         COMMON_PKGS=(
             foot kitty alacritty tmux neovim zsh kanshi playerctl fastfetch
             swaylock swayidle grim slurp wl-clipboard wlogout ripgrep
-            fd-find bat btop direnv
+            fd-find bat btop direnv bubblewrap
         )
         SWAY_PKGS=(sway swaybg)
         NIRI_PKGS=(cargo rustc libxkbcommon-dev libwayland-dev wayland-protocols libvulkan-dev)
@@ -246,7 +246,7 @@ case "${PKG_MANAGER}" in
         COMMON_PKGS=(
             foot kitty alacritty fuzzel kanshi tmux zellij neovim zsh starship fastfetch
             mako playerctl swaylock swayidle grim slurp wl-clipboard wlr-randr
-            wlogout ripgrep fd-find bat eza btop zoxide direnv
+            wlogout ripgrep fd-find bat eza btop zoxide direnv bubblewrap
         )
         SWAY_PKGS=(sway swaybg)
         NIRI_PKGS=(rust cargo vulkan-headers vulkan-loader-devel libxkbcommon-devel wayland-protocols-devel)
@@ -255,7 +255,7 @@ case "${PKG_MANAGER}" in
         # openSUSE
         COMMON_PKGS=(
             kitty alacritty tmux zellij neovim zsh starship mako playerctl fastfetch
-            swaylock swayidle grim slurp wl-clipboard wlogout ripgrep bat
+            swaylock swayidle grim slurp wl-clipboard wlogout ripgrep bat bubblewrap
         )
         SWAY_PKGS=(sway swaybg)
         NIRI_PKGS=(rust cargo libxkbcommon-devel wayland-protocols-devel)

@@ -65,9 +65,11 @@ enforce_nftables = false
 
 ---
 
-## 3. How Keybindings Compile
+## 3. Modular Compositor Architecture
 
-When `dotfield apply` runs, the `[bindings]` table is compiled into the target compositor's native syntax:
+In Dotfield, compositor configurations are managed declaratively using modular drop-in snippets under `compositor/sway/conf.d/` and `compositor/niri/conf.d/`, deployed via `./setup.sh` (or `./setup.sh sway` / `./setup.sh niri`).
+
+The examples below illustrate the corresponding native syntax for each compositor:
 
 ### For Sway (`target = "sway"`):
 ```sway

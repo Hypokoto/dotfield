@@ -95,7 +95,7 @@ Before every commit, the following gates MUST pass without exceptions:
    - File size limits.
 
 2. **Secret Auditing (Gitleaks)**:
-   - Run `gitleaks detect --no-git --redact -v`.
+   - Run `gitleaks detect -v` to audit repository commit history (use `--no-git` only when scanning uncommitted scratch worktrees).
    - Never commit API keys, personal access tokens, SSH private keys, or credentials.
 
 3. **Static Security Analysis (Semgrep)**:

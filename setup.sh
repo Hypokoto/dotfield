@@ -50,6 +50,9 @@ HARDEN_APPARMOR=false
 HARDEN_FIREJAIL=false
 HARDEN_FLATPAK=false
 HARDEN_NFT=false
+USE_SYMLINKS=true
+declare -A LAYER_STATUS=()
+declare -A LAYER_DETAILS=()
 
 show_help() {
     cat <<EOF
@@ -73,6 +76,7 @@ Options:
   --flatpak              Apply baseline restrictive Flatpak permission overrides
   --nft                  Deploy & activate NFTables workstation stateful filter
   -f, --force            Force replacement of existing configs (backed up to .bak.<timestamp>)
+  --copy                 Deploy files as copies instead of Stow-style symlinks
   --prefix <dir>         Directory to install binaries into (default: ~/.local/bin)
   --build                Force compilation of Rust crate (amane)
   --no-build             Skip compiling Rust crate with cargo
@@ -149,7 +153,15 @@ while [[ $# -gt 0 ]]; do
             FORCE_DEPLOY=true
             shift
             ;;
+        --copy)
+            USE_SYMLINKS=false
+            shift
+            ;;
         --prefix)
+            if [[ $# -lt 2 || -z "${2:-}" ]]; then
+                err "Option --prefix requires a non-empty directory argument."
+                exit 1
+            fi
             PREFIX="$2"
             shift 2
             ;;
@@ -288,14 +300,28 @@ deploy_apparmor() {
     local stage_dest="${HOME}/.config/dotfield/security/apparmor/dotfield-daemon"
 
     if [[ ! -f "${profile_src}" ]]; then
-        warn "AppArmor profile not found at ${profile_src}"
-        return 0
+        LAYER_STATUS["apparmor"]="FAIL"
+        LAYER_DETAILS["apparmor"]="Profile not found: ${profile_src}"
+        err "AppArmor profile not found at ${profile_src}"
+        return 1
+    fi
+
+    # Pre-flight check: kernel LSM enablement
+    local lsm_path="/sys/module/apparmor/parameters/enabled"
+    if [[ ! -r "${lsm_path}" ]] || [[ "$(< "${lsm_path}")" != "Y" ]]; then
+        LAYER_STATUS["apparmor"]="FAIL"
+        LAYER_DETAILS["apparmor"]="Kernel LSM 'apparmor' parameter is not 'Y' (disabled at boot)"
+        err "AppArmor is disabled in the kernel (check /sys/module/apparmor/parameters/enabled)."
+        info "Add 'lsm=landlock,lockdown,yama,apparmor,bpf' to your kernel boot parameters."
+        return 1
     fi
 
     if [[ "${DRY_RUN}" == true ]]; then
         info "[dry-run] install -m 0644 ${profile_src} ${stage_dest}"
         info "[dry-run] sudo install -m 0644 -D ${profile_src} ${profile_dest}"
         info "[dry-run] sudo apparmor_parser -r ${profile_dest}"
+        LAYER_STATUS["apparmor"]="DRY_RUN"
+        LAYER_DETAILS["apparmor"]="Dry-run preview (not applied)"
         return 0
     fi
 
@@ -304,15 +330,37 @@ deploy_apparmor() {
     info "Staged AppArmor profile to ${stage_dest}"
 
     if ! command -v apparmor_parser >/dev/null 2>&1; then
-        warn "apparmor_parser is not installed on this system. Staged profile locally."
-        return 0
+        LAYER_STATUS["apparmor"]="FAIL"
+        LAYER_DETAILS["apparmor"]="apparmor_parser binary not installed"
+        err "apparmor_parser is not installed on this system."
+        return 1
     fi
 
-    if run_sudo install -m 0644 -D "${profile_src}" "${profile_dest}" && run_sudo apparmor_parser -r "${profile_dest}"; then
-        success "AppArmor profile loaded: ${profile_dest}"
+    if ! run_sudo install -m 0644 -D "${profile_src}" "${profile_dest}"; then
+        LAYER_STATUS["apparmor"]="FAIL"
+        LAYER_DETAILS["apparmor"]="Failed to install profile into /etc/apparmor.d (sudo failed)"
+        err "Could not install AppArmor profile into /etc/apparmor.d."
+        return 1
+    fi
+
+    if ! run_sudo apparmor_parser -r "${profile_dest}"; then
+        LAYER_STATUS["apparmor"]="FAIL"
+        LAYER_DETAILS["apparmor"]="apparmor_parser failed to parse/load profile"
+        err "apparmor_parser failed to load ${profile_dest}."
+        return 1
+    fi
+
+    # Verification: check with aa-status if available
+    if command -v aa-status >/dev/null 2>&1 && run_sudo aa-status --enabled 2>/dev/null; then
+        success "AppArmor profile loaded and verified active: ${profile_dest}"
+        LAYER_STATUS["apparmor"]="PASS"
+        LAYER_DETAILS["apparmor"]="Loaded and verified active (/etc/apparmor.d/dotfield-daemon)"
+        return 0
     else
-        warn "Could not load AppArmor profile into /etc/apparmor.d with sudo."
-        info "To activate manually: sudo cp ${stage_dest} ${profile_dest} && sudo apparmor_parser -r ${profile_dest}"
+        success "AppArmor profile loaded: ${profile_dest}"
+        LAYER_STATUS["apparmor"]="PASS"
+        LAYER_DETAILS["apparmor"]="Loaded via apparmor_parser -r"
+        return 0
     fi
 }
 
@@ -323,58 +371,89 @@ deploy_firejail() {
     local sandbox_dir="${HOME}/.local/share/dotfield-sandbox"
 
     if [[ ! -f "${profile_src}" ]]; then
-        warn "Firejail profile not found at ${profile_src}"
-        return 0
+        LAYER_STATUS["firejail"]="FAIL"
+        LAYER_DETAILS["firejail"]="Profile not found: ${profile_src}"
+        err "Firejail profile not found at ${profile_src}"
+        return 1
     fi
 
     if [[ "${DRY_RUN}" == true ]]; then
         info "[dry-run] mkdir -p ~/.config/firejail ${sandbox_dir}/downloads ${sandbox_dir}/browser-profile"
         info "[dry-run] install -m 0644 ${profile_src} ${profile_dest}"
+        LAYER_STATUS["firejail"]="DRY_RUN"
+        LAYER_DETAILS["firejail"]="Dry-run preview (not applied)"
         return 0
+    fi
+
+    if ! command -v firejail >/dev/null 2>&1; then
+        LAYER_STATUS["firejail"]="FAIL"
+        LAYER_DETAILS["firejail"]="firejail command not installed"
+        err "firejail is not installed on this system."
+        return 1
     fi
 
     mkdir -p "${HOME}/.config/firejail" "${sandbox_dir}/downloads" "${sandbox_dir}/browser-profile"
     install -m 0644 "${profile_src}" "${profile_dest}"
     success "Firejail browser profile deployed: ${profile_dest}"
     success "Isolated sandbox storage initialized at ${sandbox_dir}"
+    LAYER_STATUS["firejail"]="PASS"
+    LAYER_DETAILS["firejail"]="Profile deployed: ${profile_dest}"
+    return 0
 }
 
 deploy_flatpak() {
     step "Applying Flatpak permission overrides..."
-    local overrides_src="${SCRIPT_DIR}/security/flatpak/overrides.toml"
-    local stage_dest="${HOME}/.config/dotfield/security/flatpak/overrides.toml"
+    local overrides_src="${SCRIPT_DIR}/security/flatpak/global"
+    local stage_dest="${HOME}/.config/dotfield/security/flatpak/global"
+    local global_override_dest="${HOME}/.local/share/flatpak/overrides/global"
 
     if [[ ! -f "${overrides_src}" ]]; then
-        warn "Flatpak overrides file not found at ${overrides_src}"
-        return 0
+        LAYER_STATUS["flatpak"]="FAIL"
+        LAYER_DETAILS["flatpak"]="Flatpak overrides source not found: ${overrides_src}"
+        err "Flatpak overrides file not found at ${overrides_src}"
+        return 1
     fi
 
     if [[ "${DRY_RUN}" == true ]]; then
-        info "[dry-run] stage overrides to ${stage_dest}"
-        info "[dry-run] flatpak override --user --socket=wayland --nosocket=x11 --nosocket=fallback-x11 --nosocket=pulseaudio --nosocket=ssh-auth --nosocket=gpg-agent --nofilesystem=home --nofilesystem=host --nofilesystem=host-os --nofilesystem=host-etc"
+        info "[dry-run] stage overrides to ${stage_dest} and ${global_override_dest}"
+        info "[dry-run] flatpak override --user --socket=wayland --nosocket=x11 --nosocket=fallback-x11 --nosocket=ssh-auth --nosocket=gpg-agent --nofilesystem=home --nofilesystem=host --nofilesystem=host-os --nofilesystem=host-etc"
+        LAYER_STATUS["flatpak"]="DRY_RUN"
+        LAYER_DETAILS["flatpak"]="Dry-run preview (not applied)"
         return 0
     fi
 
-    mkdir -p "$(dirname "${stage_dest}")"
-    cp "${overrides_src}" "${stage_dest}"
-    info "Staged Flatpak declarative overrides: ${stage_dest}"
+    if ! command -v flatpak >/dev/null 2>&1; then
+        LAYER_STATUS["flatpak"]="FAIL"
+        LAYER_DETAILS["flatpak"]="flatpak binary not installed"
+        err "Flatpak CLI is not installed on this system."
+        return 1
+    fi
 
-    if command -v flatpak >/dev/null 2>&1; then
-        flatpak override --user \
-            --socket=wayland \
-            --nosocket=x11 \
-            --nosocket=fallback-x11 \
-            --nosocket=pulseaudio \
-            --nosocket=ssh-auth \
-            --nosocket=gpg-agent \
-            --nofilesystem=home \
-            --nofilesystem=host \
-            --nofilesystem=host-os \
-            --nofilesystem=host-etc \
-            >/dev/null 2>&1 || true
-        success "Applied baseline Flatpak user overrides (Wayland-enforced, x11/host/home restricted)"
+    mkdir -p "$(dirname "${stage_dest}")" "${HOME}/.local/share/flatpak/overrides"
+    cp "${overrides_src}" "${stage_dest}"
+    cp "${overrides_src}" "${global_override_dest}"
+    info "Deployed native Flatpak global override: ${global_override_dest}"
+
+    # Also register via flatpak CLI to ensure user database synchronization
+    if flatpak override --user \
+        --socket=wayland \
+        --nosocket=x11 \
+        --nosocket=fallback-x11 \
+        --nosocket=ssh-auth \
+        --nosocket=gpg-agent \
+        --nofilesystem=home \
+        --nofilesystem=host \
+        --nofilesystem=host-os \
+        --nofilesystem=host-etc 2>&1; then
+        success "Applied baseline Flatpak user overrides (Wayland-enforced, host/home restricted)"
+        LAYER_STATUS["flatpak"]="PASS"
+        LAYER_DETAILS["flatpak"]="Applied to ${global_override_dest} and flatpak user database"
+        return 0
     else
-        warn "Flatpak CLI is not installed. Staged declarative overrides configuration only."
+        LAYER_STATUS["flatpak"]="FAIL"
+        LAYER_DETAILS["flatpak"]="flatpak override command failed"
+        err "Failed to apply Flatpak overrides."
+        return 1
     fi
 }
 
@@ -385,14 +464,19 @@ deploy_nftables() {
     local stage_dest="${HOME}/.config/dotfield/security/nft/workstation.nft"
 
     if [[ ! -f "${nft_src}" ]]; then
-        warn "NFTables ruleset not found at ${nft_src}"
-        return 0
+        LAYER_STATUS["nft"]="FAIL"
+        LAYER_DETAILS["nft"]="Ruleset source not found: ${nft_src}"
+        err "NFTables ruleset not found at ${nft_src}"
+        return 1
     fi
 
     if [[ "${DRY_RUN}" == true ]]; then
         info "[dry-run] install -m 0644 ${nft_src} ${stage_dest}"
         info "[dry-run] sudo install -m 0644 -D ${nft_src} ${nft_dest}"
+        info "[dry-run] sudo nft -c -f ${nft_src}"
         info "[dry-run] sudo nft -f ${nft_dest}"
+        LAYER_STATUS["nft"]="DRY_RUN"
+        LAYER_DETAILS["nft"]="Dry-run preview (not applied)"
         return 0
     fi
 
@@ -401,15 +485,46 @@ deploy_nftables() {
     info "Staged NFTables ruleset to ${stage_dest}"
 
     if ! command -v nft >/dev/null 2>&1; then
-        warn "nft command (nftables) is not installed on this system. Staged ruleset locally."
-        return 0
+        LAYER_STATUS["nft"]="FAIL"
+        LAYER_DETAILS["nft"]="nft binary not installed"
+        err "nft command (nftables) is not installed on this system."
+        return 1
     fi
 
-    if run_sudo install -m 0644 -D "${nft_src}" "${nft_dest}" && run_sudo nft -f "${nft_dest}"; then
-        success "NFTables workstation stateful ruleset loaded: ${nft_dest}"
+    # Pre-flight syntax validation
+    step "Validating NFTables ruleset syntax with pre-flight check..."
+    if ! run_sudo nft -c -f "${nft_src}"; then
+        LAYER_STATUS["nft"]="FAIL"
+        LAYER_DETAILS["nft"]="nft -c -f syntax check failed"
+        err "NFTables ruleset syntax validation failed."
+        return 1
+    fi
+
+    if ! run_sudo install -m 0644 -D "${nft_src}" "${nft_dest}"; then
+        LAYER_STATUS["nft"]="FAIL"
+        LAYER_DETAILS["nft"]="Failed to install ruleset into /etc/nftables.d (sudo failed)"
+        err "Could not install ruleset to ${nft_dest}."
+        return 1
+    fi
+
+    if ! run_sudo nft -f "${nft_dest}"; then
+        LAYER_STATUS["nft"]="FAIL"
+        LAYER_DETAILS["nft"]="nft -f failed to load ruleset into kernel"
+        err "Failed to load NFTables ruleset."
+        return 1
+    fi
+
+    # Verification: check that table inet dotfield is active in kernel
+    if run_sudo nft list table inet dotfield >/dev/null 2>&1; then
+        success "NFTables workstation stateful ruleset loaded and verified (table inet dotfield active)"
+        LAYER_STATUS["nft"]="PASS"
+        LAYER_DETAILS["nft"]="Active in kernel (table inet dotfield)"
+        return 0
     else
-        warn "Could not load NFTables ruleset into /etc/nftables.d with sudo."
-        info "To activate manually: sudo cp ${stage_dest} ${nft_dest} && sudo nft -f ${nft_dest}"
+        LAYER_STATUS["nft"]="FAIL"
+        LAYER_DETAILS["nft"]="Table inet dotfield not found in active ruleset after load"
+        err "NFTables ruleset verification failed: table inet dotfield not found."
+        return 1
     fi
 }
 
@@ -421,12 +536,13 @@ if [[ "${ENABLE_HARDENING}" == true ]]; then
             echo -e "\n${AMBER}${BOLD}Dotfield Security Hardening Suite${NC}"
             echo -e "Choose the security layers to configure and deploy:"
             echo -e "  ${BOLD}1)${NC} All security layers (AppArmor + Firejail + Flatpak + NFTables)"
-            echo -e "  ${BOLD}2)${NC} AppArmor profile only (dotfield-daemon)"
+            echo -e "  ${BOLD}2)${NC} AppArmor profile only (amane daemon confinement)"
             echo -e "  ${BOLD}3)${NC} Firejail profile only (browser sandbox & isolated storage)"
             echo -e "  ${BOLD}4)${NC} Flatpak overrides only (restrict host/home/x11 permissions)"
             echo -e "  ${BOLD}5)${NC} NFTables firewall only (workstation stateful packet filter)"
-            read -r -p "Enter selection [1-5] (default: 1): " H_CHOICE
-            case "${H_CHOICE:-1}" in
+            echo -e "  ${BOLD}6)${NC} Abort without applying (Default)"
+            read -r -p "Enter selection [1-6] (default: 6 - safe exit): " H_CHOICE
+            case "${H_CHOICE:-6}" in
                 1)
                     HARDEN_APPARMOR=true
                     HARDEN_FIREJAIL=true
@@ -446,18 +562,14 @@ if [[ "${ENABLE_HARDENING}" == true ]]; then
                     HARDEN_NFT=true
                     ;;
                 *)
-                    warn "Unrecognized selection '${H_CHOICE}', defaulting to all layers."
-                    HARDEN_APPARMOR=true
-                    HARDEN_FIREJAIL=true
-                    HARDEN_FLATPAK=true
-                    HARDEN_NFT=true
+                    info "Safe abort: No security hardening layers selected."
+                    exit 0
                     ;;
             esac
         else
-            HARDEN_APPARMOR=true
-            HARDEN_FIREJAIL=true
-            HARDEN_FLATPAK=true
-            HARDEN_NFT=true
+            err "Non-interactive hardening requires explicit layer flags (e.g. --apparmor, --firejail, --flatpak, --nft)."
+            err "Refusing to apply default firewall or sandbox rules without explicit flags."
+            exit 1
         fi
     fi
 
@@ -465,27 +577,47 @@ if [[ "${ENABLE_HARDENING}" == true ]]; then
     echo -e "${BOLD}       Deploying Security Hardening Layers            ${NC}"
     echo -e "${BOLD}======================================================${NC}\n"
 
+    hardening_has_failures=false
+
     if [[ "${HARDEN_FIREJAIL}" == true ]]; then
-        deploy_firejail
+        deploy_firejail || hardening_has_failures=true
     fi
 
     if [[ "${HARDEN_FLATPAK}" == true ]]; then
-        deploy_flatpak
+        deploy_flatpak || hardening_has_failures=true
     fi
 
     if [[ "${HARDEN_APPARMOR}" == true ]]; then
-        deploy_apparmor
+        deploy_apparmor || hardening_has_failures=true
     fi
 
     if [[ "${HARDEN_NFT}" == true ]]; then
-        deploy_nftables
+        deploy_nftables || hardening_has_failures=true
     fi
 
-    if [[ "${TARGET}" == "hardening" ]]; then
-        echo -e "\n${GREEN}${BOLD}======================================================${NC}"
-        echo -e "${GREEN}${BOLD}       Security Hardening Completed Successfully!     ${NC}"
-        echo -e "${GREEN}${BOLD}======================================================${NC}\n"
-        exit 0
+    echo -e "\n${BOLD}Security Hardening Verification Summary:${NC}"
+    for layer in "${!LAYER_STATUS[@]}"; do
+        layer_status="${LAYER_STATUS[$layer]}"
+        layer_detail="${LAYER_DETAILS[$layer]:-}"
+        if [[ "${layer_status}" == "PASS" ]]; then
+            echo -e "  ${GREEN}✔ PASS${NC} [${layer}] ${layer_detail}"
+        elif [[ "${layer_status}" == "DRY_RUN" ]]; then
+            echo -e "  ${BLUE}○ PREVIEW${NC} [${layer}] ${layer_detail}"
+        else
+            echo -e "  ${RED}✘ FAIL${NC} [${layer}] ${layer_detail}"
+        fi
+    done
+
+    if [[ "${hardening_has_failures}" == true ]]; then
+        err "One or more security hardening layers failed verification."
+        if [[ "${TARGET}" == "hardening" ]]; then
+            exit 1
+        fi
+    else
+        success "All requested security hardening layers verified successfully."
+        if [[ "${TARGET}" == "hardening" ]]; then
+            exit 0
+        fi
     fi
 fi
 
@@ -523,9 +655,11 @@ fi
 step "Deploying helper scripts to ~/.config/dotfield/scripts..."
 SCRIPTS_DEST="${HOME}/.config/dotfield/scripts"
 if [[ "${DRY_RUN}" == true ]]; then
-    info "[dry-run] mkdir -p ${SCRIPTS_DEST}"
+    info "[dry-run] mkdir -p ${SCRIPTS_DEST} ${PREFIX}"
     info "[dry-run] install -m 0755 scripts/*.sh ${SCRIPTS_DEST}/"
+    info "[dry-run] ln -sf ${SCRIPTS_DEST}/*.sh ${PREFIX}/"
 else
+    mkdir -p "${PREFIX}"
     mkdir -p "${SCRIPTS_DEST}/lib"
     for s in "${SCRIPT_DIR}/scripts"/*.sh; do
         if [[ -f "${s}" ]]; then
@@ -546,6 +680,8 @@ else
     ln -sf "${SCRIPTS_DEST}/gtk-sync.sh" "${PREFIX}/dotfield-gtk-sync" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/screenshot.sh" "${PREFIX}/dotfield-screenshot" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/screen-record.sh" "${PREFIX}/dotfield-record" 2>/dev/null || true
+    ln -sf "${SCRIPTS_DEST}/sandbox-browser.sh" "${PREFIX}/sandbox-browser" 2>/dev/null || true
+    ln -sf "${SCRIPTS_DEST}/sandbox-browser.sh" "${PREFIX}/dotfield-sandbox-browser" 2>/dev/null || true
     success "Helper scripts deployed to ${SCRIPTS_DEST}"
 fi
 
@@ -555,40 +691,80 @@ ensure_config_link_or_dir() {
     local src="$1"
     local dest="$2"
 
-    # 1. Clean broken or dead symlinks
+    # 1. Guard against missing source configuration
+    if [[ ! -e "${src}" ]]; then
+        warn "Missing source configuration: ${src}"
+        return 0
+    fi
+
+    # 2. Clean dangling broken symlinks
     if [[ -L "${dest}" && ! -e "${dest}" ]]; then
-        info "Cleaning dangling broken symlink: ${dest}"
-        if [[ "${DRY_RUN}" != true ]]; then
+        if [[ "${DRY_RUN}" == true ]]; then
+            info "[dry-run] rm -f broken symlink: ${dest}"
+        else
+            info "Cleaning dangling broken symlink: ${dest}"
             rm -f "${dest}"
         fi
     fi
 
-    # 2. Check if destination does not exist
-    if [[ ! -e "${dest}" ]]; then
-        if [[ "${DRY_RUN}" == true ]]; then
-            info "[dry-run] cp -r ${src} ${dest}"
-        else
-            mkdir -p "$(dirname "${dest}")"
-            cp -r "${src}" "${dest}"
-            success "Staged base config: ${dest}"
+    if [[ "${USE_SYMLINKS}" == true ]]; then
+        # Stow-style symlink mode
+        if [[ -L "${dest}" ]]; then
+            local current_target
+            current_target="$(readlink -f "${dest}" 2>/dev/null || true)"
+            local expected_target
+            expected_target="$(readlink -f "${src}" 2>/dev/null || true)"
+            if [[ -n "${current_target}" && "${current_target}" == "${expected_target}" ]]; then
+                info "Already synchronized: ${dest} -> ${src}"
+                return 0
+            fi
         fi
-    elif [[ "${FORCE_DEPLOY}" == true ]]; then
+
         if [[ "${DRY_RUN}" == true ]]; then
-            info "[dry-run] backup ${dest} and replace with ${src}"
-        else
+            if [[ -e "${dest}" || -L "${dest}" ]]; then
+                info "[dry-run] backup ${dest} -> ${dest}.bak.<timestamp> and symlink -> ${src}"
+            else
+                info "[dry-run] mkdir -p $(dirname "${dest}") && ln -sfn ${src} ${dest}"
+            fi
+            return 0
+        fi
+
+        mkdir -p "$(dirname "${dest}")"
+        if [[ -e "${dest}" || -L "${dest}" ]]; then
             local ts
             ts=$(date +%s)
             mv "${dest}" "${dest}.bak.${ts}"
-            mkdir -p "$(dirname "${dest}")"
-            cp -r "${src}" "${dest}"
-            success "Replaced base config (backed up to ${dest}.bak.${ts}): ${dest}"
+            info "Backed up existing $(basename "${dest}") to ${dest}.bak.${ts}"
         fi
+        ln -sfn "${src}" "${dest}"
+        success "Linked: ${dest} -> ${src}"
     else
-        # Add newly introduced files only; never overwrite existing user files without --force
-        if [[ -d "${src}" ]]; then
-            cp -rn "${src}/." "${dest}/" 2>/dev/null || true
-        elif [[ -f "${src}" ]]; then
-            cp -n "${src}" "${dest}" 2>/dev/null || true
+        # Copy mode (--copy)
+        if [[ ! -e "${dest}" ]]; then
+            if [[ "${DRY_RUN}" == true ]]; then
+                info "[dry-run] cp -r ${src} ${dest}"
+            else
+                mkdir -p "$(dirname "${dest}")"
+                cp -r "${src}" "${dest}"
+                success "Staged base config: ${dest}"
+            fi
+        elif [[ "${FORCE_DEPLOY}" == true ]]; then
+            if [[ "${DRY_RUN}" == true ]]; then
+                info "[dry-run] backup ${dest} and replace with ${src}"
+            else
+                local ts
+                ts=$(date +%s)
+                mv "${dest}" "${dest}.bak.${ts}"
+                mkdir -p "$(dirname "${dest}")"
+                cp -r "${src}" "${dest}"
+                success "Replaced base config (backed up to ${dest}.bak.${ts}): ${dest}"
+            fi
+        else
+            if [[ "${DRY_RUN}" == true ]]; then
+                info "[dry-run] skipped existing config (use --force to overwrite): ${dest}"
+            else
+                info "Skipped existing config (use --force to overwrite): ${dest}"
+            fi
         fi
     fi
 }
@@ -659,16 +835,17 @@ fi
 
 # Install fzf-tab (Tab completion via fzf: no prompt-jumping, themed popup)
 FZF_TAB_DIR="${HOME}/.local/share/zsh/plugins/fzf-tab"
+FZF_TAB_REV="d7e0234614dbe5369fdd760907d12c0e05a4dccc" # v1.3.0 pinned
 if [[ ! -d "${FZF_TAB_DIR}/.git" ]]; then
     if [[ "${DRY_RUN}" == true ]]; then
-        info "[dry-run] git clone --depth=1 https://github.com/Aloxaf/fzf-tab ${FZF_TAB_DIR}"
+        info "[dry-run] git clone https://github.com/Aloxaf/fzf-tab ${FZF_TAB_DIR} && git checkout ${FZF_TAB_REV}"
     else
-        info "Installing fzf-tab …"
+        info "Installing fzf-tab (pinned: ${FZF_TAB_REV:0:7}) …"
         mkdir -p "$(dirname "${FZF_TAB_DIR}")"
-        if git clone --depth=1 https://github.com/Aloxaf/fzf-tab "${FZF_TAB_DIR}" 2>/dev/null; then
-            success "fzf-tab installed at ${FZF_TAB_DIR}"
+        if git clone https://github.com/Aloxaf/fzf-tab "${FZF_TAB_DIR}" 2>/dev/null && (cd "${FZF_TAB_DIR}" && git checkout -q "${FZF_TAB_REV}" 2>/dev/null); then
+            success "fzf-tab installed at ${FZF_TAB_DIR} (pinned to ${FZF_TAB_REV:0:7})"
         else
-            warn "fzf-tab clone failed: Tab completions will fall back to standard menu"
+            warn "fzf-tab clone/checkout failed: Tab completions will fall back to standard menu"
         fi
     fi
 else
@@ -765,10 +942,17 @@ if [[ "${TARGET}" == "all" || "${TARGET}" == "niri" ]]; then
 fi
 
 if [[ "${ENABLE_HARDENING}" == true ]]; then
-    echo -e "${AMBER}${BOLD}Active Security Hardening Layers:${NC}"
-    [[ "${HARDEN_APPARMOR}" == true ]] && echo -e "  ${GREEN}✔${NC} AppArmor Daemon Confinement (/etc/apparmor.d/dotfield-daemon)"
-    [[ "${HARDEN_FIREJAIL}" == true ]] && echo -e "  ${GREEN}✔${NC} Firejail Untrusted App Sandbox (~/.config/firejail/browser.profile)"
-    [[ "${HARDEN_FLATPAK}" == true ]] && echo -e "  ${GREEN}✔${NC} Flatpak Declarative Permission Overrides"
-    [[ "${HARDEN_NFT}" == true ]] && echo -e "  ${GREEN}✔${NC} NFTables Workstation Stateful Packet Filter"
+    echo -e "${AMBER}${BOLD}Security Hardening Verification Status:${NC}"
+    for layer in "${!LAYER_STATUS[@]}"; do
+        layer_status="${LAYER_STATUS[$layer]}"
+        layer_detail="${LAYER_DETAILS[$layer]:-}"
+        if [[ "${layer_status}" == "PASS" ]]; then
+            echo -e "  ${GREEN}✔ PASS${NC} [${layer}] ${layer_detail}"
+        elif [[ "${layer_status}" == "DRY_RUN" ]]; then
+            echo -e "  ${BLUE}○ PREVIEW${NC} [${layer}] ${layer_detail}"
+        else
+            echo -e "  ${RED}✘ FAIL${NC} [${layer}] ${layer_detail}"
+        fi
+    done
     echo ""
 fi

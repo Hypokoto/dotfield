@@ -5,11 +5,8 @@ title = "dotfield gitleaks config"
 useDefault = true
 
 [allowlist]
-description = "Global allowlist for non-sensitive placeholders and docs"
+description = "Global allowlist for build artifacts and dummy test tokens"
 paths = [
-  '''docs/.*''',
-  '''tests/.*''',
-  '''GEMINI\.md''',
   '''target/.*'''
 ]
 regexes = [

@@ -47,7 +47,6 @@ FORCE_DEPLOY=false
 TARGET="all"
 ENABLE_HARDENING=false
 HARDEN_APPARMOR=false
-HARDEN_FIREJAIL=false
 HARDEN_FLATPAK=false
 HARDEN_NFT=false
 USE_SYMLINKS=true
@@ -64,7 +63,7 @@ Subcommands:
   sway                   Deploy configuration specifically for Sway compositor
   niri                   Deploy configuration specifically for Niri + Amane desktop
   all                    Deploy configurations for both Sway and Niri (default)
-  hardening              Deploy security hardening suite (AppArmor, Firejail, Flatpak, NFTables)
+  hardening              Deploy security hardening suite (AppArmor, Flatpak, NFTables)
 
 Options:
   --sway                 Target Sway compositor
@@ -72,7 +71,6 @@ Options:
   --all                  Target both Sway and Niri (default)
   --hardening            Enable security hardening suite deployment
   --apparmor             Deploy & activate AppArmor daemon confinement profile
-  --firejail             Deploy Firejail browser sandbox profile & isolation dirs
   --flatpak              Apply baseline restrictive Flatpak permission overrides
   --nft                  Deploy & activate NFTables workstation stateful filter
   -f, --force            Force replacement of existing configs (backed up to .bak.<timestamp>)
@@ -87,7 +85,7 @@ Examples:
   ./setup.sh sway
   ./setup.sh --niri
   ./setup.sh hardening
-  ./setup.sh --hardening --apparmor --firejail
+  ./setup.sh --hardening --apparmor --nft
   ./setup.sh --force --sway
   ./setup.sh --prefix /usr/local/bin
 EOF
@@ -132,11 +130,6 @@ while [[ $# -gt 0 ]]; do
         --apparmor)
             ENABLE_HARDENING=true
             HARDEN_APPARMOR=true
-            shift
-            ;;
-        --firejail)
-            ENABLE_HARDENING=true
-            HARDEN_FIREJAIL=true
             shift
             ;;
         --flatpak)
@@ -270,7 +263,7 @@ check_companion "zsh" "Z shell"
 check_companion "starship" "Cross-shell prompt"
 check_companion "carapace" "Multi-shell structured completion engine"
 if [[ "${ENABLE_HARDENING}" == true ]]; then
-    check_companion "firejail" "Firejail security sandbox"
+    check_companion "bwrap" "Bubblewrap unprivileged sandbox"
     check_companion "flatpak" "Flatpak package manager & permissions"
     check_companion "apparmor_parser" "AppArmor profile parser/loader"
     check_companion "nft" "NFTables packet filtering tool"
@@ -350,55 +343,19 @@ deploy_apparmor() {
         return 1
     fi
 
-    # Verification: check with aa-status if available
-    if command -v aa-status >/dev/null 2>&1 && run_sudo aa-status --enabled 2>/dev/null; then
-        success "AppArmor profile loaded and verified active: ${profile_dest}"
+    # Verification: check kernel security profiles directly
+    if run_sudo grep -q "dotfield-daemon" /sys/kernel/security/apparmor/profiles 2>/dev/null || \
+       (command -v aa-status >/dev/null 2>&1 && run_sudo aa-status 2>/dev/null | grep -q "dotfield-daemon"); then
+        success "AppArmor profile loaded and kernel confinement verified (dotfield-daemon)"
         LAYER_STATUS["apparmor"]="PASS"
-        LAYER_DETAILS["apparmor"]="Loaded and verified active (/etc/apparmor.d/dotfield-daemon)"
+        LAYER_DETAILS["apparmor"]="Active kernel profile (dotfield-daemon) in complain mode"
         return 0
     else
-        success "AppArmor profile loaded: ${profile_dest}"
-        LAYER_STATUS["apparmor"]="PASS"
-        LAYER_DETAILS["apparmor"]="Loaded via apparmor_parser -r"
-        return 0
-    fi
-}
-
-deploy_firejail() {
-    step "Deploying Firejail sandbox profile and isolation storage..."
-    local profile_src="${SCRIPT_DIR}/security/firejail/browser.profile"
-    local profile_dest="${HOME}/.config/firejail/browser.profile"
-    local sandbox_dir="${HOME}/.local/share/dotfield-sandbox"
-
-    if [[ ! -f "${profile_src}" ]]; then
-        LAYER_STATUS["firejail"]="FAIL"
-        LAYER_DETAILS["firejail"]="Profile not found: ${profile_src}"
-        err "Firejail profile not found at ${profile_src}"
+        LAYER_STATUS["apparmor"]="FAIL"
+        LAYER_DETAILS["apparmor"]="apparmor_parser ran but profile missing from /sys/kernel/security/apparmor/profiles"
+        err "AppArmor profile dotfield-daemon not found in active kernel profiles."
         return 1
     fi
-
-    if [[ "${DRY_RUN}" == true ]]; then
-        info "[dry-run] mkdir -p ~/.config/firejail ${sandbox_dir}/downloads ${sandbox_dir}/browser-profile"
-        info "[dry-run] install -m 0644 ${profile_src} ${profile_dest}"
-        LAYER_STATUS["firejail"]="DRY_RUN"
-        LAYER_DETAILS["firejail"]="Dry-run preview (not applied)"
-        return 0
-    fi
-
-    if ! command -v firejail >/dev/null 2>&1; then
-        LAYER_STATUS["firejail"]="FAIL"
-        LAYER_DETAILS["firejail"]="firejail command not installed"
-        err "firejail is not installed on this system."
-        return 1
-    fi
-
-    mkdir -p "${HOME}/.config/firejail" "${sandbox_dir}/downloads" "${sandbox_dir}/browser-profile"
-    install -m 0644 "${profile_src}" "${profile_dest}"
-    success "Firejail browser profile deployed: ${profile_dest}"
-    success "Isolated sandbox storage initialized at ${sandbox_dir}"
-    LAYER_STATUS["firejail"]="PASS"
-    LAYER_DETAILS["firejail"]="Profile deployed: ${profile_dest}"
-    return 0
 }
 
 deploy_flatpak() {
@@ -430,6 +387,12 @@ deploy_flatpak() {
     fi
 
     mkdir -p "$(dirname "${stage_dest}")" "${HOME}/.local/share/flatpak/overrides"
+    if [[ -f "${global_override_dest}" ]]; then
+        local ts
+        ts="$(date +%Y%m%d%H%M%S)"
+        cp "${global_override_dest}" "${global_override_dest}.bak.${ts}"
+        info "Backed up existing Flatpak global override to ${global_override_dest}.bak.${ts}"
+    fi
     cp "${overrides_src}" "${stage_dest}"
     cp "${overrides_src}" "${global_override_dest}"
     info "Deployed native Flatpak global override: ${global_override_dest}"
@@ -446,6 +409,7 @@ deploy_flatpak() {
         --nofilesystem=host-os \
         --nofilesystem=host-etc 2>&1; then
         success "Applied baseline Flatpak user overrides (Wayland-enforced, host/home restricted)"
+        info "Note: X11-only Flatpaks require per-app 'flatpak override --socket=x11 <app-id>'"
         LAYER_STATUS["flatpak"]="PASS"
         LAYER_DETAILS["flatpak"]="Applied to ${global_override_dest} and flatpak user database"
         return 0
@@ -507,6 +471,27 @@ deploy_nftables() {
         return 1
     fi
 
+    # Ensure persistence across reboots via /etc/nftables.conf include
+    local nft_main_conf="/etc/nftables.conf"
+    local include_stmt='include "/etc/nftables.d/*.nft"'
+    if [[ -f "${nft_main_conf}" ]]; then
+        if ! grep -qF 'include "/etc/nftables.d/' "${nft_main_conf}" 2>/dev/null; then
+            step "Hooking persistence include into ${nft_main_conf}..."
+            local ts
+            ts="$(date +%Y%m%d%H%M%S)"
+            run_sudo cp "${nft_main_conf}" "${nft_main_conf}.bak.${ts}"
+            echo -e "\n# Dotfield workstation modular ruleset include\n${include_stmt}" | run_sudo tee -a "${nft_main_conf}" >/dev/null
+            info "Appended include statement to ${nft_main_conf} (backup created at ${nft_main_conf}.bak.${ts})"
+        fi
+    else
+        step "Creating initial ${nft_main_conf} with persistence include..."
+        echo -e "#!/usr/sbin/nft -f\nflush ruleset\n${include_stmt}" | run_sudo tee "${nft_main_conf}" >/dev/null
+        run_sudo chmod 0644 "${nft_main_conf}"
+    fi
+
+    # Enable systemd nftables service if present
+    run_sudo systemctl enable nftables.service 2>/dev/null || true
+
     if ! run_sudo nft -f "${nft_dest}"; then
         LAYER_STATUS["nft"]="FAIL"
         LAYER_DETAILS["nft"]="nft -f failed to load ruleset into kernel"
@@ -514,12 +499,23 @@ deploy_nftables() {
         return 1
     fi
 
-    # Verification: check that table inet dotfield is active in kernel
+    # Verification: check that table inet dotfield is active in kernel and persistence hook exists
     if run_sudo nft list table inet dotfield >/dev/null 2>&1; then
-        success "NFTables workstation stateful ruleset loaded and verified (table inet dotfield active)"
-        LAYER_STATUS["nft"]="PASS"
-        LAYER_DETAILS["nft"]="Active in kernel (table inet dotfield)"
-        return 0
+        local persisted=false
+        if [[ -f "${nft_main_conf}" ]] && grep -qF 'include "/etc/nftables.d/' "${nft_main_conf}" 2>/dev/null; then
+            persisted=true
+        fi
+        if [[ "${persisted}" == true ]]; then
+            success "NFTables stateful filter active in kernel and verified persistent across reboot"
+            LAYER_STATUS["nft"]="PASS"
+            LAYER_DETAILS["nft"]="Active in kernel (table inet dotfield) & persisted via ${nft_main_conf}"
+            return 0
+        else
+            warn "NFTables ruleset active in kernel, but persistence include missing from ${nft_main_conf}"
+            LAYER_STATUS["nft"]="WARN"
+            LAYER_DETAILS["nft"]="Active in kernel (table inet dotfield), but unpersisted (missing from ${nft_main_conf})"
+            return 0
+        fi
     else
         LAYER_STATUS["nft"]="FAIL"
         LAYER_DETAILS["nft"]="Table inet dotfield not found in active ruleset after load"
@@ -531,21 +527,19 @@ deploy_nftables() {
 # 1b. Hardening Deployment
 if [[ "${ENABLE_HARDENING}" == true ]]; then
     # Interactive selection if no individual flag was specified
-    if [[ "${HARDEN_APPARMOR}" == false && "${HARDEN_FIREJAIL}" == false && "${HARDEN_FLATPAK}" == false && "${HARDEN_NFT}" == false ]]; then
+    if [[ "${HARDEN_APPARMOR}" == false && "${HARDEN_FLATPAK}" == false && "${HARDEN_NFT}" == false ]]; then
         if [[ -t 0 && "${DRY_RUN}" != true ]]; then
             echo -e "\n${AMBER}${BOLD}Dotfield Security Hardening Suite${NC}"
             echo -e "Choose the security layers to configure and deploy:"
-            echo -e "  ${BOLD}1)${NC} All security layers (AppArmor + Firejail + Flatpak + NFTables)"
+            echo -e "  ${BOLD}1)${NC} All security layers (AppArmor + Flatpak + NFTables)"
             echo -e "  ${BOLD}2)${NC} AppArmor profile only (amane daemon confinement)"
-            echo -e "  ${BOLD}3)${NC} Firejail profile only (browser sandbox & isolated storage)"
-            echo -e "  ${BOLD}4)${NC} Flatpak overrides only (restrict host/home/x11 permissions)"
-            echo -e "  ${BOLD}5)${NC} NFTables firewall only (workstation stateful packet filter)"
-            echo -e "  ${BOLD}6)${NC} Abort without applying (Default)"
-            read -r -p "Enter selection [1-6] (default: 6 - safe exit): " H_CHOICE
-            case "${H_CHOICE:-6}" in
+            echo -e "  ${BOLD}3)${NC} Flatpak overrides only (restrict host/home/x11 permissions)"
+            echo -e "  ${BOLD}4)${NC} NFTables firewall only (workstation stateful packet filter)"
+            echo -e "  ${BOLD}5)${NC} Abort without applying (Default)"
+            read -r -p "Enter selection [1-5] (default: 5 - safe exit): " H_CHOICE
+            case "${H_CHOICE:-5}" in
                 1)
                     HARDEN_APPARMOR=true
-                    HARDEN_FIREJAIL=true
                     HARDEN_FLATPAK=true
                     HARDEN_NFT=true
                     ;;
@@ -553,12 +547,9 @@ if [[ "${ENABLE_HARDENING}" == true ]]; then
                     HARDEN_APPARMOR=true
                     ;;
                 3)
-                    HARDEN_FIREJAIL=true
-                    ;;
-                4)
                     HARDEN_FLATPAK=true
                     ;;
-                5)
+                4)
                     HARDEN_NFT=true
                     ;;
                 *)
@@ -567,7 +558,7 @@ if [[ "${ENABLE_HARDENING}" == true ]]; then
                     ;;
             esac
         else
-            err "Non-interactive hardening requires explicit layer flags (e.g. --apparmor, --firejail, --flatpak, --nft)."
+            err "Non-interactive hardening requires explicit layer flags (e.g. --apparmor, --flatpak, --nft)."
             err "Refusing to apply default firewall or sandbox rules without explicit flags."
             exit 1
         fi
@@ -578,10 +569,6 @@ if [[ "${ENABLE_HARDENING}" == true ]]; then
     echo -e "${BOLD}======================================================${NC}\n"
 
     hardening_has_failures=false
-
-    if [[ "${HARDEN_FIREJAIL}" == true ]]; then
-        deploy_firejail || hardening_has_failures=true
-    fi
 
     if [[ "${HARDEN_FLATPAK}" == true ]]; then
         deploy_flatpak || hardening_has_failures=true
@@ -603,6 +590,8 @@ if [[ "${ENABLE_HARDENING}" == true ]]; then
             echo -e "  ${GREEN}✔ PASS${NC} [${layer}] ${layer_detail}"
         elif [[ "${layer_status}" == "DRY_RUN" ]]; then
             echo -e "  ${BLUE}○ PREVIEW${NC} [${layer}] ${layer_detail}"
+        elif [[ "${layer_status}" == "WARN" ]]; then
+            echo -e "  ${AMBER}! WARN${NC} [${layer}] ${layer_detail}"
         else
             echo -e "  ${RED}✘ FAIL${NC} [${layer}] ${layer_detail}"
         fi
@@ -656,12 +645,12 @@ step "Deploying helper scripts to ~/.config/dotfield/scripts..."
 SCRIPTS_DEST="${HOME}/.config/dotfield/scripts"
 if [[ "${DRY_RUN}" == true ]]; then
     info "[dry-run] mkdir -p ${SCRIPTS_DEST} ${PREFIX}"
-    info "[dry-run] install -m 0755 scripts/*.sh ${SCRIPTS_DEST}/"
-    info "[dry-run] ln -sf ${SCRIPTS_DEST}/*.sh ${PREFIX}/"
+    info "[dry-run] install -m 0755 scripts/* ${SCRIPTS_DEST}/"
+    info "[dry-run] ln -sf ${SCRIPTS_DEST}/* ${PREFIX}/"
 else
     mkdir -p "${PREFIX}"
     mkdir -p "${SCRIPTS_DEST}/lib"
-    for s in "${SCRIPT_DIR}/scripts"/*.sh; do
+    for s in "${SCRIPT_DIR}/scripts"/*.sh "${SCRIPT_DIR}/scripts/fw-open"; do
         if [[ -f "${s}" ]]; then
             install -m 0755 "${s}" "${SCRIPTS_DEST}/$(basename "${s}")"
         fi
@@ -682,6 +671,7 @@ else
     ln -sf "${SCRIPTS_DEST}/screen-record.sh" "${PREFIX}/dotfield-record" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/sandbox-browser.sh" "${PREFIX}/sandbox-browser" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/sandbox-browser.sh" "${PREFIX}/dotfield-sandbox-browser" 2>/dev/null || true
+    ln -sf "${SCRIPTS_DEST}/fw-open" "${PREFIX}/fw-open" 2>/dev/null || true
     success "Helper scripts deployed to ${SCRIPTS_DEST}"
 fi
 
@@ -905,9 +895,15 @@ if [[ "${DRY_RUN}" != true ]]; then
 fi
 
 # 7. Summary & Quick Guide
-echo -e "\n${GREEN}${BOLD}======================================================${NC}"
-echo -e "${GREEN}${BOLD}       Dotfield Setup Completed Successfully!         ${NC}"
-echo -e "${GREEN}${BOLD}======================================================${NC}\n"
+if [[ "${hardening_has_failures:-false}" == true ]]; then
+    echo -e "\n${RED}${BOLD}======================================================${NC}"
+    echo -e "${RED}${BOLD}    Dotfield Setup Finished with Hardening Failures   ${NC}"
+    echo -e "${RED}${BOLD}======================================================${NC}\n"
+else
+    echo -e "\n${GREEN}${BOLD}======================================================${NC}"
+    echo -e "${GREEN}${BOLD}       Dotfield Setup Completed Successfully!         ${NC}"
+    echo -e "${GREEN}${BOLD}======================================================${NC}\n"
+fi
 
 if [[ "${TARGET}" == "all" || "${TARGET}" == "sway" ]]; then
     echo -e "${AMBER}${BOLD}Sway Desktop Keybindings (Zero Bar · Fuzzel Native):${NC}"
@@ -950,9 +946,16 @@ if [[ "${ENABLE_HARDENING}" == true ]]; then
             echo -e "  ${GREEN}✔ PASS${NC} [${layer}] ${layer_detail}"
         elif [[ "${layer_status}" == "DRY_RUN" ]]; then
             echo -e "  ${BLUE}○ PREVIEW${NC} [${layer}] ${layer_detail}"
+        elif [[ "${layer_status}" == "WARN" ]]; then
+            echo -e "  ${AMBER}! WARN${NC} [${layer}] ${layer_detail}"
         else
             echo -e "  ${RED}✘ FAIL${NC} [${layer}] ${layer_detail}"
         fi
     done
     echo ""
+fi
+
+if [[ "${hardening_has_failures:-false}" == true ]]; then
+    err "One or more security hardening layers failed verification."
+    exit 1
 fi

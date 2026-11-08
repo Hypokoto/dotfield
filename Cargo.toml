@@ -2,13 +2,16 @@
 members = [
     "crates/amane-shell",
 ]
+exclude = [
+    "crates/amane",
+]
 resolver = "2"
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
 authors = ["Dotfield Contributors"]
-license = "MIT OR Apache-2.0"
+license = "MIT"
 repository = "https://github.com/hypokoto/dotfield"
 
 [workspace.dependencies]
@@ -19,10 +22,5 @@ thiserror = "1.0"
 anyhow = "1.0"
 clap = { version = "4.4", features = ["derive"] }
 colored = "2.1"
-similar = "2.4"
-walkdir = "2.4"
 tempfile = "3.10"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
-
-[patch."https://github.com/MystiaFin/amane.git"]
-amane = { path = "crates/amane" }

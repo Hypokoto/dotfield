@@ -29,8 +29,12 @@ flowchart TD
     G1 --> G2[Fuzzel Native Overlays]
     G1 --> G3[SwayOSD / Mako Fallback]
 
-    C --> H[Security Layer: Firejail / AppArmor / Flatpak / NFTables]
+    C --> H[Security Layer: Bubblewrap / AppArmor / Flatpak / NFTables]
 ```
+
+> [!NOTE]
+> **Compiler Supersession**:
+> Initial roadmap designs evaluated an intermediate compiler (`dotfield compile`) translating abstract TOML profiles into compositor configs. This was superseded in favor of native modular drop-in configurations (`conf.d/*.kdl`, `conf.d/*.conf`) and direct deployment via `setup.sh`. Eliminating the compiler layer prevents build-time lag, runtime fragility, and configuration duplication.
 
 ---
 
@@ -88,7 +92,7 @@ flowchart TD
 ## 4. Hardening and Security Layer
 
 Dotfield integrates Linux security controls into the desktop environment:
-- **Firejail**: Automatic profile wrappers for network-facing applications.
-- **NFTables**: Application-level firewall rulesets (`security/nft/`).
-- **Flatpak**: Fine-grained sandbox permission overrides (`flatpak override --user ...`).
-- **AppArmor**: Custom profiles for untrusted binary execution (`security/apparmor/`).
+- **Bubblewrap (`bwrap`)**: Standalone browser sandbox wrapper (`scripts/sandbox-browser.sh`) mounting ephemeral isolated tmpfs filesystems and masking `/etc/machine-id`.
+- **NFTables**: Workstation firewall ruleset (`security/nft/dotfield.nft`) with persistent inclusion via `/etc/nftables.conf` and user-controlled port manager utility (`scripts/fw-open`).
+- **Flatpak**: Sandbox permission overrides (`security/flatpak/`) enforcing Wayland isolation (`--nosocket=x11`, `--socket=wayland`).
+- **AppArmor**: Binary-attached daemon confinement profiles (`security/apparmor/dotfield-daemon`) attached to `amane` with kernel state verification via `/sys/kernel/security/apparmor/profiles`.

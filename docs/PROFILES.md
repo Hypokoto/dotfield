@@ -1,6 +1,10 @@
 # Dotfield Profile Specification
 
-Profiles in **Dotfield** are defined in TOML and serve as the single source of truth for your desktop environment.
+> [!NOTE]
+> **SUPERSEDED ARCHITECTURAL NOTE**:
+> This document describes an early, experimental TOML profile compiler design. Dotfield has superseded profile compilation with direct, modular drop-in configurations (`conf.d/*.conf`, `conf.d/*.kdl`) and idempotent deployment via `setup.sh`. This specification is preserved for design lineage and historical reference only.
+
+Profiles in **Dotfield** were originally conceptualized in TOML to serve as a high-level desktop specification.
 
 ## 1. Schema Overview
 

@@ -8,7 +8,8 @@ StartLimitIntervalSec=0
 [Service]
 Type=simple
 ExecStart=%h/.local/bin/amane --foreground
-Restart=on-failure
+AppArmorProfile=dotfield-daemon
+Restart=always
 RestartSec=1
 Slice=session.slice
 

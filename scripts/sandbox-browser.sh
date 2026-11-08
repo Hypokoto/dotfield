@@ -60,6 +60,9 @@ BWRAP_ARGS=(
     --ro-bind-try /bin /bin
     --ro-bind-try /sbin /sbin
     --ro-bind-try /etc /etc
+    # Mask machine-id to prevent persistent host hardware fingerprinting
+    --tmpfs /etc/machine-id
+    --tmpfs /var/lib/dbus/machine-id
 
     # Virtual filesystems
     --proc /proc

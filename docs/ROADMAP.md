@@ -90,49 +90,32 @@ flowchart LR
 
 ---
 
-## Phase 5: Security Hardening & Profile Definitions
-*Goal: Formalize sandboxing policies, firewall rulesets, and concrete user profile configurations.*
+## Phase 5: Security Hardening & Isolation Policies
+*Goal: Formalize sandboxing policies, firewall rulesets, and runtime enforcement.*
 
 - [x] **Security Modules (`security/`)**:
-  - **Firejail (`security/firejail/`)**: Custom profiles for web browsers, electron apps, and untrusted binaries.
-  - **AppArmor (`security/apparmor/`)**: Hardened profiles for sensitive background daemons.
-  - **Flatpak (`security/flatpak/`)**: Declarative permission overrides (`socket = ["wayland", "!x11"]`, pipewire features).
-  - **NFTables (`security/nft/`)**: Workstation firewall ruleset (blocking unsolicited inbound, loopback accept, established/related tracking).
-- [x] **Concrete Profiles (`profiles/`)**:
-  - `profiles/default.toml`: Balanced daily-driver rice (Foot, Fuzzel, Sway, Starship, Zellij, Mako).
-  - `profiles/minimal.toml`: Ultra-lightweight setup for low-resource environments (Foot, Fuzzel, Niri, Tmux).
-  - `profiles/battery.toml`: Lightweight low-power setup for mobile/battery environments (Foot, Fuzzel, Sway, Tmux).
-  - `profiles/hardening.toml`: Maximum isolation profile declaring Firejail wrapping, AppArmor drop-ins, and NFTables settings (active system enforcement is planned).
+  - **Bubblewrap (`bwrap`)**: Standalone browser sandbox wrapper (`scripts/sandbox-browser.sh`) mounting ephemeral isolated tmpfs filesystems and masking `/etc/machine-id`.
+  - **AppArmor (`security/apparmor/`)**: Binary-attached confinement profile for `amane` with kernel state verification via `/sys/kernel/security/apparmor/profiles`.
+  - **Flatpak (`security/flatpak/`)**: Declarative permission overrides (`--nosocket=x11`, `--socket=wayland`, pipewire features).
+  - **NFTables (`security/nft/`)**: Workstation firewall ruleset (`dotfield.nft`) with persistent inclusion via `/etc/nftables.conf` and user-controlled port manager utility (`scripts/fw-open`).
 
 ---
 
-## Phase 6: Native Core & CLI Engine (`dotfield-core` & `dotfield-cli`)
+## Phase 6: Native Core & CLI Engine [SUPERSEDED]
 *Goal: Implement the Rust compiler, validation engine, transactional deployer, and CLI tool.*
 
-- [x] **Crate Architecture (`crates/`)**:
-  - `dotfield-core`:
-    - TOML deserializers for Profiles, Apps, Bindings, Themes, Security.
-    - Path and binary resolution on `$PATH` with execution bit validation.
-    - Template generation engine (converting semantic bindings to Sway, Niri, Fuzzel, Foot, Mako configs).
-    - Generational deployment and rollback state manager (`.dotfield/generations/`, `.dotfield/state.json`).
-    - Selective reload controller (native IPC for Sway, Niri, Mako; process reloading for Kitty, Tmux; dynamic fragment compilation for Kitty and Tmux planned).
-    - [ ] Transaction staging manager (`.dotfield/staging`) with pre-flight dry-run syntax verification (planned for follow-up release).
-  - `dotfield-cli`:
-    - Commands: `status`, `check`, `diff`, `apply`, `rollback`, `list`.
-    - Rich terminal outputs with color-coded diffs using `colored` and `similar`.
+> [!NOTE]
+> **ARCHITECTURAL PIVOT**:
+> The standalone `dotfield-compiler` CLI and intermediate TOML compiler engine (`dotfield-core`, `dotfield-cli`) were superseded in favor of native modular drop-in configurations (`conf.d/*.kdl`, `conf.d/*.conf`) deployed directly via `setup.sh`. This removed compiler compilation overhead and runtime fragility while preserving zero-bloat modularity.
 
 ---
 
-## Phase 7: Custom GUI Utilities (Rust + Slint)
+## Phase 7: Custom GUI Utilities [SUPERSEDED]
 *Goal: Deliver smooth, native Wayland graphical interfaces for profile management and system interaction.*
 
-- [x] **Slint GUI Utilities (`crates/dotfield-gui/`)**:
-  - **Keybind HUD (`--hud`)**: Instant searchable cheat-sheet showing active keybindings compiled by Dotfield.
-  - **Profile Switcher (`--switcher`)**: Interactive card viewer displaying profiles with metadata and keyboard-accessible apply controls.
-  - [ ] **Rice Menu (`rice-menu`)**: Quick Wayland popover for toggling themes and screen scale (planned for follow-up release).
-  - [ ] **Profile Screenshot Previews**: Live preview captures in switcher cards (planned for follow-up release).
-- [x] **Daemon (`dotfieldd`)**:
-  - Background event subscriber for automatic profile switching on power state changes (AC / Battery via sysfs).
+> [!NOTE]
+> **ARCHITECTURAL PIVOT**:
+> Standalone Slint GUI prototypes (`crates/dotfield-gui/`) were superseded in favor of **`crates/amane-shell`** (`amane`) — a unified, high-performance native Wayland desktop shell suite built with Pure Rust + Vulkan GPU rendering exclusively for Niri.
 
 ---
 

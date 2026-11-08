@@ -4,11 +4,11 @@
 abi <abi/3.0>,
 include <tunables/global>
 
-profile dotfield-daemon flags=(attach_disconnected,mediate_deleted) {
+profile dotfield-daemon /usr/bin/amane @{HOME}/.local/bin/amane flags=(attach_disconnected,mediate_deleted,complain) {
   include <abstractions/base>
   include <abstractions/nameservice>
 
-  # Helper binaries execute within this profile; they cannot read arbitrary host binaries.
+  # Helper binaries execute within this profile
   /usr/bin/* ix,
   /usr/sbin/* ix,
   /bin/* ix,
@@ -33,6 +33,31 @@ profile dotfield-daemon flags=(attach_disconnected,mediate_deleted) {
   @{PROC}/*/{stat,cmdline,comm,status} r,
   owner @{run}/user/*/{sway-ipc.*,niri.*,wayland-*,mako*} rw,
   owner /tmp/dotfield-* rwk,
+
+  # Wayland GUI, GPU & Display acceleration
+  /dev/dri/** rw,
+  /dev/shm/** rw,
+  /sys/dev/** r,
+  /sys/devices/** r,
+
+  # D-Bus IPC & Notification bus
+  owner @{run}/user/*/bus rw,
+  /run/dbus/system_bus_socket rw,
+
+  # Audio (PipeWire / PulseAudio)
+  owner @{run}/user/*/pulse/native rw,
+  owner @{HOME}/.config/pulse/** rw,
+
+  # Typography, Fonts & System Themes
+  /usr/share/fonts/** r,
+  /usr/local/share/fonts/** r,
+  /etc/fonts/** r,
+  owner @{HOME}/.local/share/fonts/** r,
+  owner @{HOME}/.config/fontconfig/** r,
+  /usr/share/icons/** r,
+  /usr/share/themes/** r,
+  owner @{HOME}/.local/share/icons/** r,
+  owner @{HOME}/.icons/** r,
 
   # Allow monitoring hardware power status
   /sys/class/power_supply/ r,

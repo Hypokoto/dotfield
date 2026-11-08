@@ -22,11 +22,15 @@ rules:
 
   - id: dotfield-shell-set-eoupipefail
     patterns:
-      - pattern-regex: '^#!/bin/(ba)?sh'
-      - pattern-not-regex: 'set -euo pipefail'
+      - pattern-regex: '(?s)\A(?!.*set\s+-euo\s+pipefail).*'
     paths:
       include:
-        - "**/*.sh"
-    message: "Shell scripts should start with 'set -euo pipefail' for defensive execution."
+        - "/scripts/*.sh"
+        - "/setup.sh"
+        - "/install.sh"
+        - "/scripts/fw-open"
+      exclude:
+        - "/scripts/lib/env.sh"
+    message: "Shell scripts should include 'set -euo pipefail' for defensive execution."
     languages: [generic]
     severity: WARNING

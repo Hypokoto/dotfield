@@ -11,7 +11,7 @@ name = "amane"
 path = "src/main.rs"
 
 [dependencies]
-amane = { git = "https://github.com/MystiaFin/amane.git", branch = "main" }
+amane = { path = "../amane" }
 clap = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

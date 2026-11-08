@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# Dynamic port manager for Dotfield NFTables workstation filter
+set -euo pipefail
+
+TABLE_FAMILY="inet"
+TABLE_NAME="dotfield"
+SET="host_ports"
+
+usage() {
+    cat <<EOF
+Usage: $(basename "$0") [PORT | PORT-RANGE | --list | --remove PORT]
+
+Manage explicitly allowed inbound host ports in the Dotfield NFTables packet filter.
+
+Commands & Arguments:
+  PORT            Single TCP/UDP port to permit (e.g., 8080, 4444)
+  PORT-RANGE      Port range to permit (e.g., 3000-3010)
+  --list, -l      Display currently permitted host ports
+  --remove, -r P  Revoke permission for a port or range
+  --help, -h      Display this help message
+
+Examples:
+  $(basename "$0") 8080
+  $(basename "$0") 3000-3005
+  $(basename "$0") --list
+  $(basename "$0") --remove 8080
+EOF
+    exit "${1:-0}"
+}
+
+if [[ $# -eq 0 ]]; then
+    usage 1
+fi
+
+if ! command -v nft >/dev/null 2>&1; then
+    echo "Error: 'nft' command (nftables) is not installed." >&2
+    exit 1
+fi
+
+# Ensure the dotfield table exists in the running kernel
+if ! sudo nft list table "${TABLE_FAMILY}" "${TABLE_NAME}" >/dev/null 2>&1; then
+    echo "Error: Dotfield NFTables table (${TABLE_FAMILY} ${TABLE_NAME}) is not active in the kernel." >&2
+    echo "Run './setup.sh --hardening --nft' to deploy and activate it." >&2
+    exit 1
+fi
+
+case "$1" in
+    --help|-h)
+        usage 0
+        ;;
+    --list|-l)
+        echo "Allowed host ports in ${TABLE_FAMILY} ${TABLE_NAME} ${SET}:"
+        sudo nft list set "${TABLE_FAMILY}" "${TABLE_NAME}" "${SET}"
+        exit 0
+        ;;
+    --remove|-r)
+        if [[ $# -lt 2 || -z "${2:-}" ]]; then
+            echo "Error: Missing port number or range to remove." >&2
+            exit 1
+        fi
+        PORT="$2"
+        echo "Removing port ${PORT} from ${TABLE_FAMILY} ${TABLE_NAME} ${SET}..."
+        sudo nft delete element "${TABLE_FAMILY}" "${TABLE_NAME}" "${SET}" "{ ${PORT} }"
+        echo "Port ${PORT} removed successfully."
+        exit 0
+        ;;
+    *)
+        PORT="$1"
+        # Validate port format (single port 1-65535 or range min-max)
+        if [[ ! "${PORT}" =~ ^[0-9]+(-[0-9]+)?$ ]]; then
+            echo "Error: Invalid port format '${PORT}'. Expected numeric port (e.g. 8080) or range (e.g. 3000-3010)." >&2
+            exit 1
+        fi
+        echo "Adding port ${PORT} to ${TABLE_FAMILY} ${TABLE_NAME} ${SET}..."
+        sudo nft add element "${TABLE_FAMILY}" "${TABLE_NAME}" "${SET}" "{ ${PORT} }"
+        echo "Port ${PORT} permitted (TCP & UDP) in ${TABLE_FAMILY} ${TABLE_NAME} filter."
+        ;;
+esac

@@ -1,6 +1,6 @@
 # Dotfield
 
-> **Declarative, modular Linux ricing ecosystem and high-performance Wayland desktop suite.**
+> **Modular Linux ricing ecosystem and high-performance Wayland desktop suite.**
 > *"Modular configs, zero bloat, pure Wayland performance."*
 
 ---
@@ -9,9 +9,9 @@
 
 In traditional Linux desktop customization (ricing), changing a default terminal, launcher, or hotkey requires navigating bloated monolithic files with hard-to-maintain duplication.
 
-**Dotfield** provides a clean, declarative, and modular foundation built specifically for modern Wayland workflows:
+**Dotfield** provides a clean and modular foundation built specifically for modern Wayland workflows:
 
-- **Niri Workflows**: Accelerated by **Amane** (`amane`), a native Rust desktop shell suite built with Vulkan and Vello GPU rendering, delivering an integrated status bar, horizontal workspace radar, application launcher, terminal manager, control center, and OSD overlays.
+- **Niri Workflows**: Accelerated by **Amane** (`amane`), a native Rust desktop shell suite built with Vulkan and Vello GPU rendering (rendering engine created by MystiaFin; see [UPSTREAM.md](UPSTREAM.md)), delivering an integrated status bar, horizontal workspace radar, application launcher, terminal manager, control center, and OSD overlays.
 - **Sway Workflows**: Lean, distraction-free environment with suppressed status bars (100% vertical screen space), native Fuzzel menus, and zero background daemon overhead.
 - **Unified Aesthetic**: Styled end-to-end with the **Controlled Chaos** theme — an industrial, high-contrast dark aesthetic balancing Void Black, Industrial Amber, and Crimson.
 - **Automated Deployment**: Managed via idempotent shell scripts (`install.sh`, `setup.sh`) supporting `--sway`, `--niri`, and `--all` targets.
@@ -130,7 +130,15 @@ Stages dotfiles into `~/.config/`, links helper scripts, sets up permissions, an
 
 # Force update and backup existing configs
 ./setup.sh --force
+
+# Deploy with security hardening (AppArmor, NFTables, Flatpak overrides)
+./setup.sh --hardening
 ```
+
+> [!NOTE]
+> **Symlink Deployment**: By default, `setup.sh` creates symbolic links pointing directly into this repository. Keep the repository directory intact at its cloned location to prevent broken links. Pass `--copy` if you prefer static copying instead of symlinks.
+>
+> **Flatpak Sandboxing**: When `--hardening` is enabled, global Flatpak overrides restrict legacy X11 socket access (`--nosocket=x11`) to enforce pure Wayland. If an older Flatpak app strictly requires X11, grant an individual override via `flatpak override --user <app-id> --socket=x11`.
 
 ---
 
@@ -207,7 +215,7 @@ dotfield/
 ├── osd/                    # On-screen display configs (SwayOSD / Avizo)
 ├── systemd/user/           # Systemd user services (amane.service)
 ├── scripts/                # Standalone helper scripts
-├── security/               # Hardening rules (Firejail, AppArmor, Flatpak, NFT)
+├── security/               # Hardening rules (AppArmor, Flatpak, NFTables)
 ├── docs/                   # Architectural blueprints and guides
 ├── crates/
 │   ├── amane-shell/        # Native Rust + Amane Wayland desktop shell for Niri (binary: amane)
@@ -233,15 +241,18 @@ gitleaks detect -v
 # 3. Static security analysis
 semgrep --config=.semgrep.yml --error .
 
-# 4. Rust checks
+# 4. Rust checks & tests
 cargo fmt -- --check
-cargo check
-cargo clippy -- -D warnings
+cargo check --workspace
+cargo test --workspace
+cargo clippy --workspace --all-targets -- -D warnings
 ```
 
 ---
 
-## License
+## License & Upstream Attribution
 
 This project is licensed under the [MIT License](LICENSE).
-Individual sub-crates and components are available under the MIT License.
+
+- **Amane GPU Rendering Engine** (`crates/amane`): Developed by **MystiaFin** and distributed under the MIT License. See [UPSTREAM.md](UPSTREAM.md) for origin, license details, and upstream repository link.
+- **Dotfield Configurations & `amane-shell`** (`crates/amane-shell`): Original work distributed under the [MIT License](LICENSE).

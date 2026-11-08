@@ -1,10 +1,16 @@
 # Rust / Cargo build artifacts
 /target/
-Cargo.lock
+crates/amane/Cargo.lock
+crates/amane/target/
 
-# Dotfield runtime state and backups
+# Dotfield runtime state, tool cache, and backups
 .dotfield/
 .planning/
+.claude/
+.gstack/
+gtk/gtk-3.0/bookmarks
+gtk/gtk-4.0/bookmarks
+nvim/lazy-lock.json
 *.backup
 *.bak
 *.tmp

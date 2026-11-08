@@ -89,6 +89,59 @@ struct Cli {
     extra_args: Vec<String>,
 }
 
+fn lock_path() -> PathBuf {
+    amane::ipc_socket().with_extension("lock")
+}
+
+struct DaemonLock {
+    file: std::fs::File,
+}
+
+impl DaemonLock {
+    fn try_acquire() -> anyhow::Result<Option<Self>> {
+        use std::os::unix::io::AsRawFd;
+        let path = lock_path();
+        let file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(&path)?;
+
+        let fd = file.as_raw_fd();
+        let ret = unsafe { libc::flock(fd, libc::LOCK_EX | libc::LOCK_NB) };
+        if ret == 0 {
+            Ok(Some(Self { file }))
+        } else {
+            let err = std::io::Error::last_os_error();
+            if err.raw_os_error() == Some(libc::EWOULDBLOCK) {
+                Ok(None)
+            } else {
+                Err(err.into())
+            }
+        }
+    }
+
+    fn release(self) {
+        use std::os::unix::io::AsRawFd;
+        let fd = self.file.as_raw_fd();
+        unsafe {
+            libc::flock(fd, libc::LOCK_UN);
+        }
+    }
+
+    fn is_locked() -> bool {
+        match Self::try_acquire() {
+            Ok(Some(lock)) => {
+                lock.release();
+                false
+            }
+            Ok(None) => true,
+            Err(_) => false,
+        }
+    }
+}
+
 fn send_amane_ipc(call: &amane::IpcCall) -> anyhow::Result<String> {
     use std::io::Read;
 
@@ -97,31 +150,54 @@ fn send_amane_ipc(call: &amane::IpcCall) -> anyhow::Result<String> {
     let mut stream = match stream_res {
         Ok(s) => s,
         Err(_) => {
-            // Daemon is not running or socket is stale
-            if socket_path.exists() {
-                let _ = std::fs::remove_file(&socket_path);
+            // Check if amane.service is present and enabled under systemd --user
+            let systemd_managed = std::process::Command::new("systemctl")
+                .args(["--user", "is-enabled", "amane.service"])
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false);
+
+            if systemd_managed {
+                let _ = std::process::Command::new("systemctl")
+                    .args(["--user", "start", "amane.service"])
+                    .status();
+            } else {
+                // Manual spawn fallback: take lock first to prevent races between multiple hotkeys
+                if let Ok(Some(lock)) = DaemonLock::try_acquire() {
+                    // Daemon is not running, safe to remove stale socket if present
+                    if socket_path.exists() {
+                        let _ = std::fs::remove_file(&socket_path);
+                    }
+                    if let Ok(exe) = std::env::current_exe() {
+                        use std::os::unix::process::CommandExt;
+                        let mut cmd = std::process::Command::new(exe);
+                        cmd.arg("--foreground");
+                        cmd.process_group(0)
+                            .stdin(std::process::Stdio::null())
+                            .stdout(std::process::Stdio::null())
+                            .stderr(std::process::Stdio::null());
+                        let _ = cmd.spawn();
+                    }
+                    // Release lock so the spawned child can acquire it in run_shell
+                    lock.release();
+                }
             }
-            // Auto-spawn the daemon in the background
-            if let Ok(exe) = std::env::current_exe() {
-                use std::os::unix::process::CommandExt;
-                let mut cmd = std::process::Command::new(exe);
-                cmd.arg("--foreground");
-                cmd.process_group(0)
-                    .stdin(std::process::Stdio::null())
-                    .stdout(std::process::Stdio::null())
-                    .stderr(std::process::Stdio::null());
-                let _ = cmd.spawn();
-            }
+
             // Poll for socket readiness
             let mut connected = None;
-            for _ in 0..20 {
+            for _ in 0..30 {
                 std::thread::sleep(std::time::Duration::from_millis(50));
                 if let Ok(s) = UnixStream::connect(&socket_path) {
                     connected = Some(s);
                     break;
                 }
             }
-            connected.ok_or_else(|| anyhow::anyhow!("Failed to connect to amane daemon"))?
+            connected.ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Failed to connect to amane daemon at {}",
+                    socket_path.display()
+                )
+            })?
         }
     };
     call.write(&mut stream)?;
@@ -253,13 +329,31 @@ fn ipc_screen_record_handler(_args: &[String]) -> String {
 }
 
 fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
+    // Acquire exclusive daemon lock
+    let lock = match DaemonLock::try_acquire()? {
+        Some(l) => l,
+        None => {
+            eprintln!("Error: another amane daemon instance is already active and locked.");
+            std::process::exit(1);
+        }
+    };
+
     let path = config_path.unwrap_or_else(config::ShellManifest::default_path);
-    let manifest = config::ShellManifest::load_from_path(&path)?;
+    let manifest = match config::ShellManifest::load_from_path(&path) {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!(
+                "[amane:config:warn] failed to load {}: {e}; using defaults",
+                path.display()
+            );
+            config::ShellManifest::default()
+        }
+    };
     config::ConfigService::write().manifest = manifest.clone();
 
-    // Clean up stale IPC socket if no running daemon is actively listening
+    // Clean up stale IPC socket if present (safe since we hold the lock)
     let sock = amane::ipc_socket();
-    if sock.exists() && UnixStream::connect(&sock).is_err() {
+    if sock.exists() {
         let _ = std::fs::remove_file(&sock);
     }
 
@@ -304,8 +398,10 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         .window(ui::screen_record::screen_record_overlay)
         .run();
 
-    // Clean exit without racing detached worker threads
-    std::process::exit(0);
+    // If event loop returns unexpectedly, exit with code 1 so supervisor can restart
+    drop(lock);
+    eprintln!("[amane:warn] event loop exited unexpectedly");
+    std::process::exit(1);
 }
 
 fn main() -> anyhow::Result<()> {
@@ -379,8 +475,8 @@ fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    // Check if another daemon instance is already active and responding
-    if UnixStream::connect(amane::ipc_socket()).is_ok() {
+    // Check if another daemon instance is already active and responding or locked
+    if UnixStream::connect(amane::ipc_socket()).is_ok() || DaemonLock::is_locked() {
         println!("amane is already running");
         return Ok(());
     }

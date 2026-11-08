@@ -3,12 +3,23 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct ThemeConfig {
     pub font_family: String,
     pub font_size: f64,
 }
 
+impl Default for ThemeConfig {
+    fn default() -> Self {
+        Self {
+            font_family: "JetBrainsMono Nerd Font".to_string(),
+            font_size: 10.0,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct PaletteConfig {
     pub background: String,
     pub surface: String,
@@ -17,29 +28,31 @@ pub struct PaletteConfig {
     pub accent: String,
     pub highlight: String,
     pub foreground: String,
-    #[serde(default = "default_border")]
     pub border: String,
-    #[serde(default = "default_hover")]
     pub hover: String,
-    #[serde(default = "default_steel")]
     pub steel: String,
 }
 
-fn default_border() -> String {
-    "#34343D".to_string()
-}
-
-fn default_hover() -> String {
-    "#FFD166".to_string()
-}
-
-fn default_steel() -> String {
-    "#8B949E".to_string()
+impl Default for PaletteConfig {
+    fn default() -> Self {
+        Self {
+            background: "#0A0A0C".to_string(),
+            surface: "#121216".to_string(),
+            overlay: "#1C1C23".to_string(),
+            muted: "#A1A1AA".to_string(),
+            accent: "#E63946".to_string(),
+            highlight: "#FFB000".to_string(),
+            foreground: "#E8E6E3".to_string(),
+            border: "#34343D".to_string(),
+            hover: "#FFD166".to_string(),
+            steel: "#8B949E".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct BarSettings {
-    #[serde(default = "default_bar_enabled")]
     pub enabled: bool,
     pub height: f64,
     pub position: String,
@@ -48,30 +61,71 @@ pub struct BarSettings {
     pub show_telemetry: bool,
 }
 
-fn default_bar_enabled() -> bool {
-    true
+impl Default for BarSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            height: 32.0,
+            position: "top".to_string(),
+            show_workspaces: true,
+            show_title: true,
+            show_telemetry: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct OsdSettings {
     pub enabled: bool,
     pub timeout_ms: u64,
 }
 
+impl Default for OsdSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            timeout_ms: 1200,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct NotificationsSettings {
     pub enabled: bool,
     pub timeout_ms: u64,
     pub max_visible: usize,
 }
 
+impl Default for NotificationsSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            timeout_ms: 5000,
+            max_visible: 5,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct LauncherSettings {
     pub enabled: bool,
     pub max_results: usize,
 }
 
+impl Default for LauncherSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            max_results: 8,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct ControlCenterSettings {
     pub enabled: bool,
     pub show_mpris: bool,
@@ -79,17 +133,33 @@ pub struct ControlCenterSettings {
     pub show_bluetooth: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct TerminalSettings {
-    #[serde(default = "default_terminal_name")]
-    pub default: String,
-}
-
-fn default_terminal_name() -> String {
-    "foot".to_string()
+impl Default for ControlCenterSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            show_mpris: true,
+            show_network: true,
+            show_bluetooth: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct TerminalSettings {
+    pub default: String,
+}
+
+impl Default for TerminalSettings {
+    fn default() -> Self {
+        Self {
+            default: "foot".to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct ShellManifest {
     pub theme: ThemeConfig,
     pub palette: PaletteConfig,
@@ -98,61 +168,7 @@ pub struct ShellManifest {
     pub notifications: NotificationsSettings,
     pub launcher: LauncherSettings,
     pub control_center: ControlCenterSettings,
-    #[serde(default)]
     pub terminal: TerminalSettings,
-}
-
-impl Default for ShellManifest {
-    fn default() -> Self {
-        Self {
-            theme: ThemeConfig {
-                font_family: "JetBrainsMono Nerd Font".to_string(),
-                font_size: 10.0,
-            },
-            palette: PaletteConfig {
-                background: "#0A0A0C".to_string(),
-                surface: "#121216".to_string(),
-                overlay: "#1C1C23".to_string(),
-                muted: "#A1A1AA".to_string(),
-                accent: "#E63946".to_string(),
-                highlight: "#FFB000".to_string(),
-                foreground: "#E8E6E3".to_string(),
-                border: "#34343D".to_string(),
-                hover: "#FFD166".to_string(),
-                steel: "#8B949E".to_string(),
-            },
-            bar: BarSettings {
-                enabled: true,
-                height: 32.0,
-                position: "top".to_string(),
-                show_workspaces: true,
-                show_title: true,
-                show_telemetry: true,
-            },
-            osd: OsdSettings {
-                enabled: true,
-                timeout_ms: 1200,
-            },
-            notifications: NotificationsSettings {
-                enabled: true,
-                timeout_ms: 5000,
-                max_visible: 5,
-            },
-            launcher: LauncherSettings {
-                enabled: true,
-                max_results: 8,
-            },
-            control_center: ControlCenterSettings {
-                enabled: true,
-                show_mpris: true,
-                show_network: true,
-                show_bluetooth: true,
-            },
-            terminal: TerminalSettings {
-                default: "foot".to_string(),
-            },
-        }
-    }
 }
 
 impl ShellManifest {
@@ -182,11 +198,65 @@ pub struct ConfigService {
 impl amane::Service for ConfigService {
     fn new() -> Self {
         let path = ShellManifest::default_path();
-        let manifest = ShellManifest::load_from_path(&path).unwrap_or_default();
+        let manifest = ShellManifest::load_from_path(&path).unwrap_or_else(|err| {
+            eprintln!(
+                "[amane:config:warn] failed to load shell manifest from {}: {}, using defaults",
+                path.display(),
+                err
+            );
+            ShellManifest::default()
+        });
         Self { manifest }
     }
 
     fn interval() -> std::time::Duration {
         std::time::Duration::from_secs(3600)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_manifest() {
+        let manifest = ShellManifest::default();
+        assert_eq!(manifest.bar.height, 32.0);
+        assert!(manifest.bar.enabled);
+        assert_eq!(manifest.theme.font_size, 10.0);
+        assert_eq!(manifest.palette.accent, "#E63946");
+        assert_eq!(manifest.terminal.default, "foot");
+    }
+
+    #[test]
+    fn test_partial_toml_deserialization() {
+        let toml_str = r#"
+            [bar]
+            height = 28.0
+
+            [theme]
+            font_size = 12.0
+        "#;
+        let manifest: ShellManifest =
+            toml::from_str(toml_str).expect("failed to parse partial toml");
+        assert_eq!(manifest.bar.height, 28.0);
+        assert!(manifest.bar.enabled);
+        assert_eq!(manifest.bar.position, "top");
+        assert_eq!(manifest.theme.font_size, 12.0);
+        assert_eq!(manifest.theme.font_family, "JetBrainsMono Nerd Font");
+        assert_eq!(manifest.palette.accent, "#E63946");
+    }
+
+    #[test]
+    fn test_empty_toml_deserialization() {
+        let manifest: ShellManifest = toml::from_str("").expect("failed to parse empty toml");
+        assert_eq!(manifest.bar.height, 32.0);
+        assert_eq!(manifest.terminal.default, "foot");
+    }
+
+    #[test]
+    fn test_corrupt_toml_returns_error() {
+        let res: Result<ShellManifest, _> = toml::from_str("[unclosed_table");
+        assert!(res.is_err());
     }
 }

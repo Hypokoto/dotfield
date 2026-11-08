@@ -63,7 +63,6 @@ Options:
   --all                  Install dependencies for both compositors (default)
   --hardening            Forward hardening suite configuration to setup.sh
   --apparmor             Forward AppArmor profile setup to setup.sh
-  --firejail             Forward Firejail sandbox setup to setup.sh
   --flatpak              Forward Flatpak overrides setup to setup.sh
   --nft                  Forward NFTables firewall setup to setup.sh
   -y, --yes, --noconfirm Automatically answer yes to package manager prompts
@@ -116,7 +115,7 @@ while [[ $# -gt 0 ]]; do
             TARGET="all"
             shift
             ;;
-        --hardening|--apparmor|--firejail|--flatpak|--nft)
+        --hardening|--apparmor|--flatpak|--nft)
             HARDENING_FLAGS+=("$1")
             shift
             ;;
@@ -239,7 +238,7 @@ case "${PKG_MANAGER}" in
             fd-find bat btop direnv bubblewrap
         )
         SWAY_PKGS=(sway swaybg)
-        NIRI_PKGS=(cargo rustc libxkbcommon-dev libwayland-dev wayland-protocols libvulkan-dev)
+        NIRI_PKGS=(cargo rustc libxkbcommon-dev libwayland-dev wayland-protocols libvulkan-dev libpulse-dev libfontconfig1-dev)
         ;;
     dnf)
         # Fedora
@@ -249,7 +248,7 @@ case "${PKG_MANAGER}" in
             wlogout ripgrep fd-find bat eza btop zoxide direnv bubblewrap
         )
         SWAY_PKGS=(sway swaybg)
-        NIRI_PKGS=(rust cargo vulkan-headers vulkan-loader-devel libxkbcommon-devel wayland-protocols-devel)
+        NIRI_PKGS=(rust cargo vulkan-headers vulkan-loader-devel libxkbcommon-devel wayland-protocols-devel pulseaudio-libs-devel fontconfig-devel)
         ;;
     zypper)
         # openSUSE

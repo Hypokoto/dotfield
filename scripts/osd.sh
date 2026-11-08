@@ -17,9 +17,10 @@ has_cmd() {
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -f "${SCRIPT_DIR}/lib/env.sh" ]]; then
-    # shellcheck source=lib/env.sh
+    # shellcheck source=/dev/null
     source "${SCRIPT_DIR}/lib/env.sh"
 elif [[ -f "${HOME}/.config/dotfield/scripts/lib/env.sh" ]]; then
+    # shellcheck source=/dev/null
     source "${HOME}/.config/dotfield/scripts/lib/env.sh"
 fi
 

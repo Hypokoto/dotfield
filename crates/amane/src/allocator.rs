@@ -49,3 +49,8 @@ pub fn trim() {
         unsafe { malloc_trim(0) };
     }
 }
+
+/// Trims freed allocator pages back to the operating system once without looping.
+pub fn trim_once() {
+    unsafe { malloc_trim(0) };
+}

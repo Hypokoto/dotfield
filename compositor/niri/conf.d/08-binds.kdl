@@ -37,3 +37,8 @@ binds {
     XF86AudioNext        allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh media_next"; }
     XF86AudioPrev        allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh media_prev"; }
 }
+
+switch-events {
+    lid-close { spawn "sh" "-c" "~/.config/dotfield/scripts/lid-handler.sh close"; }
+    lid-open { spawn "sh" "-c" "~/.config/dotfield/scripts/lid-handler.sh open"; }
+}

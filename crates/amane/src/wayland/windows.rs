@@ -168,23 +168,37 @@ impl WaylandState {
 
         // free the memory the closed windows held, instead of waiting for the next trim pass
         #[cfg(target_env = "gnu")]
-        crate::allocator::trim();
+        crate::allocator::trim_once();
+    }
+
+    /// Ensures that all registered plain layer views (launcher, display config, control center, etc.)
+    /// have an active window surface. Recreates any missing views on the active output.
+    pub fn ensure_plain_windows(&mut self) {
+        let active = self.current_focused_output();
+        let plain_views = self.plain_views.clone();
+        for (id, plain) in plain_views.into_iter().enumerate() {
+            let already_open = self.windows.iter().any(|w| {
+                if let View::Plain {
+                    id: existing_id, ..
+                } = w.view
+                {
+                    existing_id == id
+                } else {
+                    false
+                }
+            });
+            if !already_open {
+                self.open(View::Plain { id, view: plain }, active.clone());
+            }
+        }
     }
 
     /// Returns the currently active output for placing overlays:
-    /// 1. The output actively focused by the Wayland compositor (Niri, Sway, Hyprland).
-    /// 2. If none, the output corresponding to the compositor's currently focused workspace.
-    /// 3. The output tracked from recent pointer/keyboard interaction on an Amane window.
+    /// 1. The output corresponding to the compositor's currently focused workspace (fast cached lookup).
+    /// 2. The output tracked from recent pointer/keyboard interaction on an Amane window.
+    /// 3. The output actively focused by the Wayland compositor via IPC query.
     /// 4. If neither is available, falls back to the first available output.
     pub fn current_focused_output(&self) -> Option<WlOutput> {
-        if let Some(matched) = crate::compositor::focused_output().and_then(|comp_output| {
-            self.output
-                .outputs()
-                .find(|out| self.output.info(out).and_then(|i| i.name).as_deref() == Some(&comp_output))
-        }) {
-            return Some(matched);
-        }
-
         let focused_ws_output = crate::Workspaces::read()
             .list()
             .iter()
@@ -207,12 +221,36 @@ impl WaylandState {
             return Some(focused.clone());
         }
 
+        if let Some(matched) = crate::compositor::focused_output().and_then(|comp_output| {
+            self.output
+                .outputs()
+                .find(|out| self.output.info(out).and_then(|i| i.name).as_deref() == Some(&comp_output))
+        }) {
+            return Some(matched);
+        }
+
         self.output.outputs().next()
     }
 
     // Move any layer overlay requesting OutputTarget::Active that is visible but on the wrong output
     // to the active output, so overlays appear on the external display when it has focus.
     pub fn relocate_plain_overlays(&mut self) {
+        self.ensure_plain_windows();
+
+        let has_active_visible = self.windows.iter().any(|w| {
+            if let View::Plain { .. } = w.view
+                && let Role::Layer { settings, .. } = &w.role
+            {
+                settings.visible && matches!(settings.target_output, OutputTarget::Active)
+            } else {
+                false
+            }
+        });
+
+        if !has_active_visible {
+            return;
+        }
+
         let Some(active) = self.current_focused_output() else {
             return;
         };

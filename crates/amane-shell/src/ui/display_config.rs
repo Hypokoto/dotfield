@@ -115,18 +115,38 @@ pub fn close() {
 }
 
 fn get_external_display() -> Option<String> {
-    let output = Command::new("wlr-randr").output().ok()?;
-    let text = String::from_utf8_lossy(&output.stdout);
-    for line in text.lines() {
-        if line.starts_with(' ') || line.is_empty() {
-            continue;
-        }
-        if let Some(first) = line.split_whitespace().next()
-            && !first.starts_with("eDP")
-        {
-            return Some(first.to_string());
+    if let Ok(output) = Command::new("wlr-randr").output() {
+        let text = String::from_utf8_lossy(&output.stdout);
+        for line in text.lines() {
+            if line.starts_with(' ') || line.is_empty() {
+                continue;
+            }
+            if let Some(first) = line.split_whitespace().next()
+                && !first.starts_with("eDP")
+                && !first.starts_with("Writeback")
+            {
+                return Some(first.to_string());
+            }
         }
     }
+
+    // Direct DRM sysfs fallback for connected displays that might be unmapped
+    if let Ok(entries) = std::fs::read_dir("/sys/class/drm") {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let status_file = path.join("status");
+            if let Ok(content) = std::fs::read_to_string(&status_file)
+                && content.trim() == "connected"
+                && let Some(name) = path.file_name().and_then(|n| n.to_str())
+            {
+                let port = name.split_once('-').map(|(_, p)| p).unwrap_or(name);
+                if !port.starts_with("eDP") && !port.starts_with("Writeback") {
+                    return Some(port.to_string());
+                }
+            }
+        }
+    }
+
     None
 }
 
@@ -139,32 +159,50 @@ pub fn apply_preset(index: usize) {
                 let _ = Command::new("niri")
                     .args(["msg", "output", "eDP-1", "mode", "1920x1080@144.003"])
                     .spawn();
-                let _ = Command::new("kanshictl")
-                    .args(["switch", "docked-dual"])
-                    .spawn();
-                let _ = Command::new("kanshictl")
-                    .args(["switch", "undocked"])
-                    .spawn();
                 let _ = Command::new("wlr-randr")
                     .args(["--output", "eDP-1", "--mode", "1920x1080@144.003Hz"])
                     .spawn();
+                if let Some(ext) = get_external_display() {
+                    let profile = if ext.starts_with("DP") {
+                        "docked-dp"
+                    } else {
+                        "docked-dual"
+                    };
+                    let _ = Command::new("kanshictl").args(["switch", profile]).spawn();
+                } else {
+                    let _ = Command::new("kanshictl")
+                        .args(["switch", "undocked"])
+                        .spawn();
+                }
             }
             "60hz" => {
                 let _ = Command::new("niri")
                     .args(["msg", "output", "eDP-1", "mode", "1920x1080@60.001"])
                     .spawn();
-                let _ = Command::new("kanshictl")
-                    .args(["switch", "docked-dual-60hz"])
-                    .spawn();
-                let _ = Command::new("kanshictl")
-                    .args(["switch", "undocked-60hz"])
-                    .spawn();
                 let _ = Command::new("wlr-randr")
                     .args(["--output", "eDP-1", "--mode", "1920x1080@60.001Hz"])
                     .spawn();
+                if let Some(ext) = get_external_display() {
+                    let profile = if ext.starts_with("DP") {
+                        "docked-dp"
+                    } else {
+                        "docked-dual-60hz"
+                    };
+                    let _ = Command::new("kanshictl").args(["switch", profile]).spawn();
+                } else {
+                    let _ = Command::new("kanshictl")
+                        .args(["switch", "undocked-60hz"])
+                        .spawn();
+                }
             }
             "extend-right" => {
                 if let Some(ext) = get_external_display() {
+                    let profile = if ext.starts_with("DP") {
+                        "docked-dp"
+                    } else {
+                        "docked-dual"
+                    };
+                    let _ = Command::new("kanshictl").args(["switch", profile]).spawn();
                     let _ = Command::new("niri")
                         .args(["msg", "output", "eDP-1", "on"])
                         .spawn();
@@ -177,12 +215,6 @@ pub fn apply_preset(index: usize) {
                     let _ = Command::new("niri")
                         .args(["msg", "output", &ext, "position", "set", "1920", "0"])
                         .spawn();
-                    let _ = Command::new("kanshictl")
-                        .args(["switch", "docked-dual"])
-                        .spawn();
-                    let _ = Command::new("kanshictl")
-                        .args(["switch", "docked-dp"])
-                        .spawn();
                     let _ = Command::new("wlr-randr")
                         .args([
                             "--output", "eDP-1", "--pos", "0,0", "--output", &ext, "--pos",
@@ -193,6 +225,12 @@ pub fn apply_preset(index: usize) {
             }
             "mirror" => {
                 if let Some(ext) = get_external_display() {
+                    let profile = if ext.starts_with("DP") {
+                        "docked-mirror-dp"
+                    } else {
+                        "docked-mirror-hdmi"
+                    };
+                    let _ = Command::new("kanshictl").args(["switch", profile]).spawn();
                     let _ = Command::new("niri")
                         .args(["msg", "output", "eDP-1", "on"])
                         .spawn();
@@ -205,12 +243,6 @@ pub fn apply_preset(index: usize) {
                     let _ = Command::new("niri")
                         .args(["msg", "output", &ext, "position", "set", "0", "0"])
                         .spawn();
-                    let _ = Command::new("kanshictl")
-                        .args(["switch", "docked-mirror-hdmi"])
-                        .spawn();
-                    let _ = Command::new("kanshictl")
-                        .args(["switch", "docked-mirror-dp"])
-                        .spawn();
                     let _ = Command::new("wlr-randr")
                         .args([
                             "--output", "eDP-1", "--pos", "0,0", "--output", &ext, "--pos", "0,0",
@@ -220,14 +252,14 @@ pub fn apply_preset(index: usize) {
             }
             "laptop-only" => {
                 if let Some(ext) = get_external_display() {
+                    let _ = Command::new("kanshictl")
+                        .args(["switch", "undocked"])
+                        .spawn();
                     let _ = Command::new("niri")
                         .args(["msg", "output", "eDP-1", "on"])
                         .spawn();
                     let _ = Command::new("niri")
                         .args(["msg", "output", &ext, "off"])
-                        .spawn();
-                    let _ = Command::new("kanshictl")
-                        .args(["switch", "undocked"])
                         .spawn();
                     let _ = Command::new("wlr-randr")
                         .args(["--output", "eDP-1", "--on", "--output", &ext, "--off"])
@@ -236,6 +268,12 @@ pub fn apply_preset(index: usize) {
             }
             "clamshell" => {
                 if let Some(ext) = get_external_display() {
+                    let profile = if ext.starts_with("DP") {
+                        "clamshell-dp"
+                    } else {
+                        "clamshell-hdmi"
+                    };
+                    let _ = Command::new("kanshictl").args(["switch", profile]).spawn();
                     let _ = Command::new("niri")
                         .args(["msg", "output", &ext, "on"])
                         .spawn();
@@ -244,12 +282,6 @@ pub fn apply_preset(index: usize) {
                         .spawn();
                     let _ = Command::new("niri")
                         .args(["msg", "output", "eDP-1", "off"])
-                        .spawn();
-                    let _ = Command::new("kanshictl")
-                        .args(["switch", "clamshell-hdmi"])
-                        .spawn();
-                    let _ = Command::new("kanshictl")
-                        .args(["switch", "clamshell-dp"])
                         .spawn();
                     let _ = Command::new("wlr-randr")
                         .args([

@@ -79,6 +79,7 @@ impl OutputHandler for WaylandState {
         }
         self.windows
             .retain(|window| window.output.as_ref() != Some(&output));
+        self.ensure_plain_windows();
     }
 }
 

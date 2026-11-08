@@ -3,43 +3,52 @@
 
 profile undocked {
     output eDP-1 enable mode 1920x1080@144.003 position 0,0
+    exec ~/.config/dotfield/scripts/wallpaper.sh
 }
 
 profile docked-dual {
     output eDP-1 enable mode 1920x1080@144.003 position 0,0
     output "HDMI-A-1" enable position 1920,0
+    exec ~/.config/dotfield/scripts/wallpaper.sh
 }
 
 profile docked-dp {
     output eDP-1 enable mode 1920x1080@144.003 position 0,0
     output "DP-1" enable position 1920,0
+    exec ~/.config/dotfield/scripts/wallpaper.sh
 }
 
 profile undocked-60hz {
     output eDP-1 enable mode 1920x1080@60.001 position 0,0
+    exec ~/.config/dotfield/scripts/wallpaper.sh
 }
 
 profile docked-dual-60hz {
     output eDP-1 enable mode 1920x1080@60.001 position 0,0
     output "HDMI-A-1" enable position 1920,0
+    exec ~/.config/dotfield/scripts/wallpaper.sh
 }
 
 profile docked-mirror-hdmi {
     output eDP-1 enable mode 1920x1080@144.003 position 0,0
     output "HDMI-A-1" enable position 0,0
+    exec ~/.config/dotfield/scripts/wallpaper.sh
 }
 
 profile docked-mirror-dp {
     output eDP-1 enable mode 1920x1080@144.003 position 0,0
     output "DP-1" enable position 0,0
+    exec ~/.config/dotfield/scripts/wallpaper.sh
 }
 
 profile clamshell-hdmi {
     output eDP-1 disable
     output "HDMI-A-1" enable position 0,0
+    exec ~/.config/dotfield/scripts/wallpaper.sh
 }
 
 profile clamshell-dp {
     output eDP-1 disable
     output "DP-1" enable position 0,0
+    exec ~/.config/dotfield/scripts/wallpaper.sh
 }

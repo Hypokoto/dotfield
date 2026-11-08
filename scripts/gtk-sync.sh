@@ -16,19 +16,25 @@ for d in "${HOME}/.config/gtk-3.0" "${HOME}/.config/gtk-4.0"; do
 done
 mkdir -p "${HOME}/.config/gtk-3.0" "${HOME}/.config/gtk-4.0"
 
-if [[ -f "${DOTFIELD_ROOT}/gtk/gtk-3.0/settings.ini" ]]; then
-    cp -f "${DOTFIELD_ROOT}/gtk/gtk-3.0/settings.ini" "${HOME}/.config/gtk-3.0/settings.ini"
-fi
-if [[ -f "${DOTFIELD_ROOT}/gtk/gtk-3.0/gtk.css" ]]; then
-    cp -f "${DOTFIELD_ROOT}/gtk/gtk-3.0/gtk.css" "${HOME}/.config/gtk-3.0/gtk.css"
-fi
+sync_gtk_file() {
+    local src="$1"
+    local dest="$2"
+    if [[ -f "${src}" ]]; then
+        if [[ -f "${dest}" ]]; then
+            if ! cmp -s "${src}" "${dest}"; then
+                cp --backup=numbered -f "${src}" "${dest}"
+            fi
+        else
+            cp "${src}" "${dest}"
+        fi
+    fi
+}
 
-if [[ -f "${DOTFIELD_ROOT}/gtk/gtk-4.0/settings.ini" ]]; then
-    cp -f "${DOTFIELD_ROOT}/gtk/gtk-4.0/settings.ini" "${HOME}/.config/gtk-4.0/settings.ini"
-fi
-if [[ -f "${DOTFIELD_ROOT}/gtk/gtk-4.0/gtk.css" ]]; then
-    cp -f "${DOTFIELD_ROOT}/gtk/gtk-4.0/gtk.css" "${HOME}/.config/gtk-4.0/gtk.css"
-fi
+sync_gtk_file "${DOTFIELD_ROOT}/gtk/gtk-3.0/settings.ini" "${HOME}/.config/gtk-3.0/settings.ini"
+sync_gtk_file "${DOTFIELD_ROOT}/gtk/gtk-3.0/gtk.css" "${HOME}/.config/gtk-3.0/gtk.css"
+
+sync_gtk_file "${DOTFIELD_ROOT}/gtk/gtk-4.0/settings.ini" "${HOME}/.config/gtk-4.0/settings.ini"
+sync_gtk_file "${DOTFIELD_ROOT}/gtk/gtk-4.0/gtk.css" "${HOME}/.config/gtk-4.0/gtk.css"
 
 # 2. Synchronize GSettings (GNOME Desktop Interface & Dark Preference)
 if command -v gsettings >/dev/null 2>&1; then
@@ -65,11 +71,24 @@ fi
 
 # 3. Synchronize XCursor theme for legacy apps
 mkdir -p "${HOME}/.icons/default"
-cat <<'EOF' > "${HOME}/.icons/default/index.theme"
+INDEX_THEME="${HOME}/.icons/default/index.theme"
+if [[ -f "${INDEX_THEME}" ]]; then
+    if ! grep -Fxq "Inherits=Bibata-Modern-Amber" "${INDEX_THEME}" 2>/dev/null; then
+        cp --backup=numbered -f "${INDEX_THEME}" "${INDEX_THEME}.bak" 2>/dev/null || true
+        cat <<'EOF' > "${INDEX_THEME}"
 [Icon Theme]
 Name=Default
 Comment=Default Cursor Theme
 Inherits=Bibata-Modern-Amber
 EOF
+    fi
+else
+    cat <<'EOF' > "${INDEX_THEME}"
+[Icon Theme]
+Name=Default
+Comment=Default Cursor Theme
+Inherits=Bibata-Modern-Amber
+EOF
+fi
 
 echo "✔ Dotfield GTK & Interface preferences synchronized cleanly."

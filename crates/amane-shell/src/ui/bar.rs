@@ -13,10 +13,6 @@ pub fn top_bar_monitor(monitor: &amane::Monitor) -> LayerWindow {
     build_top_bar(Some(&monitor.name))
 }
 
-pub fn top_bar() -> LayerWindow {
-    build_top_bar(None)
-}
-
 fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
     let bar_cfg = &manifest.bar;

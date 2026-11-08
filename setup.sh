@@ -292,7 +292,6 @@ deploy_apparmor() {
         return 0
     fi
 
-    mkdir -p "$(dirname "${stage_dest}")"
     if [[ "${DRY_RUN}" == true ]]; then
         info "[dry-run] install -m 0644 ${profile_src} ${stage_dest}"
         info "[dry-run] sudo install -m 0644 -D ${profile_src} ${profile_dest}"
@@ -300,6 +299,7 @@ deploy_apparmor() {
         return 0
     fi
 
+    mkdir -p "$(dirname "${stage_dest}")"
     cp "${profile_src}" "${stage_dest}"
     info "Staged AppArmor profile to ${stage_dest}"
 
@@ -349,13 +349,13 @@ deploy_flatpak() {
         return 0
     fi
 
-    mkdir -p "$(dirname "${stage_dest}")"
     if [[ "${DRY_RUN}" == true ]]; then
         info "[dry-run] stage overrides to ${stage_dest}"
         info "[dry-run] flatpak override --user --socket=wayland --nosocket=x11 --nosocket=fallback-x11 --nosocket=pulseaudio --nosocket=ssh-auth --nosocket=gpg-agent --nofilesystem=home --nofilesystem=host --nofilesystem=host-os --nofilesystem=host-etc"
         return 0
     fi
 
+    mkdir -p "$(dirname "${stage_dest}")"
     cp "${overrides_src}" "${stage_dest}"
     info "Staged Flatpak declarative overrides: ${stage_dest}"
 
@@ -389,7 +389,6 @@ deploy_nftables() {
         return 0
     fi
 
-    mkdir -p "$(dirname "${stage_dest}")"
     if [[ "${DRY_RUN}" == true ]]; then
         info "[dry-run] install -m 0644 ${nft_src} ${stage_dest}"
         info "[dry-run] sudo install -m 0644 -D ${nft_src} ${nft_dest}"
@@ -397,6 +396,7 @@ deploy_nftables() {
         return 0
     fi
 
+    mkdir -p "$(dirname "${stage_dest}")"
     cp "${nft_src}" "${stage_dest}"
     info "Staged NFTables ruleset to ${stage_dest}"
 
@@ -633,9 +633,12 @@ fi
 
 # Deploy systemd user service and environment for amane (Niri)
 if [[ "${TARGET}" == "all" || "${TARGET}" == "niri" ]]; then
-    mkdir -p "${HOME}/.config/systemd/user" "${HOME}/.config/environment.d" 2>/dev/null || true
+    if [[ "${DRY_RUN}" != true ]]; then
+        mkdir -p "${HOME}/.config/systemd/user" "${HOME}/.config/environment.d" 2>/dev/null || true
+    fi
     if [[ ! -f "${HOME}/.config/environment.d/10-dotfield-path.conf" ]]; then
         if [[ "${DRY_RUN}" != true ]]; then
+            # shellcheck disable=SC2016
             echo 'PATH=${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}' > "${HOME}/.config/environment.d/10-dotfield-path.conf"
         fi
     fi
@@ -678,12 +681,20 @@ if [[ "${DRY_RUN}" != true ]] && command -v zsh >/dev/null 2>&1; then
 fi
 
 if [[ -d "${SCRIPT_DIR}/Wallpapers" ]]; then
-    mkdir -p "${HOME}/.config/dotfield/background"
-    ln -sfn "${SCRIPT_DIR}/Wallpapers" "${HOME}/.config/dotfield/background/Wallpapers"
+    if [[ "${DRY_RUN}" == true ]]; then
+        info "[dry-run] ln -sfn ${SCRIPT_DIR}/Wallpapers ${HOME}/.config/dotfield/background/Wallpapers"
+    else
+        mkdir -p "${HOME}/.config/dotfield/background"
+        ln -sfn "${SCRIPT_DIR}/Wallpapers" "${HOME}/.config/dotfield/background/Wallpapers"
+    fi
 fi
 if [[ -d "${SCRIPT_DIR}/Wallpapers/Gifs" ]]; then
-    mkdir -p "${HOME}/.config/dotfield/background"
-    ln -sfn "${SCRIPT_DIR}/Wallpapers/Gifs" "${HOME}/.config/dotfield/background/Gifs"
+    if [[ "${DRY_RUN}" == true ]]; then
+        info "[dry-run] ln -sfn ${SCRIPT_DIR}/Wallpapers/Gifs ${HOME}/.config/dotfield/background/Gifs"
+    else
+        mkdir -p "${HOME}/.config/dotfield/background"
+        ln -sfn "${SCRIPT_DIR}/Wallpapers/Gifs" "${HOME}/.config/dotfield/background/Gifs"
+    fi
 fi
 
 # 6. Reload running desktop components

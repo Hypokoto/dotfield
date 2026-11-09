@@ -92,7 +92,7 @@ if is_niri; then
     fi
 
     if [[ -z "${NIRI_WALLPAPER}" ]]; then
-        NIRI_WALLPAPER=$(find_gif "L8.gif" || true)
+        NIRI_WALLPAPER=$(find_gif "L12.gif" || true)
     fi
 
     if [[ -n "${NIRI_WALLPAPER}" && -f "${NIRI_WALLPAPER}" ]]; then
@@ -102,6 +102,16 @@ if is_niri; then
         elif [[ -n "${STATIC_FALLBACK}" ]]; then
             cache_wallpaper "${STATIC_FALLBACK}"
         fi
+
+        # If the requested wallpaper is already active and awww-daemon is running, skip redundant re-decoding
+        if [[ -f "${CACHE_DIR}/current_niri_wallpaper" ]] && \
+           [[ "$(< "${CACHE_DIR}/current_niri_wallpaper")" == "${NIRI_WALLPAPER}" ]] && \
+           awww query >/dev/null 2>&1; then
+            exit 0
+        fi
+
+        mkdir -p "${CACHE_DIR}" 2>/dev/null || true
+        echo "${NIRI_WALLPAPER}" > "${CACHE_DIR}/current_niri_wallpaper" 2>/dev/null || true
         setsid awww img "${NIRI_WALLPAPER}" --resize crop --filter Bilinear --transition-type none </dev/null >/dev/null 2>&1 &
     else
         setsid awww clear 0A0A0C </dev/null >/dev/null 2>&1 &

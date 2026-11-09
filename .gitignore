@@ -7,6 +7,9 @@ crates/amane/target/
 .dotfield/
 .planning/
 .claude/
+.agents/
+.hermes/
+skills-lock.json
 .gstack/
 gtk/gtk-3.0/bookmarks
 gtk/gtk-4.0/bookmarks

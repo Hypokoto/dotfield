@@ -180,8 +180,12 @@ case "$CHOICE" in
     *"Laptop Display Only"*)
         EXT=$(detect_external)
         if [[ -n "${EXT:-}" ]]; then
+            PROFILE="laptop-only-hdmi"
+            if [[ "$EXT" == DP* ]]; then
+                PROFILE="laptop-only-dp"
+            fi
             if command -v kanshictl >/dev/null 2>&1; then
-                kanshictl switch undocked 2>/dev/null || true
+                kanshictl switch "$PROFILE" 2>/dev/null || kanshictl switch undocked 2>/dev/null || true
             fi
             if is_sway && command -v swaymsg >/dev/null 2>&1; then
                 swaymsg "output eDP-1 enable; output $EXT disable" >/dev/null 2>&1 || true
@@ -195,7 +199,10 @@ case "$CHOICE" in
             fi
             notify "External display $EXT turned off"
         else
-            notify "No external display detected"
+            if command -v kanshictl >/dev/null 2>&1; then
+                kanshictl switch undocked 2>/dev/null || true
+            fi
+            notify "Internal laptop display active"
         fi
         ;;
     *"External Display Only"*)
@@ -229,11 +236,14 @@ case "$CHOICE" in
     *"Reload Kanshi"*)
         if command -v kanshictl >/dev/null 2>&1 && kanshictl reload >/dev/null 2>&1; then
             notify "Reloaded Kanshi display profiles"
+        elif systemctl --user is-active --quiet kanshi.service; then
+            systemctl --user restart kanshi.service
+            notify "Restarted Kanshi systemd service"
         elif pgrep -x kanshi >/dev/null 2>&1; then
             pkill -HUP kanshi
             notify "Reloaded Kanshi display daemon"
         else
-            setsid kanshi </dev/null >/dev/null 2>&1 &
+            systemctl --user start kanshi.service 2>/dev/null || (setsid kanshi </dev/null >/dev/null 2>&1 &)
             notify "Started Kanshi display daemon"
         fi
         ;;

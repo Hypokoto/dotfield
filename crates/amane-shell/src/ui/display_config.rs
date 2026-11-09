@@ -298,9 +298,27 @@ pub fn apply_preset(index: usize) {
                 }
             }
             "laptop-only" => {
-                let _ = Command::new("kanshictl")
-                    .args(["switch", "undocked"])
-                    .status();
+                if let Some(ext) = get_external_display() {
+                    let profile = if ext.starts_with("DP") {
+                        "laptop-only-dp"
+                    } else {
+                        "laptop-only-hdmi"
+                    };
+                    let _ = Command::new("kanshictl").args(["switch", profile]).status();
+                    let _ = Command::new("niri")
+                        .args(["msg", "output", &ext, "off"])
+                        .status();
+                    let _ = Command::new("swaymsg")
+                        .args(["output", &ext, "disable"])
+                        .status();
+                    let _ = Command::new("wlr-randr")
+                        .args(["--output", &ext, "--off"])
+                        .status();
+                } else {
+                    let _ = Command::new("kanshictl")
+                        .args(["switch", "undocked"])
+                        .status();
+                }
                 // Ensure internal display is on before powering down external
                 let _ = Command::new("niri")
                     .args(["msg", "output", "eDP-1", "on"])
@@ -311,17 +329,6 @@ pub fn apply_preset(index: usize) {
                 let _ = Command::new("wlr-randr")
                     .args(["--output", "eDP-1", "--on"])
                     .status();
-                if let Some(ext) = get_external_display() {
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", &ext, "off"])
-                        .status();
-                    let _ = Command::new("swaymsg")
-                        .args(["output", &ext, "disable"])
-                        .status();
-                    let _ = Command::new("wlr-randr")
-                        .args(["--output", &ext, "--off"])
-                        .status();
-                }
             }
             "clamshell" => {
                 if let Some(ext) = get_external_display() {
@@ -357,16 +364,12 @@ pub fn apply_preset(index: usize) {
                 }
             }
             "kanshi" => {
-                use std::os::unix::process::CommandExt;
                 let _ = Command::new("kanshictl").arg("reload").status();
-                let status = Command::new("pkill").args(["-HUP", "kanshi"]).status();
+                let status = Command::new("systemctl")
+                    .args(["--user", "restart", "kanshi.service"])
+                    .status();
                 if !status.is_ok_and(|s| s.success()) {
-                    let _ = Command::new("kanshi")
-                        .process_group(0)
-                        .stdin(std::process::Stdio::null())
-                        .stdout(std::process::Stdio::null())
-                        .stderr(std::process::Stdio::null())
-                        .spawn();
+                    let _ = Command::new("pkill").args(["-HUP", "kanshi"]).status();
                 }
             }
             _ => {}

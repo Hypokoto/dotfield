@@ -1,0 +1,15 @@
+[Unit]
+Description=Kanshi Dynamic Output Configuration Manager
+Documentation=man:kanshi(1) man:kanshi(5)
+BindsTo=graphical-session.target
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/kanshi
+Restart=always
+RestartSec=2s
+
+[Install]
+WantedBy=graphical-session.target

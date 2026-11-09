@@ -2,11 +2,12 @@ use std::process::Command;
 use std::time::Duration;
 
 use amane::{
-    Align, Color, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin,
-    OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
+    Align, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin, OutputTarget,
+    Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
 };
 
 use crate::config::ConfigService;
+use crate::ui::tokens::{ThemeTokens, radius, spacing, typography};
 
 #[derive(Debug, Clone)]
 pub struct DisplayPreset {
@@ -408,119 +409,67 @@ pub fn display_config_overlay() -> LayerWindow {
     }
     let selected_idx = svc.selected;
 
-    let bg_color = Color::from(manifest.palette.surface.as_str()); // Obsidian #121216
-    let fg_color = Color::from(manifest.palette.foreground.as_str()); // Bone #E8E6E3
-    let amber_color = Color::from(manifest.palette.highlight.as_str()); // Amber #FFB000
-    let overlay_color = Color::from(manifest.palette.overlay.as_str()); // Graphite #1C1C23
-    let muted_color = Color::from(manifest.palette.muted.as_str()); // Ash #A1A1AA
+    let tokens = ThemeTokens::from_manifest(&manifest);
     let font = manifest.theme.font_family.clone();
 
     let mut rows: Vec<Box<dyn Widget>> = Vec::new();
 
-    // Header box
-    let header_icon = Text::new("󰍹").size(16.0).color(amber_color).font(&font);
-
-    let header_title = Text::new("Display Configurator")
-        .size(13.0)
-        .color(fg_color)
-        .font(&font);
-
-    let badge_rect = Rectangle::new()
-        .width(68.0)
-        .height(18.0)
-        .radius(4.0)
-        .fill(overlay_color)
-        .border(1.0, Color::from("#34343D"))
-        .padding(Padding {
-            top: 1.0,
-            bottom: 1.0,
-            left: 6.0,
-            right: 6.0,
-        })
-        .align_child(Align::Center, Align::Center)
-        .child(
-            Text::new("wlr-randr")
-                .size(9.0)
-                .color(amber_color)
-                .font(&font),
-        );
-
-    let header_left = Row::new(vec![Box::new(header_icon), Box::new(header_title)])
-        .gap(8.0)
-        .align(Align::Center);
-
-    let header_row = Rectangle::new()
-        .width(Parent)
-        .height(28.0)
-        .align_child(Align::Start, Align::Center)
-        .child(
-            Row::new(vec![Box::new(header_left), Box::new(badge_rect)])
-                .width(Parent)
-                .justify(Justify::SpaceBetween)
-                .align(Align::Center),
-        );
-
-    rows.push(Box::new(header_row));
+    // Standardized Modal Header with close button and context tag
+    let header = crate::ui::components::modal_header(
+        "󰍹",
+        "Display Configurator",
+        Some("wlr-randr"),
+        &tokens,
+        close,
+    );
+    rows.push(Box::new(header));
 
     // Preset options
     let total_presets = PRESETS.len();
     let mut preset_rows: Vec<Box<dyn Widget>> = Vec::new();
 
-    let hover_color = Color::from(manifest.palette.hover.as_str()); // Pale Amber #FFD166
-    let steel_color = Color::from(manifest.palette.steel.as_str()); // Steel #8B949E
-    let border_color_token = Color::from(manifest.palette.border.as_str()); // Iron #34343D
-
     for (idx, preset) in PRESETS.iter().enumerate() {
         let is_selected = idx == selected_idx;
         let is_hovered = svc.hover_index == Some(idx);
 
-        let card_bg = if is_selected {
-            Color::from("#262632") // Elevated Graphite
+        let (card_bg, border_color, title_color, icon_color) = if is_selected {
+            (
+                tokens.surface_selected,
+                tokens.border_focus,
+                tokens.accent,
+                tokens.accent,
+            )
         } else if is_hovered {
-            Color::from("#202028") // Subtle hover surface
+            (
+                tokens.surface_hover,
+                tokens.border_hover,
+                tokens.text_primary,
+                tokens.accent,
+            )
         } else {
-            bg_color // Obsidian #121216
-        };
-
-        let border_color = if is_selected {
-            amber_color // Industrial Amber #FFB000
-        } else if is_hovered {
-            Color::from("#4E4E5C") // Focused steel-iron border
-        } else {
-            border_color_token // Iron #34343D
-        };
-
-        let icon_color = if is_selected {
-            amber_color
-        } else if is_hovered {
-            hover_color
-        } else {
-            steel_color
-        };
-
-        let title_color = if is_selected {
-            amber_color
-        } else if is_hovered {
-            hover_color
-        } else {
-            fg_color
+            (
+                tokens.surface_elevated,
+                tokens.border_subtle,
+                tokens.text_primary,
+                tokens.text_secondary,
+            )
         };
 
         let icon_box = Rectangle::new()
             .width(28.0)
             .height(28.0)
-            .radius(6.0)
+            .radius(radius::SM)
             .fill(if is_selected {
-                Color::from("#23232D")
+                tokens.surface_active
             } else {
-                Color::from("#16161D")
+                tokens.surface
             })
             .border(
                 1.0,
                 if is_selected {
-                    amber_color
+                    tokens.border_focus
                 } else {
-                    Color::from("#2A2A34")
+                    tokens.border_subtle
                 },
             )
             .align_child(Align::Center, Align::Center)
@@ -532,13 +481,17 @@ pub fn display_config_overlay() -> LayerWindow {
             );
 
         let title_widget = Text::new(preset.title)
-            .size(12.0)
+            .size(typography::BODY)
             .color(title_color)
             .font(&font);
 
         let subtitle_widget = Text::new(preset.subtitle)
-            .size(10.0)
-            .color(if is_hovered { steel_color } else { muted_color })
+            .size(typography::BADGE)
+            .color(if is_hovered {
+                tokens.text_secondary
+            } else {
+                tokens.text_muted
+            })
             .font(&font);
 
         let text_column = Column::new(vec![Box::new(title_widget), Box::new(subtitle_widget)])
@@ -546,46 +499,29 @@ pub fn display_config_overlay() -> LayerWindow {
             .align(Align::Start);
 
         let left_content = Row::new(vec![Box::new(icon_box), Box::new(text_column)])
-            .gap(10.0)
+            .gap(spacing::GAP_MD)
             .align(Align::Center);
 
         let mut card_content: Vec<Box<dyn Widget>> = vec![Box::new(left_content)];
 
         if is_selected {
-            let apply_badge = Rectangle::new()
-                .width(58.0)
-                .height(20.0)
-                .radius(4.0)
-                .fill(Color::from("#0A0A0C"))
-                .border(1.0, border_color_token)
-                .padding(Padding {
-                    top: 1.0,
-                    bottom: 1.0,
-                    left: 6.0,
-                    right: 6.0,
-                })
-                .align_child(Align::Center, Align::Center)
-                .child(
-                    Text::new("↵ Apply")
-                        .size(9.0)
-                        .color(amber_color)
-                        .font(&font),
-                );
+            let apply_badge =
+                crate::ui::components::status_badge("↵ Apply", tokens.accent, &tokens);
             card_content.push(Box::new(apply_badge));
         }
 
         let preset_card = Rectangle::new()
             .width(Parent)
             .height(44.0)
-            .radius(8.0)
+            .radius(radius::MD)
             .fill(card_bg)
             .border(1.0, border_color)
             .cursor(Pointer)
             .padding(Padding {
                 top: 4.0,
                 bottom: 4.0,
-                left: 8.0,
-                right: 10.0,
+                left: spacing::PAD_SM,
+                right: spacing::PAD_MD,
             })
             .align_child(Align::Start, Align::Center)
             .on_hover(move |inside| {
@@ -609,40 +545,75 @@ pub fn display_config_overlay() -> LayerWindow {
         preset_rows.push(Box::new(preset_card));
     }
 
-    let preset_list = Column::new(preset_rows).width(Parent).gap(6.0);
+    let preset_list = Column::new(preset_rows).width(Parent).gap(spacing::GAP_SM);
     rows.push(Box::new(preset_list));
 
-    // Footer bar with navigation hints
-    let footer_text = Text::new("[↑/↓] Navigate   [↵] Apply Preset   [Esc] Dismiss")
-        .size(10.0)
-        .color(muted_color)
-        .font(&font);
-
-    let footer_row = Rectangle::new()
-        .width(Parent)
-        .height(20.0)
-        .align_child(Align::Center, Align::Center)
-        .child(footer_text);
+    // Footer bar with standardized keycaps
+    let footer_row = Row::new(vec![
+        Box::new(
+            Row::new(vec![
+                Box::new(crate::ui::components::keycap("↑/↓", &tokens)),
+                Box::new(
+                    Text::new("Navigate")
+                        .size(typography::CAPTION)
+                        .color(tokens.text_muted)
+                        .font(&font),
+                ),
+            ])
+            .gap(spacing::GAP_XS)
+            .align(Align::Center),
+        ),
+        Box::new(
+            Row::new(vec![
+                Box::new(crate::ui::components::keycap("↵", &tokens)),
+                Box::new(
+                    Text::new("Apply")
+                        .size(typography::CAPTION)
+                        .color(tokens.text_muted)
+                        .font(&font),
+                ),
+            ])
+            .gap(spacing::GAP_XS)
+            .align(Align::Center),
+        ),
+        Box::new(
+            Row::new(vec![
+                Box::new(crate::ui::components::keycap("Esc", &tokens)),
+                Box::new(
+                    Text::new("Dismiss")
+                        .size(typography::CAPTION)
+                        .color(tokens.text_muted)
+                        .font(&font),
+                ),
+            ])
+            .gap(spacing::GAP_XS)
+            .align(Align::Center),
+        ),
+    ])
+    .width(Parent)
+    .justify(Justify::Center)
+    .align(Align::Center)
+    .gap(spacing::GAP_MD);
 
     rows.push(Box::new(footer_row));
 
     let dialog = Rectangle::new()
         .width(440.0)
-        .height(430.0)
-        .radius(12.0)
-        .fill(bg_color)
-        .border(1.0, Color::from("#34343D"))
+        .height(450.0)
+        .radius(radius::LG)
+        .fill(tokens.surface)
+        .border(1.0, tokens.border_subtle)
         .padding(Padding {
-            top: 14.0,
-            bottom: 12.0,
-            left: 14.0,
-            right: 14.0,
+            top: spacing::PAD_MD,
+            bottom: spacing::PAD_MD,
+            left: spacing::PAD_MD,
+            right: spacing::PAD_MD,
         })
-        .child(Column::new(rows).width(Parent).gap(10.0));
+        .child(Column::new(rows).width(Parent).gap(spacing::GAP_MD));
 
     LayerWindow::new()
         .width(440.0)
-        .height(430.0)
+        .height(450.0)
         .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Middle)
         .anchor_horizontal(Horizontal::Middle)

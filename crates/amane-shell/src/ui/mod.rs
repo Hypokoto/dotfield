@@ -1,5 +1,6 @@
 pub mod bar;
 pub mod calendar;
+pub mod components;
 pub mod control_center;
 pub mod display_config;
 pub mod launcher;
@@ -8,5 +9,6 @@ pub mod osd;
 pub mod powermenu;
 pub mod screen_record;
 pub mod terminal_manager;
+pub mod tokens;
 pub mod tray;
 pub mod widgets;

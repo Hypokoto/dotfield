@@ -2,7 +2,7 @@ use std::process::Command;
 use std::time::Duration;
 
 use amane::{
-    Align, Center, Color, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin,
+    Align, Center, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin,
     OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
 };
 
@@ -166,15 +166,7 @@ pub fn powermenu_overlay() -> LayerWindow {
             .namespace("dotfield-shell-powermenu");
     }
 
-    let bg_color = Color::from(manifest.palette.surface.as_str()); // Obsidian #121216
-    let overlay_color = Color::from(manifest.palette.overlay.as_str()); // Graphite #1C1C23
-    let amber_color = Color::from(manifest.palette.highlight.as_str()); // Amber #FFB000
-    let hover_color = Color::from(manifest.palette.hover.as_str()); // #FFD166
-    let crimson_color = Color::from(manifest.palette.accent.as_str()); // Crimson #E63946
-    let fg_color = Color::from(manifest.palette.foreground.as_str());
-    let border_color = Color::from(manifest.palette.border.as_str()); // Iron #34343D
-    let steel_color = Color::from(manifest.palette.steel.as_str());
-    let font = manifest.theme.font_family.clone();
+    let tokens = crate::ui::tokens::ThemeTokens::from_manifest(&manifest);
 
     // Header with title, system info, and close button
     let user_name = std::env::var("USER").unwrap_or_else(|_| "user".to_string());
@@ -186,37 +178,29 @@ pub fn powermenu_overlay() -> LayerWindow {
     let header_card = Row::new(vec![
         Box::new(
             Row::new(vec![
-                Box::new(Text::new("󰐥").size(14.0).color(crimson_color).font(&font)),
                 Box::new(
-                    Text::new("SESSION & POWER CONTROL")
-                        .size(11.0)
-                        .color(fg_color)
-                        .font(&font),
+                    Text::new("󰐥")
+                        .size(crate::ui::tokens::typography::TITLE_SM)
+                        .color(tokens.danger)
+                        .font(&tokens.font_family),
+                ),
+                Box::new(
+                    Text::new("SESSION & POWER")
+                        .size(crate::ui::tokens::typography::SECONDARY)
+                        .color(tokens.text_primary)
+                        .font(&tokens.font_family),
                 ),
                 Box::new(
                     Text::new(format!("• {user_name}@{host_name}"))
-                        .size(10.0)
-                        .color(steel_color)
-                        .font(&font),
+                        .size(crate::ui::tokens::typography::BADGE)
+                        .color(tokens.text_secondary)
+                        .font(&tokens.font_family),
                 ),
             ])
-            .gap(6.0)
+            .gap(crate::ui::tokens::spacing::GAP_SM)
             .align(Align::Center),
         ),
-        Box::new(
-            Rectangle::new()
-                .width(26.0)
-                .height(26.0)
-                .radius(4.0)
-                .fill(overlay_color)
-                .border(1.0, border_color)
-                .cursor(Pointer)
-                .align_child(Center, Center)
-                .on_click(|_| {
-                    close();
-                })
-                .child(Text::new("󰅖").size(12.0).color(steel_color).font(&font)),
-        ),
+        Box::new(crate::ui::components::close_button(close, &tokens)),
     ])
     .width(Parent)
     .justify(Justify::SpaceBetween)
@@ -228,63 +212,44 @@ pub fn powermenu_overlay() -> LayerWindow {
     for (idx, action) in ACTIONS.iter().enumerate() {
         let is_selected = idx == menu.selected;
 
-        let card_fill = if is_selected { overlay_color } else { bg_color };
-
-        let card_border = if is_selected {
+        let (card_fill, card_border, icon_color, title_color) = if is_selected {
             if action.is_critical {
-                crimson_color
+                (
+                    tokens.danger_subtle,
+                    tokens.border_danger,
+                    tokens.danger,
+                    tokens.text_primary,
+                )
             } else {
-                amber_color
-            }
-        } else {
-            border_color
-        };
-
-        let icon_color = if is_selected {
-            if action.is_critical {
-                crimson_color
-            } else {
-                hover_color
+                (
+                    tokens.surface_selected,
+                    tokens.border_focus,
+                    tokens.accent,
+                    tokens.text_primary,
+                )
             }
         } else if action.is_critical {
-            Color::from("#FF6B76")
+            (
+                tokens.surface_elevated,
+                tokens.border_subtle,
+                tokens.danger,
+                tokens.text_secondary,
+            )
         } else {
-            amber_color
+            (
+                tokens.surface_elevated,
+                tokens.border_subtle,
+                tokens.text_secondary,
+                tokens.text_secondary,
+            )
         };
 
-        let key_chip = Rectangle::new()
-            .width(20.0)
-            .height(16.0)
-            .radius(3.0)
-            .fill(if is_selected {
-                if action.is_critical {
-                    Color::from("#3D2024")
-                } else {
-                    Color::from("#382E15")
-                }
-            } else {
-                overlay_color
-            })
-            .border(
-                1.0,
-                if is_selected {
-                    card_border
-                } else {
-                    border_color
-                },
-            )
-            .align_child(Center, Center)
-            .child(
-                Text::new(action.key_hint)
-                    .size(9.0)
-                    .color(if is_selected { fg_color } else { steel_color })
-                    .font(&font),
-            );
+        let key_chip = crate::ui::components::keycap(action.key_hint, &tokens);
 
         let card = Rectangle::new()
-            .width(104.0)
-            .height(116.0)
-            .radius(8.0)
+            .width(100.0)
+            .height(112.0)
+            .radius(crate::ui::tokens::radius::MD)
             .fill(card_fill)
             .border(if is_selected { 1.5 } else { 1.0 }, card_border)
             .cursor(Pointer)
@@ -308,19 +273,19 @@ pub fn powermenu_overlay() -> LayerWindow {
                 Column::new(vec![
                     Box::new(
                         Text::new(action.icon)
-                            .size(30.0)
+                            .size(28.0)
                             .color(icon_color)
-                            .font(&font),
+                            .font(&tokens.font_family),
                     ),
                     Box::new(
                         Text::new(action.title)
-                            .size(11.0)
-                            .color(if is_selected { fg_color } else { steel_color })
-                            .font(&font),
+                            .size(crate::ui::tokens::typography::SECONDARY)
+                            .color(title_color)
+                            .font(&tokens.font_family),
                     ),
                     Box::new(key_chip),
                 ])
-                .gap(8.0)
+                .gap(crate::ui::tokens::spacing::GAP_SM)
                 .align(Align::Center),
             );
 
@@ -332,23 +297,52 @@ pub fn powermenu_overlay() -> LayerWindow {
         .justify(Justify::SpaceBetween)
         .align(Align::Center);
 
-    // Footer with hotkey hints
-    let footer_text = Row::new(vec![Box::new(
-        Text::new("Use [←/→] or [h/l] to navigate • [Enter] to execute • [Esc] to cancel")
-            .size(9.5)
-            .color(steel_color)
-            .font(&font),
-    )])
-    .width(Parent)
+    // Footer with keycap hints
+    let footer_row = Row::new(vec![
+        Box::new(crate::ui::components::keycap("←/→", &tokens)),
+        Box::new(
+            Text::new("Navigate")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_family),
+        ),
+        Box::new(
+            Text::new("•")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_muted)
+                .font(&tokens.font_family),
+        ),
+        Box::new(crate::ui::components::keycap("↵ Enter", &tokens)),
+        Box::new(
+            Text::new("Execute")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_family),
+        ),
+        Box::new(
+            Text::new("•")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_muted)
+                .font(&tokens.font_family),
+        ),
+        Box::new(crate::ui::components::keycap("Esc", &tokens)),
+        Box::new(
+            Text::new("Cancel")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_family),
+        ),
+    ])
+    .gap(6.0)
     .align(Align::Center);
 
     // Modal Dialog Box
     let dialog = Rectangle::new()
         .width(580.0)
-        .height(210.0)
-        .radius(12.0)
-        .fill(bg_color)
-        .border(1.0, border_color)
+        .height(206.0)
+        .radius(crate::ui::tokens::radius::LG)
+        .fill(tokens.surface)
+        .border(1.0, tokens.border_subtle)
         .padding(Padding {
             top: 14.0,
             bottom: 12.0,
@@ -359,7 +353,7 @@ pub fn powermenu_overlay() -> LayerWindow {
             Column::new(vec![
                 Box::new(header_card),
                 Box::new(actions_row),
-                Box::new(footer_text),
+                Box::new(footer_row),
             ])
             .width(Parent)
             .gap(12.0),

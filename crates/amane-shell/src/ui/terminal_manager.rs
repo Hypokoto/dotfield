@@ -258,89 +258,25 @@ pub fn terminal_manager_overlay() -> LayerWindow {
     }
     let selected_idx = svc.selected;
     let default_id = svc.default_terminal.clone();
+    let total_presets = TERMINAL_PRESETS.len();
 
-    let bg_color = Color::from(manifest.palette.surface.as_str()); // Obsidian #121216
-    let fg_color = Color::from(manifest.palette.foreground.as_str()); // Bone #E8E6E3
-    let amber_color = Color::from(manifest.palette.highlight.as_str()); // Amber #FFB000
-    let overlay_color = Color::from(manifest.palette.overlay.as_str()); // Graphite #1C1C23
-    let muted_color = Color::from(manifest.palette.muted.as_str()); // Ash #A1A1AA
-    let font = manifest.theme.font_family.clone();
+    let tokens = crate::ui::tokens::ThemeTokens::from_manifest(&manifest);
 
     let mut rows: Vec<Box<dyn Widget>> = Vec::new();
 
-    // Header box
-    let header_icon = Text::new("󰞷").size(16.0).color(amber_color).font(&font);
-
-    let header_title = Text::new("Terminal Manager")
-        .size(13.0)
-        .color(fg_color)
-        .font(&font);
-
-    let default_badge = Rectangle::new()
-        .width(130.0)
-        .height(18.0)
-        .radius(4.0)
-        .fill(overlay_color)
-        .border(1.0, Color::from(manifest.palette.border.as_str()))
-        .padding(Padding {
-            top: 1.0,
-            bottom: 1.0,
-            left: 6.0,
-            right: 6.0,
-        })
-        .align_child(Align::Center, Align::Center)
-        .child(
-            Text::new(format!("Default: {default_id}"))
-                .size(9.0)
-                .color(amber_color)
-                .font(&font),
-        );
-
-    let header_left = Row::new(vec![Box::new(header_icon), Box::new(header_title)])
-        .gap(8.0)
-        .align(Align::Center);
-
-    let close_btn = Rectangle::new()
-        .width(22.0)
-        .height(22.0)
-        .radius(4.0)
-        .fill(overlay_color)
-        .border(1.0, Color::from(manifest.palette.border.as_str()))
-        .align_child(Align::Center, Align::Center)
-        .cursor(Pointer)
-        .on_click(|_| {
-            close();
-        })
-        .child(Text::new("✕").size(10.0).color(muted_color).font(&font));
-
-    let header_row = Rectangle::new()
-        .width(Parent)
-        .height(28.0)
-        .align_child(Align::Start, Align::Center)
-        .child(
-            Row::new(vec![
-                Box::new(header_left),
-                Box::new(
-                    Row::new(vec![Box::new(default_badge), Box::new(close_btn)])
-                        .gap(6.0)
-                        .align(Align::Center),
-                ),
-            ])
-            .width(Parent)
-            .justify(Justify::SpaceBetween)
-            .align(Align::Center),
-        );
-
-    rows.push(Box::new(header_row));
+    // Standardized Modal Header
+    let default_tag = format!("Default: {default_id}");
+    let header = crate::ui::components::modal_header(
+        "󰞷",
+        "Terminal Manager",
+        Some(&default_tag),
+        &tokens,
+        close,
+    );
+    rows.push(Box::new(header));
 
     // Terminal preset cards in a 2x2 grid
-    let total_presets = TERMINAL_PRESETS.len();
     let mut cards: Vec<Box<dyn Widget>> = Vec::new();
-
-    let hover_color = Color::from(manifest.palette.hover.as_str()); // Pale Amber #FFD166
-    let steel_color = Color::from(manifest.palette.steel.as_str()); // Steel #8B949E
-    let border_color_token = Color::from(manifest.palette.border.as_str()); // Iron #34343D
-    let green_color = Color::from("#7BC47F"); // Success Green
 
     for (idx, preset) in TERMINAL_PRESETS.iter().enumerate() {
         let is_selected = idx == selected_idx;
@@ -348,169 +284,109 @@ pub fn terminal_manager_overlay() -> LayerWindow {
         let is_default = preset.id == default_id;
         let installed = is_installed(preset.bin);
 
-        let card_bg = if is_selected {
-            Color::from("#262632") // Elevated Graphite
+        let (card_bg, border_color, title_color) = if is_selected {
+            (tokens.surface_selected, tokens.border_focus, tokens.accent)
         } else if is_hovered {
-            Color::from("#202028") // Subtle hover surface
+            (
+                tokens.surface_hover,
+                tokens.border_hover,
+                tokens.text_primary,
+            )
         } else {
-            Color::from("#17171E") // Structured Obsidian card surface
-        };
-
-        let border_color = if is_selected {
-            amber_color // Industrial Amber #FFB000
-        } else if is_hovered {
-            Color::from("#4E4E5C") // Focused steel-iron border
-        } else {
-            border_color_token // Iron #34343D
+            (
+                tokens.surface_elevated,
+                tokens.border_subtle,
+                if installed {
+                    tokens.text_primary
+                } else {
+                    tokens.text_muted
+                },
+            )
         };
 
         let icon_color = if is_selected {
-            amber_color
+            tokens.accent
         } else if is_hovered {
-            hover_color
+            tokens.text_primary
         } else if installed {
-            steel_color
+            tokens.text_secondary
         } else {
-            Color::from("#52525B")
+            tokens.text_muted
         };
 
-        let title_color = if is_selected {
-            amber_color
-        } else if is_hovered {
-            hover_color
-        } else if installed {
-            fg_color
-        } else {
-            Color::from("#71717A")
-        };
-
-        // Top line: Glyph + Title on left, quick number badge on right
+        // Top line: Glyph + Title on left, quick number keycap on right
         let title_left = Row::new(vec![
             Box::new(
                 Text::new(preset.glyph)
-                    .size(16.0)
+                    .size(crate::ui::tokens::typography::TITLE_SM)
                     .color(icon_color)
-                    .font(&font),
+                    .font(&tokens.font_family),
             ),
             Box::new(
                 Text::new(preset.name)
-                    .size(12.5)
+                    .size(crate::ui::tokens::typography::SECONDARY)
                     .color(title_color)
-                    .font(&font),
+                    .font(&tokens.font_family),
             ),
         ])
-        .gap(6.0)
+        .gap(crate::ui::tokens::spacing::GAP_SM)
         .align(Align::Center);
 
-        let num_badge = Rectangle::new()
-            .width(20.0)
-            .height(16.0)
-            .radius(3.0)
-            .fill(overlay_color)
-            .border(
-                1.0,
-                if is_selected {
-                    amber_color
-                } else {
-                    border_color_token
-                },
-            )
-            .align_child(Align::Center, Align::Center)
-            .child(
-                Text::new(format!("[{}]", idx + 1))
-                    .size(8.5)
-                    .color(if is_selected {
-                        amber_color
-                    } else {
-                        steel_color
-                    })
-                    .font(&font),
-            );
+        let num_keycap = crate::ui::components::keycap(&format!("{}", idx + 1), &tokens);
 
-        let top_row = Row::new(vec![Box::new(title_left), Box::new(num_badge)])
+        let top_row = Row::new(vec![Box::new(title_left), Box::new(num_keycap)])
             .width(Parent)
             .justify(Justify::SpaceBetween)
             .align(Align::Center);
 
         // Middle line: Description
         let desc_text = Text::new(preset.description)
-            .size(8.5)
+            .size(crate::ui::tokens::typography::CAPTION)
             .color(if installed {
-                muted_color
+                tokens.text_secondary
             } else {
-                Color::from("#52525B")
+                tokens.text_muted
             })
-            .font(&font);
+            .font(&tokens.font_family);
 
-        // Bottom line: Badges (Default / Not Found / Tag) on left, Launch on right
+        // Bottom line: Badges (Default / Not Found / Tag) on left, Launch keycap on right
         let mut left_badges: Vec<Box<dyn Widget>> = Vec::new();
         if is_default {
-            left_badges.push(Box::new(
-                Rectangle::new()
-                    .width(58.0)
-                    .height(16.0)
-                    .radius(3.0)
-                    .fill(Color::from("#152818"))
-                    .border(1.0, green_color)
-                    .align_child(Align::Center, Align::Center)
-                    .child(
-                        Text::new("★ Default")
-                            .size(8.5)
-                            .color(green_color)
-                            .font(&font),
-                    ),
-            ));
+            left_badges.push(Box::new(crate::ui::components::status_badge(
+                "Default",
+                tokens.accent,
+                &tokens,
+            )));
         } else if !installed {
-            left_badges.push(Box::new(
-                Rectangle::new()
-                    .width(62.0)
-                    .height(16.0)
-                    .radius(3.0)
-                    .fill(overlay_color)
-                    .border(1.0, Color::from("#452A2D"))
-                    .align_child(Align::Center, Align::Center)
-                    .child(
-                        Text::new("Not Found")
-                            .size(8.5)
-                            .color(Color::from("#E63946"))
-                            .font(&font),
-                    ),
-            ));
+            left_badges.push(Box::new(crate::ui::components::status_badge(
+                "Missing",
+                tokens.danger,
+                &tokens,
+            )));
         } else {
-            left_badges.push(Box::new(
-                Text::new(preset.tag)
-                    .size(8.5)
-                    .color(if is_selected {
-                        hover_color
-                    } else {
-                        steel_color
-                    })
-                    .font(&font),
-            ));
+            left_badges.push(Box::new(crate::ui::components::status_badge(
+                preset.tag,
+                tokens.text_muted,
+                &tokens,
+            )));
         }
 
         let mut right_badges: Vec<Box<dyn Widget>> = Vec::new();
         if is_selected {
-            right_badges.push(Box::new(
-                Rectangle::new()
-                    .width(52.0)
-                    .height(16.0)
-                    .radius(3.0)
-                    .fill(Color::BLACK)
-                    .border(1.0, amber_color)
-                    .align_child(Align::Center, Align::Center)
-                    .child(
-                        Text::new("↵ Launch")
-                            .size(8.5)
-                            .color(amber_color)
-                            .font(&font),
-                    ),
-            ));
+            right_badges.push(Box::new(crate::ui::components::keycap("↵ Launch", &tokens)));
         }
 
         let bottom_row = Row::new(vec![
-            Box::new(Row::new(left_badges).gap(4.0).align(Align::Center)),
-            Box::new(Row::new(right_badges).gap(4.0).align(Align::Center)),
+            Box::new(
+                Row::new(left_badges)
+                    .gap(crate::ui::tokens::spacing::GAP_XS)
+                    .align(Align::Center),
+            ),
+            Box::new(
+                Row::new(right_badges)
+                    .gap(crate::ui::tokens::spacing::GAP_XS)
+                    .align(Align::Center),
+            ),
         ])
         .width(Parent)
         .justify(Justify::SpaceBetween)
@@ -519,12 +395,12 @@ pub fn terminal_manager_overlay() -> LayerWindow {
         let indicator_pill =
             Rectangle::new()
                 .width(3.0)
-                .height(50.0)
+                .height(48.0)
                 .radius(1.5)
                 .fill(if is_selected {
-                    amber_color
+                    tokens.accent
                 } else if is_hovered {
-                    hover_color
+                    tokens.border_hover
                 } else {
                     Color::TRANSPARENT
                 });
@@ -534,19 +410,19 @@ pub fn terminal_manager_overlay() -> LayerWindow {
             Box::new(desc_text),
             Box::new(bottom_row),
         ])
-        .gap(3.0)
+        .gap(crate::ui::tokens::spacing::GAP_XS)
         .width(Parent)
         .align(Align::Start);
 
         let card_content = Row::new(vec![Box::new(indicator_pill), Box::new(card_body)])
             .width(Parent)
-            .gap(8.0)
+            .gap(crate::ui::tokens::spacing::GAP_SM)
             .align(Align::Center);
 
         let card = Rectangle::new()
             .width(240.0)
             .height(78.0)
-            .radius(8.0)
+            .radius(crate::ui::tokens::radius::MD)
             .fill(card_bg)
             .border(if is_selected { 1.5 } else { 1.0 }, border_color)
             .padding(Padding {
@@ -591,11 +467,13 @@ pub fn terminal_manager_overlay() -> LayerWindow {
 
         let grid_container = Column::new(vec![Box::new(grid_row_0), Box::new(grid_row_1)])
             .width(Parent)
-            .gap(10.0);
+            .gap(crate::ui::tokens::spacing::GAP_MD);
 
         rows.push(Box::new(grid_container));
     } else {
-        let grid_container = Column::new(cards).width(Parent).gap(8.0);
+        let grid_container = Column::new(cards)
+            .width(Parent)
+            .gap(crate::ui::tokens::spacing::GAP_SM);
         rows.push(Box::new(grid_container));
     }
 
@@ -603,12 +481,17 @@ pub fn terminal_manager_overlay() -> LayerWindow {
     if let Some(ref msg) = svc.status_message {
         let status_box = Rectangle::new()
             .width(Parent)
-            .height(20.0)
-            .radius(4.0)
-            .fill(Color::from("#181822"))
-            .border(1.0, hover_color)
+            .height(22.0)
+            .radius(crate::ui::tokens::radius::SM)
+            .fill(tokens.surface_elevated)
+            .border(1.0, tokens.border_focus)
             .align_child(Align::Center, Align::Center)
-            .child(Text::new(msg).size(9.0).color(hover_color).font(&font));
+            .child(
+                Text::new(msg)
+                    .size(crate::ui::tokens::typography::CAPTION)
+                    .color(tokens.accent)
+                    .font(&tokens.font_family),
+            );
         rows.push(Box::new(status_box));
     }
 
@@ -618,10 +501,10 @@ pub fn terminal_manager_overlay() -> LayerWindow {
 
     let mux_btn = Rectangle::new()
         .width(156.0)
-        .height(26.0)
-        .radius(4.0)
-        .fill(overlay_color)
-        .border(1.0, border_color_token)
+        .height(28.0)
+        .radius(crate::ui::tokens::radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .align_child(Align::Center, Align::Center)
         .on_click(move |_| {
@@ -629,17 +512,17 @@ pub fn terminal_manager_overlay() -> LayerWindow {
         })
         .child(
             Text::new(format!("󰒋 {sel_name} + Tmux"))
-                .size(9.0)
-                .color(fg_color)
-                .font(&font),
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_primary)
+                .font(&tokens.font_family),
         );
 
     let scratch_btn = Rectangle::new()
         .width(156.0)
-        .height(26.0)
-        .radius(4.0)
-        .fill(overlay_color)
-        .border(1.0, border_color_token)
+        .height(28.0)
+        .radius(crate::ui::tokens::radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .align_child(Align::Center, Align::Center)
         .on_click(move |_| {
@@ -647,17 +530,17 @@ pub fn terminal_manager_overlay() -> LayerWindow {
         })
         .child(
             Text::new(format!("󰖲 {sel_name} Floating"))
-                .size(9.0)
-                .color(fg_color)
-                .font(&font),
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_primary)
+                .font(&tokens.font_family),
         );
 
     let default_btn = Rectangle::new()
         .width(156.0)
-        .height(26.0)
-        .radius(4.0)
-        .fill(overlay_color)
-        .border(1.0, border_color_token)
+        .height(28.0)
+        .radius(crate::ui::tokens::radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .align_child(Align::Center, Align::Center)
         .on_click(move |_| {
@@ -665,12 +548,12 @@ pub fn terminal_manager_overlay() -> LayerWindow {
         })
         .child(
             Text::new(format!("★ Make {sel_name} Default"))
-                .size(9.0)
-                .color(amber_color)
-                .font(&font),
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.accent)
+                .font(&tokens.font_family),
         );
 
-    let actions_row = Rectangle::new().width(Parent).height(26.0).child(
+    let actions_row = Rectangle::new().width(Parent).height(28.0).child(
         Row::new(vec![
             Box::new(mux_btn),
             Box::new(scratch_btn),
@@ -685,52 +568,80 @@ pub fn terminal_manager_overlay() -> LayerWindow {
 
     // Footer navigation key hints
     let footer_hints = Row::new(vec![
+        Box::new(crate::ui::components::keycap("1-4", &tokens)),
         Box::new(
-            Text::new("[Arrows]")
-                .size(9.0)
-                .color(hover_color)
-                .font(&font),
+            Text::new("Pick")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_family),
         ),
         Box::new(
-            Text::new("Navigate")
-                .size(9.0)
-                .color(steel_color)
-                .font(&font),
+            Text::new("•")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_muted)
+                .font(&tokens.font_family),
         ),
-        Box::new(Text::new("[1-4]").size(9.0).color(hover_color).font(&font)),
+        Box::new(crate::ui::components::keycap("↵", &tokens)),
         Box::new(
-            Text::new("Quick Pick")
-                .size(9.0)
-                .color(steel_color)
-                .font(&font),
+            Text::new("Launch")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_family),
         ),
-        Box::new(Text::new("[↵]").size(9.0).color(hover_color).font(&font)),
-        Box::new(Text::new("Launch").size(9.0).color(steel_color).font(&font)),
-        Box::new(Text::new("[m]").size(9.0).color(hover_color).font(&font)),
-        Box::new(Text::new("Tmux").size(9.0).color(steel_color).font(&font)),
-        Box::new(Text::new("[s]").size(9.0).color(hover_color).font(&font)),
         Box::new(
-            Text::new("Floating")
-                .size(9.0)
-                .color(steel_color)
-                .font(&font),
+            Text::new("•")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_muted)
+                .font(&tokens.font_family),
         ),
-        Box::new(Text::new("[d]").size(9.0).color(hover_color).font(&font)),
+        Box::new(crate::ui::components::keycap("m", &tokens)),
+        Box::new(
+            Text::new("Tmux")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_family),
+        ),
+        Box::new(
+            Text::new("•")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_muted)
+                .font(&tokens.font_family),
+        ),
+        Box::new(crate::ui::components::keycap("s", &tokens)),
+        Box::new(
+            Text::new("Float")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_family),
+        ),
+        Box::new(
+            Text::new("•")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_muted)
+                .font(&tokens.font_family),
+        ),
+        Box::new(crate::ui::components::keycap("d", &tokens)),
         Box::new(
             Text::new("Default")
-                .size(9.0)
-                .color(steel_color)
-                .font(&font),
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_family),
         ),
-        Box::new(Text::new("[Esc]").size(9.0).color(hover_color).font(&font)),
+        Box::new(
+            Text::new("•")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_muted)
+                .font(&tokens.font_family),
+        ),
+        Box::new(crate::ui::components::keycap("Esc", &tokens)),
         Box::new(
             Text::new("Dismiss")
-                .size(9.0)
-                .color(steel_color)
-                .font(&font),
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_family),
         ),
     ])
-    .gap(4.0)
+    .gap(5.0)
     .align(Align::Center);
 
     let footer_row = Rectangle::new()
@@ -745,9 +656,9 @@ pub fn terminal_manager_overlay() -> LayerWindow {
     let dialog = Rectangle::new()
         .width(520.0)
         .height(340.0)
-        .radius(10.0)
-        .fill(bg_color)
-        .border(1.0, border_color_token)
+        .radius(crate::ui::tokens::radius::LG)
+        .fill(tokens.surface)
+        .border(1.0, tokens.border_subtle)
         .padding(Padding {
             top: 14.0,
             bottom: 12.0,

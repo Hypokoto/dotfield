@@ -1,9 +1,11 @@
 use amane::{
-    Center, Color, Column, Horizontal, Layer, LayerWindow, Margin, Notification, Notifications,
-    OutputTarget, Padding, Parent, Rectangle, Row, Service, Text, Urgency, Vertical, Widget, Zone,
+    Align, Center, Color, Column, Horizontal, Justify, Layer, LayerWindow, Margin, Notification,
+    Notifications, OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Urgency,
+    Vertical, Widget, Zone,
 };
 
 use crate::config::{ConfigService, ShellManifest};
+use crate::ui::tokens::{ThemeTokens, radius, spacing, typography};
 
 pub fn notification_popups() -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
@@ -39,7 +41,7 @@ pub fn notification_popups() -> LayerWindow {
         cards.push(render_notification_card(notif, &manifest, &font));
     }
 
-    let window_h = (cards.len() as f32 * 96.0).clamp(96.0, 520.0);
+    let window_h = (cards.len() as f32 * 104.0).clamp(96.0, 520.0);
 
     LayerWindow::new()
         .width(360.0)
@@ -48,7 +50,7 @@ pub fn notification_popups() -> LayerWindow {
         .anchor_vertical(Vertical::Top)
         .anchor_horizontal(Horizontal::Right)
         .margin(Margin {
-            top: 40,
+            top: 38,
             right: 16,
             bottom: 0,
             left: 0,
@@ -57,7 +59,7 @@ pub fn notification_popups() -> LayerWindow {
         .space(Zone::Respect)
         .visible(true)
         .namespace("dotfield-shell-notifications")
-        .child(Column::new(cards).width(Parent).gap(10.0))
+        .child(Column::new(cards).width(Parent).gap(spacing::GAP_SM))
 }
 
 fn render_notification_card(
@@ -65,40 +67,59 @@ fn render_notification_card(
     manifest: &ShellManifest,
     font: &str,
 ) -> Box<dyn Widget> {
-    let bg_color = Color::from(manifest.palette.surface.as_str()); // Obsidian #121216
-    let fg_color = Color::from(manifest.palette.foreground.as_str());
-    let crimson_color = Color::from(manifest.palette.accent.as_str());
-    let amber_color = Color::from(manifest.palette.highlight.as_str());
-    let muted_color = Color::from(manifest.palette.muted.as_str());
-
-    let border_color = match notif.urgency() {
-        Urgency::Critical => crimson_color,
-        Urgency::Low => muted_color,
-        Urgency::Normal => amber_color,
-    };
-
+    let tokens = ThemeTokens::from_manifest(manifest);
     let id = notif.id();
+
+    let (border_color, header_color) = match notif.urgency() {
+        Urgency::Critical => (tokens.border_danger, tokens.danger),
+        Urgency::Low => (tokens.border_subtle, tokens.text_muted),
+        Urgency::Normal => (tokens.border_subtle, tokens.accent),
+    };
 
     let mut elements: Vec<Box<dyn Widget>> = Vec::new();
 
-    // Header: App name
+    // Header row: App Name + Dismiss button
     let app_text = if notif.app_name().is_empty() {
-        "Notification"
+        "Notification".to_string()
     } else {
-        notif.app_name()
+        notif.app_name().to_string()
     };
-    elements.push(Box::new(
-        Text::new(app_text)
-            .size(10.0)
-            .color(border_color)
-            .font(font),
-    ));
+
+    let header_row = Row::new(vec![
+        Box::new(
+            Text::new(app_text)
+                .size(typography::CAPTION)
+                .color(header_color)
+                .font(font),
+        ),
+        Box::new(
+            Rectangle::new()
+                .width(18.0)
+                .height(18.0)
+                .radius(radius::XS)
+                .fill(Color::TRANSPARENT)
+                .cursor(Pointer)
+                .align_child(Center, Center)
+                .on_click(move |_| Notifications::dismiss(id))
+                .child(
+                    Text::new("󰅖")
+                        .size(10.0)
+                        .color(tokens.text_muted)
+                        .font(font),
+                ),
+        ),
+    ])
+    .width(Parent)
+    .justify(Justify::SpaceBetween)
+    .align(Align::Center);
+
+    elements.push(Box::new(header_row));
 
     // Summary (bold title)
     elements.push(Box::new(
         Text::new(notif.summary())
-            .size(13.0)
-            .color(fg_color)
+            .size(typography::BODY_LG)
+            .color(tokens.text_primary)
             .font(font),
     ));
 
@@ -106,8 +127,8 @@ fn render_notification_card(
     if !notif.body().is_empty() {
         elements.push(Box::new(
             Text::new(notif.body())
-                .size(11.0)
-                .color(Color::from("#A1A1AA"))
+                .size(typography::SECONDARY)
+                .color(tokens.text_secondary)
                 .font(font),
         ));
     }
@@ -121,30 +142,38 @@ fn render_notification_card(
             let btn = Rectangle::new()
                 .width(80.0)
                 .height(24.0)
-                .radius(4.0)
-                .fill(Color::from(manifest.palette.overlay.as_str()))
+                .radius(radius::SM)
+                .fill(tokens.surface)
+                .border(1.0, tokens.border_subtle)
+                .cursor(Pointer)
                 .align_child(Center, Center)
                 .on_click(move |_| Notifications::invoke(id, &key))
-                .child(Text::new(label).size(10.0).color(fg_color).font(font));
+                .child(
+                    Text::new(label)
+                        .size(typography::BADGE)
+                        .color(tokens.text_primary)
+                        .font(font),
+                );
             buttons.push(Box::new(btn));
         }
-        elements.push(Box::new(Row::new(buttons).gap(6.0)));
+        elements.push(Box::new(Row::new(buttons).gap(spacing::GAP_SM)));
     }
 
     let card = Rectangle::new()
         .width(Parent)
-        .height(90.0)
-        .radius(8.0)
-        .fill(bg_color)
+        .height(96.0)
+        .radius(radius::MD)
+        .fill(tokens.surface_elevated)
         .border(1.0, border_color)
         .padding(Padding {
-            top: 10.0,
-            bottom: 10.0,
-            left: 14.0,
-            right: 14.0,
+            top: spacing::PAD_SM,
+            bottom: spacing::PAD_SM,
+            left: spacing::PAD_MD,
+            right: spacing::PAD_MD,
         })
+        .cursor(Pointer)
         .on_click(move |_| Notifications::click(id))
-        .child(Column::new(elements).width(Parent).gap(4.0));
+        .child(Column::new(elements).width(Parent).gap(spacing::GAP_XS));
 
     Box::new(card)
 }

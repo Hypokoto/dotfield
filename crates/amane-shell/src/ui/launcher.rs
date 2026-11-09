@@ -68,11 +68,7 @@ pub fn launcher_overlay() -> LayerWindow {
             .namespace("dotfield-shell-launcher");
     }
 
-    let bg_color = Color::from(manifest.palette.surface.as_str()); // Obsidian #121216
-    let fg_color = Color::from(manifest.palette.foreground.as_str());
-    let amber_color = Color::from(manifest.palette.highlight.as_str()); // Amber #FFB000
-    let overlay_color = Color::from(manifest.palette.overlay.as_str()); // Graphite #1C1C23
-    let font = manifest.theme.font_family.clone();
+    let tokens = crate::ui::tokens::ThemeTokens::from_manifest(&manifest);
 
     let apps = Apps::read();
     let mut matched_apps: Vec<DesktopApp> = Vec::new();
@@ -109,11 +105,15 @@ pub fn launcher_overlay() -> LayerWindow {
 
     let mut rows: Vec<Box<dyn Widget>> = Vec::new();
 
-    // Search bar with icon prefix and subtle border
-    let search_icon = Text::new("󰍉").size(15.0).color(amber_color).font(&font);
+    // Search bar with icon prefix, text input, and count badge
+    let search_icon = Text::new("󰍉")
+        .size(crate::ui::tokens::typography::TITLE_SM)
+        .color(tokens.accent)
+        .font(&tokens.font_family);
+
     let search_input = TextInput::new("launcher-search")
-        .size(13.0)
-        .color(fg_color)
+        .size(crate::ui::tokens::typography::BODY)
+        .color(tokens.text_primary)
         .placeholder("Search applications or commands...")
         .focused()
         .on_change(|text| {
@@ -131,25 +131,22 @@ pub fn launcher_overlay() -> LayerWindow {
     } else {
         "0 apps".to_string()
     };
-    let count_badge = Text::new(count_text)
-        .size(10.0)
-        .color(Color::from(manifest.palette.muted.as_str()))
-        .font(&font);
+    let count_badge = crate::ui::components::status_badge(&count_text, tokens.accent, &tokens);
 
     let search_row = Row::new(vec![
         Box::new(search_icon),
         Box::new(search_input),
         Box::new(count_badge),
     ])
-    .gap(10.0)
+    .gap(crate::ui::tokens::spacing::GAP_MD)
     .align(Align::Center);
 
     let search_box = Rectangle::new()
         .width(Parent)
-        .height(42.0)
-        .radius(8.0)
-        .fill(overlay_color)
-        .border(1.0, Color::from("#34343D"))
+        .height(44.0)
+        .radius(crate::ui::tokens::radius::MD)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,
@@ -162,9 +159,6 @@ pub fn launcher_overlay() -> LayerWindow {
     rows.push(Box::new(search_box));
 
     // Results grid: 3 columns x 4 rows
-    let hover_color = Color::from(manifest.palette.hover.as_str()); // Pale Amber #FFD166
-    let steel_color = Color::from(manifest.palette.steel.as_str()); // Steel #8B949E
-
     let mut grid_rows: Vec<Box<dyn Widget>> = Vec::new();
     let start_idx = scroll_row * GRID_COLS;
 
@@ -178,40 +172,32 @@ pub fn launcher_overlay() -> LayerWindow {
                 let is_hovered = launcher.hover_index == Some(abs_idx);
                 let launched = app.clone();
 
-                let card_bg = if is_selected {
-                    Color::from("#262632") // Elevated Graphite
+                let (card_bg, card_border, title_color) = if is_selected {
+                    (tokens.surface_selected, tokens.border_focus, tokens.accent)
                 } else if is_hovered {
-                    Color::from("#202028") // Subtle hover surface
+                    (
+                        tokens.surface_hover,
+                        tokens.border_hover,
+                        tokens.text_primary,
+                    )
                 } else {
-                    overlay_color // Graphite #1C1C23
-                };
-
-                let card_border = if is_selected {
-                    amber_color // Industrial Amber #FFB000
-                } else if is_hovered {
-                    Color::from("#4E4E5C") // Focused steel-iron border
-                } else {
-                    Color::from("#2A2A34") // Restrained separator
-                };
-
-                let title_color = if is_selected {
-                    amber_color
-                } else if is_hovered {
-                    hover_color
-                } else {
-                    fg_color
+                    (
+                        tokens.surface_elevated,
+                        tokens.border_subtle,
+                        tokens.text_primary,
+                    )
                 };
 
                 // Indicator pill for selected / hovered item
                 let indicator =
                     Rectangle::new()
                         .width(3.0)
-                        .height(40.0)
+                        .height(36.0)
                         .radius(1.5)
                         .fill(if is_selected {
-                            amber_color
+                            tokens.accent
                         } else if is_hovered {
-                            hover_color
+                            tokens.border_hover
                         } else {
                             Color::TRANSPARENT
                         });
@@ -228,21 +214,19 @@ pub fn launcher_overlay() -> LayerWindow {
                         Rectangle::new()
                             .width(28.0)
                             .height(28.0)
-                            .radius(4.0)
-                            .fill(Color::from("#16161D"))
-                            .border(1.0, Color::from("#2A2A34"))
+                            .radius(crate::ui::tokens::radius::SM)
+                            .fill(tokens.surface)
+                            .border(1.0, tokens.border_subtle)
                             .align_child(Align::Center, Align::Center)
                             .child(
                                 Text::new("󰵆")
-                                    .size(14.0)
+                                    .size(crate::ui::tokens::typography::TITLE_SM)
                                     .color(if is_selected {
-                                        amber_color
-                                    } else if is_hovered {
-                                        hover_color
+                                        tokens.accent
                                     } else {
-                                        steel_color
+                                        tokens.text_secondary
                                     })
-                                    .font(&font),
+                                    .font(&tokens.font_family),
                             ),
                     ),
                 };
@@ -257,11 +241,16 @@ pub fn launcher_overlay() -> LayerWindow {
                 let text_col = Column::new(vec![
                     Box::new(
                         Text::new(app_name)
-                            .size(11.5)
+                            .size(crate::ui::tokens::typography::SECONDARY)
                             .color(title_color)
-                            .font(&font),
+                            .font(&tokens.font_family),
                     ),
-                    Box::new(Text::new(app_desc).size(8.5).color(steel_color).font(&font)),
+                    Box::new(
+                        Text::new(app_desc)
+                            .size(crate::ui::tokens::typography::BADGE)
+                            .color(tokens.text_secondary)
+                            .font(&tokens.font_family),
+                    ),
                 ])
                 .gap(2.0)
                 .width(140.0)
@@ -275,7 +264,7 @@ pub fn launcher_overlay() -> LayerWindow {
                 let app_card = Rectangle::new()
                     .width(204.0)
                     .height(64.0)
-                    .radius(8.0)
+                    .radius(crate::ui::tokens::radius::MD)
                     .fill(card_bg)
                     .border(if is_selected { 1.5 } else { 1.0 }, card_border)
                     .cursor(Pointer)
@@ -352,53 +341,92 @@ pub fn launcher_overlay() -> LayerWindow {
     } else if !launcher.query.trim().is_empty() {
         let empty_card = Rectangle::new()
             .width(Parent)
-            .height(60.0)
-            .radius(8.0)
-            .fill(overlay_color)
-            .border(1.0, Color::from("#34343D"))
+            .height(72.0)
+            .radius(crate::ui::tokens::radius::MD)
+            .fill(tokens.surface_elevated)
+            .border(1.0, tokens.border_subtle)
             .align_child(Align::Center, Align::Center)
             .child(
                 Column::new(vec![
                     Box::new(
                         Text::new("󰛐")
-                            .size(16.0)
-                            .color(Color::from(manifest.palette.muted.as_str()))
-                            .font(&font),
+                            .size(crate::ui::tokens::typography::TITLE_SM)
+                            .color(tokens.text_muted)
+                            .font(&tokens.font_family),
                     ),
                     Box::new(
                         Text::new(format!("No applications matching \"{}\"", launcher.query))
-                            .size(11.0)
-                            .color(Color::from(manifest.palette.muted.as_str()))
-                            .font(&font),
+                            .size(crate::ui::tokens::typography::SECONDARY)
+                            .color(tokens.text_secondary)
+                            .font(&tokens.font_family),
                     ),
                 ])
-                .gap(4.0)
+                .gap(crate::ui::tokens::spacing::GAP_XS)
                 .align(Align::Center),
             );
         rows.push(Box::new(empty_card));
     }
 
-    // Footer bar with navigation hints
-    let footer_text =
-        Text::new("[Arrows] Navigate Grid   [PgUp/PgDn] Page   [↵] Launch   [Esc] Dismiss")
-            .size(9.5)
-            .color(Color::from(manifest.palette.muted.as_str()))
-            .font(&font);
-
-    let footer_row = Rectangle::new()
-        .width(Parent)
-        .height(20.0)
-        .align_child(Align::Center, Align::Center)
-        .child(footer_text);
+    // Footer bar with keycaps
+    let footer_row = Row::new(vec![
+        Box::new(crate::ui::components::keycap("↑/↓/←/→", &tokens)),
+        Box::new(
+            Text::new("Navigate")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_family),
+        ),
+        Box::new(
+            Text::new("•")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_muted)
+                .font(&tokens.font_family),
+        ),
+        Box::new(crate::ui::components::keycap("PgUp/Dn", &tokens)),
+        Box::new(
+            Text::new("Page")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_family),
+        ),
+        Box::new(
+            Text::new("•")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_muted)
+                .font(&tokens.font_family),
+        ),
+        Box::new(crate::ui::components::keycap("↵ Enter", &tokens)),
+        Box::new(
+            Text::new("Launch")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_family),
+        ),
+        Box::new(
+            Text::new("•")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_muted)
+                .font(&tokens.font_family),
+        ),
+        Box::new(crate::ui::components::keycap("Esc", &tokens)),
+        Box::new(
+            Text::new("Dismiss")
+                .size(crate::ui::tokens::typography::BADGE)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_family),
+        ),
+    ])
+    .gap(6.0)
+    .align(Align::Center);
 
     rows.push(Box::new(footer_row));
 
     let dialog = Rectangle::new()
         .width(660.0)
         .height(460.0)
-        .radius(12.0)
-        .fill(bg_color)
-        .border(1.0, Color::from("#34343D"))
+        .radius(crate::ui::tokens::radius::LG)
+        .fill(tokens.surface)
+        .border(1.0, tokens.border_subtle)
         .padding(Padding {
             top: 14.0,
             bottom: 12.0,

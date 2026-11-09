@@ -217,6 +217,16 @@ impl WaylandState {
     /// 3. The output actively focused by the Wayland compositor via IPC query.
     /// 4. If neither is available, falls back to the first available output.
     pub fn current_focused_output(&self) -> Option<WlOutput> {
+        // 1. Authoritative compositor query for active/focused monitor
+        if let Some(matched) = crate::compositor::focused_output().and_then(|comp_output| {
+            self.output
+                .outputs()
+                .find(|out| self.output.info(out).and_then(|i| i.name).as_deref() == Some(&comp_output))
+        }) {
+            return Some(matched);
+        }
+
+        // 2. Output corresponding to the compositor's currently focused workspace
         let focused_ws_output = crate::Workspaces::read()
             .list()
             .iter()
@@ -231,6 +241,7 @@ impl WaylandState {
             return Some(matched);
         }
 
+        // 3. Tracked output from recent pointer or keyboard interaction on an Amane window
         if let Some(focused) = self
             .focused_output
             .as_ref()
@@ -239,14 +250,7 @@ impl WaylandState {
             return Some(focused.clone());
         }
 
-        if let Some(matched) = crate::compositor::focused_output().and_then(|comp_output| {
-            self.output
-                .outputs()
-                .find(|out| self.output.info(out).and_then(|i| i.name).as_deref() == Some(&comp_output))
-        }) {
-            return Some(matched);
-        }
-
+        // 4. Fallback to first available output
         self.output.outputs().next()
     }
 
@@ -256,10 +260,9 @@ impl WaylandState {
         self.ensure_plain_windows();
 
         let has_active_visible = self.windows.iter().any(|w| {
-            if let View::Plain { .. } = w.view
-                && let Role::Layer { settings, .. } = &w.role
-            {
-                settings.visible && matches!(settings.target_output, OutputTarget::Active)
+            if let View::Plain { view, .. } = w.view {
+                let cur = (view)();
+                cur.visible && matches!(cur.target_output, OutputTarget::Active)
             } else {
                 false
             }
@@ -283,14 +286,12 @@ impl WaylandState {
                 let View::Plain { id, view } = w.view else {
                     return None;
                 };
-                let Role::Layer { settings, .. } = &w.role else {
-                    return None;
-                };
-                if !settings.visible {
+                let cur = (view)();
+                if !cur.visible {
                     return None;
                 }
 
-                let target_output = match settings.target_output {
+                let target_output = match cur.target_output {
                     OutputTarget::Active => active.clone(),
                     OutputTarget::Named(name) => self.output.outputs().find(|out| {
                         self.output.info(out).and_then(|i| i.name) == Some(name.to_string())

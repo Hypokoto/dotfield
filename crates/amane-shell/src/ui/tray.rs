@@ -5,6 +5,7 @@ use amane::{
 
 use crate::config::ShellManifest;
 use crate::services::tray::TrayService;
+use crate::ui::tokens::{ThemeTokens, radius};
 
 /// Renders the compact Status Tray pill for the top bar.
 pub fn render_tray_pill(
@@ -12,9 +13,7 @@ pub fn render_tray_pill(
     font: &str,
     monitor_name: Option<&str>,
 ) -> Box<dyn Widget> {
-    let surface_color = Color::from(manifest.palette.surface.as_str());
-    let amber_color = Color::from(manifest.palette.highlight.as_str());
-    let border_color = Color::from(manifest.palette.border.as_str());
+    let tokens = ThemeTokens::from_manifest(manifest);
 
     let tray = TrayService::read();
     let mut items: Vec<Box<dyn Widget>> = Vec::new();
@@ -26,9 +25,9 @@ pub fn render_tray_pill(
         let app_pill = Rectangle::new()
             .width(22.0)
             .height(22.0)
-            .radius(4.0)
-            .fill(Color::from("#1C1C23"))
-            .border(1.0, border_color)
+            .radius(radius::SM)
+            .fill(tokens.surface_elevated)
+            .border(1.0, tokens.border_subtle)
             .cursor(Pointer)
             .align_child(Center, Center)
             .on_click(move |btn| {
@@ -41,7 +40,7 @@ pub fn render_tray_pill(
                     TrayService::activate(idx);
                 }
             })
-            .child(Text::new(glyph).size(12.0).color(amber_color).font(font));
+            .child(Text::new(glyph).size(12.0).color(tokens.accent).font(font));
 
         items.push(Box::new(app_pill));
     }
@@ -49,7 +48,7 @@ pub fn render_tray_pill(
     // Fallback: If no external SNI apps are registered, show a tray indicator icon
     if items.is_empty() {
         items.push(Box::new(
-            Text::new("󰀻").size(12.0).color(amber_color).font(font),
+            Text::new("󰀻").size(12.0).color(tokens.accent).font(font),
         ));
     }
 
@@ -63,9 +62,9 @@ pub fn render_tray_pill(
     let tray_container = Rectangle::new()
         .width(pill_w)
         .height(26.0)
-        .radius(6.0)
-        .fill(surface_color)
-        .border(1.0, border_color)
+        .radius(radius::SM)
+        .fill(tokens.surface)
+        .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .padding(Padding {
             top: 2.0,

@@ -2,12 +2,14 @@ use std::time::Duration;
 
 use amane::{
     Align, Audio, Battery, Bluetooth, Brightness, Center, Color, Column, Cpu, Horizontal, Justify,
-    Layer, LayerWindow, Margin, Media, Memory, Network, Notifications, OutputTarget, Padding,
-    Parent, Pointer, Rectangle, Row, Scroll, Service, Stack, Text, Vertical, Widget, Zone,
+    Key, Keyboard, Layer, LayerWindow, Margin, Media, Memory, Network, Notifications, OutputTarget,
+    Padding, Parent, Pointer, Rectangle, Row, Scroll, Service, Stack, Text, Vertical, Widget, Zone,
 };
 
-use crate::config::{ConfigService, ShellManifest};
+use crate::config::ConfigService;
 use crate::services::niri::NiriService;
+use crate::ui::components;
+use crate::ui::tokens::{ThemeTokens, radius, spacing, typography};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ActiveView {
@@ -73,76 +75,67 @@ pub fn control_center_panel() -> LayerWindow {
             .namespace("dotfield-shell-control-center");
     }
 
-    let bg_color = Color::from(manifest.palette.surface.as_str()); // Obsidian #121216
+    let tokens = ThemeTokens::from_manifest(&manifest);
+    let bg_color = tokens.surface;
     let font = manifest.theme.font_family.clone();
 
     let content: Column = match cc.view {
         ActiveView::Main => {
             let mut sections: Vec<Box<dyn Widget>> = vec![
-                Box::new(render_header(&manifest, &font)),
-                Box::new(render_system_overview(&manifest, &font)),
-                Box::new(render_quick_toggles(&manifest, cc.dnd, &font)),
-                Box::new(render_widget_shortcuts(&manifest, &font)),
-                Box::new(render_sliders(&manifest, &font)),
-                Box::new(render_appearance(&manifest, &font)),
+                Box::new(render_header(&tokens)),
+                Box::new(render_system_overview(&tokens, &font)),
+                Box::new(render_quick_toggles(&tokens, cc.dnd, &font)),
+                Box::new(render_widget_shortcuts(&tokens, &font)),
+                Box::new(render_sliders(&tokens, &font)),
+                Box::new(render_appearance(&tokens, &font)),
             ];
 
             if manifest.control_center.show_mpris {
-                sections.push(Box::new(render_media(&manifest, &font)));
+                sections.push(Box::new(render_media(&tokens, &font)));
             }
 
-            sections.push(Box::new(render_notifications_drawer(&manifest, &font)));
-            sections.push(Box::new(render_power_actions(&manifest, &font)));
+            sections.push(Box::new(render_notifications_drawer(&tokens, &font)));
+            sections.push(Box::new(render_power_actions(&tokens, &font)));
 
-            Column::new(sections).width(Parent).gap(10.0)
+            Column::new(sections).width(Parent).gap(spacing::GAP_MD)
         }
         ActiveView::Network => {
             let sections: Vec<Box<dyn Widget>> = vec![
-                Box::new(render_subview_header(
-                    "NetworkManager",
-                    "󰤨",
-                    &manifest,
-                    &font,
-                )),
+                Box::new(render_subview_header("NetworkManager", "󰤨", &tokens, &font)),
                 crate::ui::widgets::network::render_network_widget(&manifest, &font),
             ];
-            Column::new(sections).width(Parent).gap(10.0)
+            Column::new(sections).width(Parent).gap(spacing::GAP_MD)
         }
         ActiveView::Audio => {
             let sections: Vec<Box<dyn Widget>> = vec![
-                Box::new(render_subview_header(
-                    "PipeWire Audio",
-                    "󰕾",
-                    &manifest,
-                    &font,
-                )),
+                Box::new(render_subview_header("PipeWire Audio", "󰕾", &tokens, &font)),
                 crate::ui::widgets::audio::render_audio_widget(&manifest, &font),
             ];
-            Column::new(sections).width(Parent).gap(10.0)
+            Column::new(sections).width(Parent).gap(spacing::GAP_MD)
         }
         ActiveView::Bluetooth => {
             let sections: Vec<Box<dyn Widget>> = vec![
                 Box::new(render_subview_header(
                     "BlueZ Bluetooth",
                     "󰂯",
-                    &manifest,
+                    &tokens,
                     &font,
                 )),
                 crate::ui::widgets::bluetooth::render_bluetooth_widget(&manifest, &font),
             ];
-            Column::new(sections).width(Parent).gap(10.0)
+            Column::new(sections).width(Parent).gap(spacing::GAP_MD)
         }
         ActiveView::Tray => {
             let sections: Vec<Box<dyn Widget>> = vec![
                 Box::new(render_subview_header(
                     "System Tray & Apps",
                     "󰀻",
-                    &manifest,
+                    &tokens,
                     &font,
                 )),
                 crate::ui::tray::render_tray_drawer(&manifest, &font),
             ];
-            Column::new(sections).width(Parent).gap(10.0)
+            Column::new(sections).width(Parent).gap(spacing::GAP_MD)
         }
     };
 
@@ -157,14 +150,14 @@ pub fn control_center_panel() -> LayerWindow {
     let panel = Rectangle::new()
         .width(380.0)
         .height(panel_height)
-        .radius(12.0)
+        .radius(radius::LG)
         .fill(bg_color)
-        .border(1.0, Color::from("#34343D"))
+        .border(1.0, tokens.border_subtle)
         .padding(Padding {
-            top: 14.0,
-            bottom: 14.0,
-            left: 14.0,
-            right: 14.0,
+            top: spacing::PAD_MD,
+            bottom: spacing::PAD_MD,
+            left: spacing::PAD_MD,
+            right: spacing::PAD_MD,
         })
         .child(content);
 
@@ -181,64 +174,27 @@ pub fn control_center_panel() -> LayerWindow {
             left: 0,
         })
         .layer(Layer::Top)
+        .keyboard(if is_visible {
+            Keyboard::OnDemand
+        } else {
+            Keyboard::None
+        })
+        .on_key(|key| {
+            if key == Key::Escape {
+                close();
+            }
+        })
         .space(Zone::Ignore)
         .visible(is_visible)
         .namespace("dotfield-shell-control-center")
         .child(panel)
 }
 
-fn render_header(manifest: &ShellManifest, font: &str) -> Rectangle {
-    let amber_color = Color::from(manifest.palette.highlight.as_str());
-    let fg_color = Color::from(manifest.palette.foreground.as_str());
-    let muted_color = Color::from(manifest.palette.muted.as_str());
-
-    let title_block = Row::new(vec![
-        Box::new(Text::new("󰒓").size(14.0).color(amber_color).font(font)),
-        Box::new(
-            Text::new("CONTROL CENTER")
-                .size(11.0)
-                .color(fg_color)
-                .font(font),
-        ),
-        Box::new(
-            Text::new("• Niri+Amane")
-                .size(10.0)
-                .color(muted_color)
-                .font(font),
-        ),
-    ])
-    .gap(8.0)
-    .align(Align::Center);
-
-    let close_btn = Rectangle::new()
-        .width(24.0)
-        .height(24.0)
-        .radius(4.0)
-        .fill(Color::from(manifest.palette.overlay.as_str()))
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| close())
-        .child(Text::new("󰅖").size(11.0).color(fg_color).font(font));
-
-    let header_row = Row::new(vec![Box::new(title_block), Box::new(close_btn)])
-        .width(Parent)
-        .justify(Justify::SpaceBetween)
-        .align(Align::Center);
-
-    Rectangle::new()
-        .width(Parent)
-        .height(28.0)
-        .child(header_row)
+fn render_header(tokens: &ThemeTokens) -> Rectangle {
+    components::modal_header("󰒓", "Control Center", Some("Niri+Amane"), tokens, close)
 }
 
-fn render_system_overview(manifest: &ShellManifest, font: &str) -> Rectangle {
-    let overlay_color = Color::from(manifest.palette.overlay.as_str()); // Graphite #1C1C23
-    let amber_color = Color::from(manifest.palette.highlight.as_str()); // Industrial Amber #FFB000
-    let hover_color = Color::from(manifest.palette.hover.as_str()); // Pale Amber #FFD166
-    let fg_color = Color::from(manifest.palette.foreground.as_str()); // Bone #E8E6E3
-    let crimson_color = Color::from(manifest.palette.accent.as_str()); // Crimson #E63946
-    let border_color = Color::from(manifest.palette.border.as_str()); // Iron #34343D
-
+fn render_system_overview(tokens: &ThemeTokens, font: &str) -> Rectangle {
     let cpu = Cpu::read().percent();
     let mem = Memory::read();
     let mem_pct = mem.percent();
@@ -250,12 +206,20 @@ fn render_system_overview(manifest: &ShellManifest, font: &str) -> Rectangle {
     let mut metrics: Vec<Box<dyn Widget>> = Vec::new();
 
     // CPU Card
+    let cpu_color = if cpu > 80 {
+        tokens.danger
+    } else if cpu > 50 {
+        tokens.border_focus
+    } else {
+        tokens.accent
+    };
+
     let cpu_card = Rectangle::new()
         .width(112.0)
         .height(48.0)
-        .radius(6.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .padding(Padding {
             top: 4.0,
             bottom: 4.0,
@@ -266,20 +230,14 @@ fn render_system_overview(manifest: &ShellManifest, font: &str) -> Rectangle {
             Column::new(vec![
                 Box::new(
                     Text::new("󰍛 CPU")
-                        .size(10.0)
-                        .color(if cpu > 80 {
-                            crimson_color
-                        } else if cpu > 50 {
-                            hover_color
-                        } else {
-                            amber_color
-                        })
+                        .size(typography::BADGE)
+                        .color(cpu_color)
                         .font(font),
                 ),
                 Box::new(
                     Text::new(format!("{cpu}%"))
-                        .size(13.0)
-                        .color(fg_color)
+                        .size(typography::TITLE_SM)
+                        .color(tokens.text_primary)
                         .font(font),
                 ),
             ])
@@ -288,12 +246,20 @@ fn render_system_overview(manifest: &ShellManifest, font: &str) -> Rectangle {
     metrics.push(Box::new(cpu_card));
 
     // RAM Card
+    let ram_color = if mem_pct > 85 {
+        tokens.danger
+    } else if mem_pct > 70 {
+        tokens.border_focus
+    } else {
+        tokens.accent
+    };
+
     let ram_card = Rectangle::new()
         .width(112.0)
         .height(48.0)
-        .radius(6.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .padding(Padding {
             top: 4.0,
             bottom: 4.0,
@@ -304,20 +270,14 @@ fn render_system_overview(manifest: &ShellManifest, font: &str) -> Rectangle {
             Column::new(vec![
                 Box::new(
                     Text::new("󰘚 RAM")
-                        .size(10.0)
-                        .color(if mem_pct > 85 {
-                            crimson_color
-                        } else if mem_pct > 70 {
-                            hover_color
-                        } else {
-                            amber_color
-                        })
+                        .size(typography::BADGE)
+                        .color(ram_color)
                         .font(font),
                 ),
                 Box::new(
                     Text::new(format!("{mem_pct}% ({used_gib:.1}/{total_gib:.0}G)"))
-                        .size(11.0)
-                        .color(fg_color)
+                        .size(typography::SECONDARY)
+                        .color(tokens.text_primary)
                         .font(font),
                 ),
             ])
@@ -335,9 +295,9 @@ fn render_system_overview(manifest: &ShellManifest, font: &str) -> Rectangle {
     let bat_card = Rectangle::new()
         .width(112.0)
         .height(48.0)
-        .radius(6.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .padding(Padding {
             top: 4.0,
             bottom: 4.0,
@@ -346,8 +306,18 @@ fn render_system_overview(manifest: &ShellManifest, font: &str) -> Rectangle {
         })
         .child(
             Column::new(vec![
-                Box::new(Text::new("POWER").size(10.0).color(amber_color).font(font)),
-                Box::new(Text::new(bat_text).size(11.0).color(fg_color).font(font)),
+                Box::new(
+                    Text::new("POWER")
+                        .size(typography::BADGE)
+                        .color(tokens.accent)
+                        .font(font),
+                ),
+                Box::new(
+                    Text::new(bat_text)
+                        .size(typography::SECONDARY)
+                        .color(tokens.text_primary)
+                        .font(font),
+                ),
             ])
             .gap(2.0),
         );
@@ -361,13 +331,7 @@ fn render_system_overview(manifest: &ShellManifest, font: &str) -> Rectangle {
     )
 }
 
-fn render_quick_toggles(manifest: &ShellManifest, dnd: bool, font: &str) -> Rectangle {
-    let overlay_color = Color::from(manifest.palette.overlay.as_str()); // Graphite #1C1C23
-    let amber_color = Color::from(manifest.palette.highlight.as_str()); // Industrial Amber #FFB000
-    let crimson_color = Color::from(manifest.palette.accent.as_str()); // Crimson #E63946
-    let fg_color = Color::from(manifest.palette.foreground.as_str()); // Bone #E8E6E3
-    let border_color = Color::from(manifest.palette.border.as_str()); // Iron #34343D
-
+fn render_quick_toggles(tokens: &ThemeTokens, dnd: bool, font: &str) -> Rectangle {
     let network = Network::read();
     let bluetooth = Bluetooth::read();
 
@@ -378,18 +342,18 @@ fn render_quick_toggles(manifest: &ShellManifest, dnd: bool, font: &str) -> Rect
     let wifi_btn = Rectangle::new()
         .width(110.0)
         .height(38.0)
-        .radius(6.0)
+        .radius(radius::SM)
         .fill(if wifi_active {
-            amber_color
+            tokens.accent
         } else {
-            overlay_color
+            tokens.surface_elevated
         })
         .border(
             1.0,
             if wifi_active {
-                Color::from("#FFD166")
+                tokens.border_focus
             } else {
-                border_color
+                tokens.border_subtle
             },
         )
         .cursor(Pointer)
@@ -404,8 +368,12 @@ fn render_quick_toggles(manifest: &ShellManifest, dnd: bool, font: &str) -> Rect
             } else {
                 "󰤭 Wi-Fi"
             })
-            .size(11.0)
-            .color(if wifi_active { Color::BLACK } else { fg_color })
+            .size(typography::SECONDARY)
+            .color(if wifi_active {
+                Color::BLACK
+            } else {
+                tokens.text_primary
+            })
             .font(font),
         );
     toggles.push(Box::new(wifi_btn));
@@ -415,18 +383,18 @@ fn render_quick_toggles(manifest: &ShellManifest, dnd: bool, font: &str) -> Rect
     let bt_btn = Rectangle::new()
         .width(110.0)
         .height(38.0)
-        .radius(6.0)
+        .radius(radius::SM)
         .fill(if bt_active {
-            amber_color
+            tokens.accent
         } else {
-            overlay_color
+            tokens.surface_elevated
         })
         .border(
             1.0,
             if bt_active {
-                Color::from("#FFD166")
+                tokens.border_focus
             } else {
-                border_color
+                tokens.border_subtle
             },
         )
         .cursor(Pointer)
@@ -440,8 +408,12 @@ fn render_quick_toggles(manifest: &ShellManifest, dnd: bool, font: &str) -> Rect
             } else {
                 "󰂲 BT Off"
             })
-            .size(11.0)
-            .color(if bt_active { Color::BLACK } else { fg_color })
+            .size(typography::SECONDARY)
+            .color(if bt_active {
+                Color::BLACK
+            } else {
+                tokens.text_primary
+            })
             .font(font),
         );
     toggles.push(Box::new(bt_btn));
@@ -450,14 +422,18 @@ fn render_quick_toggles(manifest: &ShellManifest, dnd: bool, font: &str) -> Rect
     let dnd_btn = Rectangle::new()
         .width(110.0)
         .height(38.0)
-        .radius(6.0)
-        .fill(if dnd { crimson_color } else { overlay_color })
+        .radius(radius::SM)
+        .fill(if dnd {
+            tokens.danger
+        } else {
+            tokens.surface_elevated
+        })
         .border(
             1.0,
             if dnd {
-                Color::from("#FF6B76")
+                tokens.border_danger
             } else {
-                border_color
+                tokens.border_subtle
             },
         )
         .cursor(Pointer)
@@ -468,8 +444,12 @@ fn render_quick_toggles(manifest: &ShellManifest, dnd: bool, font: &str) -> Rect
         })
         .child(
             Text::new(if dnd { "󰂛 DND" } else { "󰂚 DND" })
-                .size(11.0)
-                .color(if dnd { Color::WHITE } else { fg_color })
+                .size(typography::SECONDARY)
+                .color(if dnd {
+                    Color::WHITE
+                } else {
+                    tokens.text_primary
+                })
                 .font(font),
         );
     toggles.push(Box::new(dnd_btn));
@@ -482,98 +462,45 @@ fn render_quick_toggles(manifest: &ShellManifest, dnd: bool, font: &str) -> Rect
     )
 }
 
-fn render_widget_shortcuts(manifest: &ShellManifest, font: &str) -> Rectangle {
-    let overlay_color = Color::from(manifest.palette.overlay.as_str());
-    let amber_color = Color::from(manifest.palette.highlight.as_str());
-    let fg_color = Color::from(manifest.palette.foreground.as_str());
-    let border_color = Color::from(manifest.palette.border.as_str());
-
-    let net_shortcut = Rectangle::new()
-        .width(82.0)
-        .height(30.0)
-        .radius(6.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            open_view(ActiveView::Network);
-        })
-        .child(
-            Row::new(vec![
-                Box::new(Text::new("󰤨").size(12.0).color(amber_color).font(font)),
-                Box::new(Text::new("Net ❯").size(10.0).color(fg_color).font(font)),
-            ])
-            .gap(3.0)
-            .align(Align::Center),
-        );
-
-    let audio_shortcut = Rectangle::new()
-        .width(82.0)
-        .height(30.0)
-        .radius(6.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            open_view(ActiveView::Audio);
-        })
-        .child(
-            Row::new(vec![
-                Box::new(Text::new("󰕾").size(12.0).color(amber_color).font(font)),
-                Box::new(Text::new("Audio ❯").size(10.0).color(fg_color).font(font)),
-            ])
-            .gap(3.0)
-            .align(Align::Center),
-        );
-
-    let bt_shortcut = Rectangle::new()
-        .width(82.0)
-        .height(30.0)
-        .radius(6.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            open_view(ActiveView::Bluetooth);
-        })
-        .child(
-            Row::new(vec![
-                Box::new(Text::new("󰂯").size(12.0).color(amber_color).font(font)),
-                Box::new(Text::new("BlueZ ❯").size(10.0).color(fg_color).font(font)),
-            ])
-            .gap(3.0)
-            .align(Align::Center),
-        );
-
-    let tray_shortcut = Rectangle::new()
-        .width(82.0)
-        .height(30.0)
-        .radius(6.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            open_view(ActiveView::Tray);
-        })
-        .child(
-            Row::new(vec![
-                Box::new(Text::new("󰀻").size(12.0).color(amber_color).font(font)),
-                Box::new(Text::new("Tray ❯").size(10.0).color(fg_color).font(font)),
-            ])
-            .gap(3.0)
-            .align(Align::Center),
-        );
+fn render_widget_shortcuts(tokens: &ThemeTokens, font: &str) -> Rectangle {
+    let make_shortcut = |icon: &'static str, label: &'static str, view: ActiveView| {
+        Rectangle::new()
+            .width(82.0)
+            .height(30.0)
+            .radius(radius::SM)
+            .fill(tokens.surface_elevated)
+            .border(1.0, tokens.border_subtle)
+            .cursor(Pointer)
+            .align_child(Center, Center)
+            .on_click(move |_| {
+                open_view(view);
+            })
+            .child(
+                Row::new(vec![
+                    Box::new(
+                        Text::new(icon)
+                            .size(typography::BODY)
+                            .color(tokens.accent)
+                            .font(font),
+                    ),
+                    Box::new(
+                        Text::new(label)
+                            .size(typography::CAPTION)
+                            .color(tokens.text_secondary)
+                            .font(font),
+                    ),
+                ])
+                .gap(3.0)
+                .align(Align::Center),
+            )
+    };
 
     Rectangle::new().width(Parent).height(30.0).child(
         Row::new(vec![
-            Box::new(net_shortcut),
-            Box::new(audio_shortcut),
-            Box::new(bt_shortcut),
-            Box::new(tray_shortcut),
+            Box::new(make_shortcut("󰤨", "Net ❯", ActiveView::Network)),
+            Box::new(make_shortcut("󰕾", "Audio ❯", ActiveView::Audio)),
+            Box::new(make_shortcut("󰂯", "BlueZ ❯", ActiveView::Bluetooth)),
+            Box::new(make_shortcut("󰀻", "Tray ❯", ActiveView::Tray)),
         ])
         .width(Parent)
         .justify(Justify::SpaceBetween)
@@ -581,24 +508,13 @@ fn render_widget_shortcuts(manifest: &ShellManifest, font: &str) -> Rectangle {
     )
 }
 
-fn render_subview_header(
-    title: &str,
-    icon: &str,
-    manifest: &ShellManifest,
-    font: &str,
-) -> Rectangle {
-    let amber_color = Color::from(manifest.palette.highlight.as_str());
-    let fg_color = Color::from(manifest.palette.foreground.as_str());
-    let hover_color = Color::from(manifest.palette.hover.as_str());
-    let overlay_color = Color::from(manifest.palette.overlay.as_str());
-    let border_color = Color::from(manifest.palette.border.as_str());
-
+fn render_subview_header(title: &str, icon: &str, tokens: &ThemeTokens, font: &str) -> Rectangle {
     let back_btn = Rectangle::new()
         .width(82.0)
         .height(28.0)
-        .radius(6.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(|_| {
@@ -607,32 +523,36 @@ fn render_subview_header(
         })
         .child(
             Row::new(vec![
-                Box::new(Text::new("❮").size(11.0).color(amber_color).font(font)),
-                Box::new(Text::new("Overview").size(10.0).color(fg_color).font(font)),
+                Box::new(Text::new("❮").size(11.0).color(tokens.accent).font(font)),
+                Box::new(
+                    Text::new("Overview")
+                        .size(typography::SECONDARY)
+                        .color(tokens.text_primary)
+                        .font(font),
+                ),
             ])
-            .gap(4.0)
+            .gap(spacing::GAP_XS)
             .align(Align::Center),
         );
 
     let title_block = Row::new(vec![
-        Box::new(Text::new(icon).size(14.0).color(amber_color).font(font)),
-        Box::new(Text::new(title).size(12.0).color(fg_color).font(font)),
+        Box::new(
+            Text::new(icon)
+                .size(typography::BODY)
+                .color(tokens.accent)
+                .font(font),
+        ),
+        Box::new(
+            Text::new(title)
+                .size(typography::BODY)
+                .color(tokens.text_primary)
+                .font(font),
+        ),
     ])
-    .gap(6.0)
+    .gap(spacing::GAP_SM)
     .align(Align::Center);
 
-    let close_btn = Rectangle::new()
-        .width(28.0)
-        .height(28.0)
-        .radius(6.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            close();
-        })
-        .child(Text::new("󰅖").size(12.0).color(hover_color).font(font));
+    let close_btn = components::close_button(close, tokens);
 
     Rectangle::new().width(Parent).height(28.0).child(
         Row::new(vec![
@@ -646,14 +566,7 @@ fn render_subview_header(
     )
 }
 
-fn render_sliders(manifest: &ShellManifest, font: &str) -> Rectangle {
-    let overlay_color = Color::from(manifest.palette.overlay.as_str()); // Graphite #1C1C23
-    let amber_color = Color::from(manifest.palette.highlight.as_str()); // Industrial Amber #FFB000
-    let crimson_color = Color::from(manifest.palette.accent.as_str()); // Crimson #E63946
-    let fg_color = Color::from(manifest.palette.foreground.as_str()); // Bone #E8E6E3
-    let border_color = Color::from(manifest.palette.border.as_str()); // Iron #34343D
-    let steel_color = Color::from(manifest.palette.steel.as_str()); // Steel #8B949E
-
+fn render_sliders(tokens: &ThemeTokens, font: &str) -> Rectangle {
     let audio = Audio::read();
     let vol = audio.volume();
     let is_muted = audio.muted();
@@ -666,39 +579,47 @@ fn render_sliders(manifest: &ShellManifest, font: &str) -> Rectangle {
     let vol_slider_w = 280.0;
     let vol_fill_w = (vol_slider_w * (vol as f32 / 100.0)).clamp(0.0, vol_slider_w);
     let vol_fill_color = if is_muted {
-        Color::from("#3D2024") // Muted Crimson tint
+        tokens.danger_subtle
     } else {
-        Color::from("#382E15") // Rich Amber tint
+        tokens.accent_subtle
     };
 
     let vol_bg_rect = Rectangle::new()
         .width(vol_slider_w)
         .height(34.0)
-        .radius(6.0)
-        .fill(overlay_color)
-        .border(1.0, border_color);
+        .radius(radius::SM)
+        .fill(tokens.surface_track)
+        .border(1.0, tokens.border_subtle);
 
     let vol_fill_rect = Rectangle::new()
         .width(vol_fill_w)
         .height(34.0)
-        .radius(6.0)
+        .radius(radius::SM)
         .fill(vol_fill_color);
 
     let vol_label_row = Row::new(vec![
         Box::new(
             Text::new(if is_muted { "󰖁" } else { "󰕾" })
-                .size(13.0)
-                .color(if is_muted { crimson_color } else { amber_color })
+                .size(typography::BODY_LG)
+                .color(if is_muted {
+                    tokens.danger
+                } else {
+                    tokens.accent
+                })
                 .font(font),
         ),
         Box::new(
             Text::new(format!("Volume {vol}%"))
-                .size(11.0)
-                .color(if is_muted { steel_color } else { fg_color })
+                .size(typography::SECONDARY)
+                .color(if is_muted {
+                    tokens.text_secondary
+                } else {
+                    tokens.text_primary
+                })
                 .font(font),
         ),
     ])
-    .gap(8.0)
+    .gap(spacing::GAP_SM)
     .align(Align::Center);
 
     let vol_content = Rectangle::new()
@@ -734,18 +655,18 @@ fn render_sliders(manifest: &ShellManifest, font: &str) -> Rectangle {
     let mute_btn = Rectangle::new()
         .width(60.0)
         .height(34.0)
-        .radius(6.0)
+        .radius(radius::SM)
         .fill(if is_muted {
-            crimson_color
+            tokens.danger
         } else {
-            overlay_color
+            tokens.surface_elevated
         })
         .border(
             1.0,
             if is_muted {
-                Color::from("#FF6B76")
+                tokens.border_danger
             } else {
-                border_color
+                tokens.border_subtle
             },
         )
         .cursor(Pointer)
@@ -755,8 +676,12 @@ fn render_sliders(manifest: &ShellManifest, font: &str) -> Rectangle {
         })
         .child(
             Text::new(if is_muted { "Muted" } else { "Mute" })
-                .size(10.0)
-                .color(if is_muted { Color::WHITE } else { fg_color })
+                .size(typography::BADGE)
+                .color(if is_muted {
+                    Color::WHITE
+                } else {
+                    tokens.text_primary
+                })
                 .font(font),
         );
 
@@ -769,31 +694,36 @@ fn render_sliders(manifest: &ShellManifest, font: &str) -> Rectangle {
     // Brightness Slider Row with Stacked Visual Track
     let bright_slider_w = 352.0;
     let bright_fill_w = (bright_slider_w * (bright as f32 / 100.0)).clamp(0.0, bright_slider_w);
-    let bright_fill_color = Color::from("#382E15"); // Rich Amber tint
+    let bright_fill_color = tokens.accent_subtle;
 
     let bright_bg_rect = Rectangle::new()
         .width(bright_slider_w)
         .height(34.0)
-        .radius(6.0)
-        .fill(overlay_color)
-        .border(1.0, border_color);
+        .radius(radius::SM)
+        .fill(tokens.surface_track)
+        .border(1.0, tokens.border_subtle);
 
     let bright_fill_rect = Rectangle::new()
         .width(bright_fill_w)
         .height(34.0)
-        .radius(6.0)
+        .radius(radius::SM)
         .fill(bright_fill_color);
 
     let bright_label_row = Row::new(vec![
-        Box::new(Text::new("󰃠").size(13.0).color(amber_color).font(font)),
+        Box::new(
+            Text::new("󰃠")
+                .size(typography::BODY_LG)
+                .color(tokens.accent)
+                .font(font),
+        ),
         Box::new(
             Text::new(format!("Brightness {bright}%"))
-                .size(11.0)
-                .color(fg_color)
+                .size(typography::SECONDARY)
+                .color(tokens.text_primary)
                 .font(font),
         ),
     ])
-    .gap(8.0)
+    .gap(spacing::GAP_SM)
     .align(Align::Center);
 
     let bright_content = Rectangle::new()
@@ -830,34 +760,34 @@ fn render_sliders(manifest: &ShellManifest, font: &str) -> Rectangle {
 
     Rectangle::new()
         .width(Parent)
-        .height(72.0)
-        .child(Column::new(rows).gap(8.0))
+        .height(76.0)
+        .child(Column::new(rows).gap(spacing::GAP_SM))
 }
 
-fn render_appearance(manifest: &ShellManifest, font: &str) -> Rectangle {
-    let overlay_color = Color::from(manifest.palette.overlay.as_str());
-    let amber_color = Color::from(manifest.palette.highlight.as_str());
-    let fg_color = Color::from(manifest.palette.foreground.as_str());
-    let border_color = Color::from(manifest.palette.border.as_str());
-
+fn render_appearance(tokens: &ThemeTokens, font: &str) -> Rectangle {
     let theme_badge = Row::new(vec![
-        Box::new(Text::new("󰔎").size(13.0).color(amber_color).font(font)),
+        Box::new(
+            Text::new("󰔎")
+                .size(typography::BODY_LG)
+                .color(tokens.accent)
+                .font(font),
+        ),
         Box::new(
             Text::new("Controlled Chaos Theme")
-                .size(11.0)
-                .color(fg_color)
+                .size(typography::SECONDARY)
+                .color(tokens.text_primary)
                 .font(font),
         ),
     ])
-    .gap(8.0)
+    .gap(spacing::GAP_SM)
     .align(Align::Center);
 
     let wallpaper_btn = Rectangle::new()
         .width(110.0)
         .height(26.0)
-        .radius(4.0)
-        .fill(amber_color)
-        .border(1.0, Color::from("#FFD166"))
+        .radius(radius::SM)
+        .fill(tokens.accent)
+        .border(1.0, tokens.accent_hover)
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(|_| {
@@ -867,7 +797,7 @@ fn render_appearance(manifest: &ShellManifest, font: &str) -> Rectangle {
         })
         .child(
             Text::new("󰸉 Next Wall")
-                .size(10.0)
+                .size(typography::BADGE)
                 .color(Color::BLACK)
                 .font(font),
         );
@@ -880,9 +810,9 @@ fn render_appearance(manifest: &ShellManifest, font: &str) -> Rectangle {
     Rectangle::new()
         .width(Parent)
         .height(34.0)
-        .radius(6.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,
@@ -893,12 +823,7 @@ fn render_appearance(manifest: &ShellManifest, font: &str) -> Rectangle {
         .child(row)
 }
 
-fn render_media(manifest: &ShellManifest, font: &str) -> Rectangle {
-    let overlay_color = Color::from(manifest.palette.overlay.as_str());
-    let amber_color = Color::from(manifest.palette.highlight.as_str());
-    let fg_color = Color::from(manifest.palette.foreground.as_str());
-    let border_color = Color::from(manifest.palette.border.as_str());
-
+fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
     let media = Media::read();
     let playing = media.playing();
 
@@ -913,9 +838,9 @@ fn render_media(manifest: &ShellManifest, font: &str) -> Rectangle {
     Rectangle::new()
         .width(Parent)
         .height(64.0)
-        .radius(6.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .padding(Padding {
             top: 6.0,
             bottom: 6.0,
@@ -924,34 +849,44 @@ fn render_media(manifest: &ShellManifest, font: &str) -> Rectangle {
         })
         .child(
             Column::new(vec![
-                Box::new(Text::new(title_text).size(11.0).color(fg_color).font(font)),
+                Box::new(
+                    Text::new(title_text)
+                        .size(typography::SECONDARY)
+                        .color(tokens.text_primary)
+                        .font(font),
+                ),
                 Box::new(
                     Row::new(vec![
                         Box::new(
                             Rectangle::new()
                                 .width(34.0)
                                 .height(24.0)
-                                .radius(4.0)
-                                .fill(Color::from(manifest.palette.muted.as_str()))
-                                .border(1.0, Color::from("#262630"))
+                                .radius(radius::SM)
+                                .fill(tokens.surface_track)
+                                .border(1.0, tokens.border_subtle)
                                 .cursor(Pointer)
                                 .align_child(Center, Center)
                                 .on_click(|_| Media::previous())
-                                .child(Text::new("󰒮").size(11.0).color(fg_color).font(font)),
+                                .child(
+                                    Text::new("󰒮")
+                                        .size(typography::SECONDARY)
+                                        .color(tokens.text_primary)
+                                        .font(font),
+                                ),
                         ),
                         Box::new(
                             Rectangle::new()
                                 .width(34.0)
                                 .height(24.0)
-                                .radius(4.0)
-                                .fill(amber_color)
-                                .border(1.0, Color::from("#FFD166"))
+                                .radius(radius::SM)
+                                .fill(tokens.accent)
+                                .border(1.0, tokens.accent_hover)
                                 .cursor(Pointer)
                                 .align_child(Center, Center)
                                 .on_click(|_| Media::play_pause())
                                 .child(
                                     Text::new(play_pause_icon)
-                                        .size(13.0)
+                                        .size(typography::BODY_LG)
                                         .color(Color::BLACK)
                                         .font(font),
                                 ),
@@ -960,50 +895,55 @@ fn render_media(manifest: &ShellManifest, font: &str) -> Rectangle {
                             Rectangle::new()
                                 .width(34.0)
                                 .height(24.0)
-                                .radius(4.0)
-                                .fill(Color::from(manifest.palette.muted.as_str()))
-                                .border(1.0, Color::from("#262630"))
+                                .radius(radius::SM)
+                                .fill(tokens.surface_track)
+                                .border(1.0, tokens.border_subtle)
                                 .cursor(Pointer)
                                 .align_child(Center, Center)
                                 .on_click(|_| Media::next())
-                                .child(Text::new("󰒭").size(11.0).color(fg_color).font(font)),
+                                .child(
+                                    Text::new("󰒭")
+                                        .size(typography::SECONDARY)
+                                        .color(tokens.text_primary)
+                                        .font(font),
+                                ),
                         ),
                     ])
-                    .gap(10.0)
+                    .gap(spacing::GAP_MD)
                     .align(Align::Center),
                 ),
             ])
-            .gap(4.0),
+            .gap(spacing::GAP_XS),
         )
 }
 
-fn render_notifications_drawer(manifest: &ShellManifest, font: &str) -> Rectangle {
-    let overlay_color = Color::from(manifest.palette.overlay.as_str());
-    let crimson_color = Color::from(manifest.palette.accent.as_str());
-    let fg_color = Color::from(manifest.palette.foreground.as_str());
-    let border_color = Color::from(manifest.palette.border.as_str());
-
+fn render_notifications_drawer(tokens: &ThemeTokens, font: &str) -> Rectangle {
     let notifications = Notifications::read();
     let notifs_count = notifications.list().len();
 
     let header_row = Row::new(vec![
         Box::new(
             Text::new(format!("Notifications ({notifs_count})"))
-                .size(11.0)
-                .color(fg_color)
+                .size(typography::SECONDARY)
+                .color(tokens.text_primary)
                 .font(font),
         ),
         Box::new(
             Rectangle::new()
                 .width(56.0)
                 .height(20.0)
-                .radius(4.0)
-                .fill(crimson_color)
-                .border(1.0, Color::from("#FF6B76"))
+                .radius(radius::SM)
+                .fill(tokens.danger)
+                .border(1.0, tokens.border_danger)
                 .cursor(Pointer)
                 .align_child(Center, Center)
                 .on_click(|_| Notifications::clear())
-                .child(Text::new("Clear").size(10.0).color(Color::WHITE).font(font)),
+                .child(
+                    Text::new("Clear")
+                        .size(typography::BADGE)
+                        .color(Color::WHITE)
+                        .font(font),
+                ),
         ),
     ])
     .width(Parent)
@@ -1013,9 +953,9 @@ fn render_notifications_drawer(manifest: &ShellManifest, font: &str) -> Rectangl
     Rectangle::new()
         .width(Parent)
         .height(80.0)
-        .radius(6.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .padding(Padding {
             top: 8.0,
             bottom: 8.0,
@@ -1031,30 +971,25 @@ fn render_notifications_drawer(manifest: &ShellManifest, font: &str) -> Rectangl
                     } else {
                         "Recent notifications shown in overlay"
                     })
-                    .size(10.0)
-                    .color(Color::from(manifest.palette.muted.as_str()))
+                    .size(typography::BADGE)
+                    .color(tokens.text_muted)
                     .font(font),
                 ),
             ])
-            .gap(8.0),
+            .gap(spacing::GAP_SM),
         )
 }
 
-fn render_power_actions(manifest: &ShellManifest, font: &str) -> Rectangle {
-    let overlay_color = Color::from(manifest.palette.overlay.as_str());
-    let crimson_color = Color::from(manifest.palette.accent.as_str());
-    let fg_color = Color::from(manifest.palette.foreground.as_str());
-    let border_color = Color::from(manifest.palette.border.as_str());
-
+fn render_power_actions(tokens: &ThemeTokens, font: &str) -> Rectangle {
     let mut btns: Vec<Box<dyn Widget>> = Vec::new();
 
     // Lock
     let lock_btn = Rectangle::new()
         .width(64.0)
         .height(30.0)
-        .radius(4.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(|_| {
@@ -1063,16 +998,21 @@ fn render_power_actions(manifest: &ShellManifest, font: &str) -> Rectangle {
                 .spawn();
             close();
         })
-        .child(Text::new("󰌾 Lock").size(10.0).color(fg_color).font(font));
+        .child(
+            Text::new("󰌾 Lock")
+                .size(typography::BADGE)
+                .color(tokens.text_primary)
+                .font(font),
+        );
     btns.push(Box::new(lock_btn));
 
     // Suspend
     let suspend_btn = Rectangle::new()
         .width(64.0)
         .height(30.0)
-        .radius(4.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(|_| {
@@ -1081,16 +1021,21 @@ fn render_power_actions(manifest: &ShellManifest, font: &str) -> Rectangle {
                 .spawn();
             close();
         })
-        .child(Text::new("󰒲 Sleep").size(10.0).color(fg_color).font(font));
+        .child(
+            Text::new("󰒲 Sleep")
+                .size(typography::BADGE)
+                .color(tokens.text_primary)
+                .font(font),
+        );
     btns.push(Box::new(suspend_btn));
 
     // Reboot
     let reboot_btn = Rectangle::new()
         .width(64.0)
         .height(30.0)
-        .radius(4.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(|_| {
@@ -1099,16 +1044,21 @@ fn render_power_actions(manifest: &ShellManifest, font: &str) -> Rectangle {
                 .spawn();
             close();
         })
-        .child(Text::new("󰜉 Reboot").size(10.0).color(fg_color).font(font));
+        .child(
+            Text::new("󰜉 Reboot")
+                .size(typography::BADGE)
+                .color(tokens.text_primary)
+                .font(font),
+        );
     btns.push(Box::new(reboot_btn));
 
     // Poweroff
     let poweroff_btn = Rectangle::new()
         .width(64.0)
         .height(30.0)
-        .radius(4.0)
-        .fill(crimson_color)
-        .border(1.0, Color::from("#9D0208")) // Blood Red critical emphasis
+        .radius(radius::SM)
+        .fill(tokens.danger)
+        .border(1.0, tokens.border_danger)
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(|_| {
@@ -1119,7 +1069,7 @@ fn render_power_actions(manifest: &ShellManifest, font: &str) -> Rectangle {
         })
         .child(
             Text::new("󰐥 Power")
-                .size(10.0)
+                .size(typography::BADGE)
                 .color(Color::WHITE)
                 .font(font),
         );
@@ -1129,16 +1079,21 @@ fn render_power_actions(manifest: &ShellManifest, font: &str) -> Rectangle {
     let logout_btn = Rectangle::new()
         .width(64.0)
         .height(30.0)
-        .radius(4.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(|_| {
             let _ = NiriService::quit(false);
             close();
         })
-        .child(Text::new("󰗽 Quit").size(10.0).color(fg_color).font(font));
+        .child(
+            Text::new("󰗽 Quit")
+                .size(typography::BADGE)
+                .color(tokens.text_primary)
+                .font(font),
+        );
     btns.push(Box::new(logout_btn));
 
     Rectangle::new().width(Parent).height(30.0).child(

@@ -1,8 +1,8 @@
 use std::time::{Duration, Instant};
 
 use amane::{
-    Align, Center, Color, Horizontal, Layer, LayerWindow, Margin, OutputTarget, Padding, Rectangle,
-    Row, Service, Text, Vertical, Zone,
+    Align, Center, Horizontal, Layer, LayerWindow, Margin, OutputTarget, Padding, Rectangle, Row,
+    Service, Text, Vertical, Zone,
 };
 
 use crate::config::ConfigService;
@@ -72,16 +72,12 @@ pub fn osd_overlay() -> LayerWindow {
             .namespace("dotfield-shell-osd");
     }
 
-    let bg_color = Color::from(manifest.palette.overlay.as_str()); // Graphite #1C1C23
-    let fg_color = Color::from(manifest.palette.foreground.as_str());
-    let accent_color = Color::from(manifest.palette.accent.as_str()); // Crimson #E63946
-    let track_color = Color::from(manifest.palette.muted.as_str()); // Iron #34343D
+    let tokens = crate::ui::tokens::ThemeTokens::from_manifest(&manifest);
     let fill_color = if osd.muted {
-        accent_color
+        tokens.danger
     } else {
-        Color::from(manifest.palette.highlight.as_str()) // Amber #FFB000
+        tokens.accent
     };
-    let font = &manifest.theme.font_family;
 
     let (icon, label) = match osd.osd_type {
         OsdType::Volume => {
@@ -94,29 +90,20 @@ pub fn osd_overlay() -> LayerWindow {
         OsdType::Brightness => ("󰃠", format!("{}%", osd.percent)),
     };
 
-    // Calculate gauge widths
-    let track_width = 180.0;
-    let fill_width = (track_width * (osd.percent as f32 / 100.0)).clamp(0.0, track_width);
-
-    let gauge = Rectangle::new()
-        .width(track_width)
-        .height(8.0)
-        .radius(4.0)
-        .fill(track_color)
-        .child(
-            Rectangle::new()
-                .width(fill_width)
-                .height(8.0)
-                .radius(4.0)
-                .fill(fill_color),
-        );
+    let gauge = crate::ui::components::progress_bar(
+        osd.percent as f32 / 100.0,
+        150.0,
+        8.0,
+        fill_color,
+        &tokens,
+    );
 
     let osd_box = Rectangle::new()
         .width(260.0)
-        .height(60.0)
-        .radius(10.0)
-        .fill(bg_color)
-        .border(1.0, Color::from("#34343D"))
+        .height(56.0)
+        .radius(crate::ui::tokens::radius::LG)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .padding(Padding {
             top: 10.0,
             bottom: 10.0,
@@ -126,9 +113,19 @@ pub fn osd_overlay() -> LayerWindow {
         .align_child(Center, Center)
         .child(
             Row::new(vec![
-                Box::new(Text::new(icon).size(20.0).color(fill_color).font(font)),
+                Box::new(
+                    Text::new(icon)
+                        .size(crate::ui::tokens::typography::DISPLAY)
+                        .color(fill_color)
+                        .font(&tokens.font_family),
+                ),
                 Box::new(gauge),
-                Box::new(Text::new(label).size(12.0).color(fg_color).font(font)),
+                Box::new(
+                    Text::new(label)
+                        .size(crate::ui::tokens::typography::BODY)
+                        .color(tokens.text_primary)
+                        .font(&tokens.font_family),
+                ),
             ])
             .gap(12.0)
             .align(Align::Center),
@@ -136,7 +133,7 @@ pub fn osd_overlay() -> LayerWindow {
 
     LayerWindow::new()
         .width(260.0)
-        .height(60.0)
+        .height(56.0)
         .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Top)
         .anchor_horizontal(Horizontal::Middle)

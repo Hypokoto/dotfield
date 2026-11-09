@@ -75,16 +75,28 @@ fn read(family: &str, weight: Weight) -> FontRef<'static> {
         other => Some(other.style()),
     };
 
-    let found = fontconfig.find(family, style).expect("failed to find font");
+    if let Ok(found) = fontconfig.find(family, style) {
+        let index = found.index.unwrap_or(0) as u32;
+        if let Some(font) = open(&found.path.to_string_lossy(), index) {
+            return font;
+        }
+    }
 
-    // a .ttc file holds several fonts, the index says which one
-    let index = found.index.unwrap_or(0) as u32;
+    // Resilient fallback chain if the primary family or file is unparseable
+    for fallback in ["sans-serif", "DejaVu Sans", "Noto Sans"] {
+        if let Ok(found) = fontconfig.find(fallback, style) {
+            let index = found.index.unwrap_or(0) as u32;
+            if let Some(font) = open(&found.path.to_string_lossy(), index) {
+                return font;
+            }
+        }
+    }
 
-    open(&found.path.to_string_lossy(), index)
+    panic!("failed to load any usable font for family '{family}' or system fallbacks");
 }
 
-fn open(path: &str, index: u32) -> FontRef<'static> {
-    let bytes = std::fs::read(path).expect("failed to read font file");
+fn open(path: &str, index: u32) -> Option<FontRef<'static>> {
+    let bytes = std::fs::read(path).ok()?;
 
     /*
      * fonts stay loaded until the program exits,
@@ -95,17 +107,17 @@ fn open(path: &str, index: u32) -> FontRef<'static> {
     // fontconfig keeps a variable font's named style in the upper half, the file only knows the lower
     let font_index = index & 0xffff;
 
-    let font = FontRef::from_index(bytes, font_index as usize).expect("failed to parse font");
+    let font = FontRef::from_index(bytes, font_index as usize)?;
 
     // the upper half counts named styles from 1, 0 keeps the font's default
     let instance = index >> 16;
 
     if instance == 0 {
-        return font;
+        return Some(font);
     }
 
     let Some(style) = font.instances().nth(instance as usize - 1) else {
-        return font;
+        return Some(font);
     };
 
     let coords: Vec<i16> = style.normalized_coords().collect();
@@ -114,7 +126,7 @@ fn open(path: &str, index: u32) -> FontRef<'static> {
 
     all_coords.insert(font.key.value(), Vec::leak(coords));
 
-    font
+    Some(font)
 }
 
 /*
@@ -247,7 +259,9 @@ fn find_covering(letter: char, weight: u16) -> Option<FontRef<'static>> {
             continue;
         }
 
-        let font = load_file(path, index);
+        let Some(font) = load_file(path, index) else {
+            continue;
+        };
 
         // the fonts with the letter come first, so the first without it ends the search
         if font.charmap().map(letter) == 0 {
@@ -284,18 +298,18 @@ fn fontconfig_weight(weight: u16) -> i32 {
     }
 }
 
-fn load_file(path: &str, index: u32) -> FontRef<'static> {
+fn load_file(path: &str, index: u32) -> Option<FontRef<'static>> {
     let key = format!("{path} {index}");
 
     let mut loaded = LOADED.lock().unwrap_or_else(PoisonError::into_inner);
 
     if let Some(font) = loaded.get(&key) {
-        return *font;
+        return Some(*font);
     }
 
-    let font = open(path, index);
+    let font = open(path, index)?;
 
     loaded.insert(key, font);
 
-    font
+    Some(font)
 }

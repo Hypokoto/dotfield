@@ -217,15 +217,25 @@ pub fn launch_preset(index: usize, mode: LaunchMode) {
         // Detached spawn using discrete binary and arguments
         let mut parts = cmd.split_whitespace();
         if let Some(bin) = parts.next() {
-            use std::os::unix::process::CommandExt;
             let args: Vec<&str> = parts.collect();
-            let _ = Command::new(bin)
+            let mut scope_cmd = Command::new("systemd-run");
+            scope_cmd
+                .args(["--user", "--scope", "--quiet", bin])
                 .args(&args)
-                .process_group(0)
                 .stdin(std::process::Stdio::null())
                 .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
-                .spawn();
+                .stderr(std::process::Stdio::null());
+
+            if scope_cmd.spawn().is_err() {
+                use std::os::unix::process::CommandExt;
+                let _ = Command::new(bin)
+                    .args(&args)
+                    .process_group(0)
+                    .stdin(std::process::Stdio::null())
+                    .stdout(std::process::Stdio::null())
+                    .stderr(std::process::Stdio::null())
+                    .spawn();
+            }
         }
 
         let _ = Command::new("notify-send")

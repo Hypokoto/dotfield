@@ -47,10 +47,24 @@ fn shell(command: &str) -> Command {
 
 // starts a program and moves on without waiting for it
 pub fn spawn(command: &str) {
+    // Isolate spawned applications into their own transient systemd scope if available
+    // so they do not inherit amane.service's cgroup slice or terminate on daemon reload.
+    if let Ok(mut child) = Command::new("systemd-run")
+        .args(["--user", "--scope", "--quiet", "sh", "-c", command])
+        .spawn()
+    {
+        thread::spawn(move || {
+            let _ = child.wait();
+        });
+        return;
+    }
+
     let mut child = shell(command).spawn().expect("failed to start command");
 
     // a finished child that nobody waits for stays behind as a zombie
-    thread::spawn(move || child.wait());
+    thread::spawn(move || {
+        let _ = child.wait();
+    });
 }
 
 // waits for the command to finish, so call it from a service thread, not from view()

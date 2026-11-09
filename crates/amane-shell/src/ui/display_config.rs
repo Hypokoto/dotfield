@@ -182,185 +182,143 @@ fn get_external_display() -> Option<String> {
 pub fn apply_preset(index: usize) {
     if let Some(preset) = PRESETS.get(index) {
         let title = preset.title;
+        let ext_opt = get_external_display();
+
+        let switch_kanshi = |profile: &str| -> bool {
+            Command::new("kanshictl")
+                .args(["switch", profile])
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false)
+        };
 
         match preset.id {
             "144hz" => {
-                let _ = Command::new("niri")
-                    .args(["msg", "output", "eDP-1", "mode", "1920x1080@144.003"])
-                    .status();
-                let _ = Command::new("swaymsg")
-                    .args(["output", "eDP-1", "mode", "1920x1080@144.003Hz"])
-                    .status();
-                let _ = Command::new("wlr-randr")
-                    .args(["--output", "eDP-1", "--mode", "1920x1080@144.003Hz"])
-                    .status();
-                if let Some(ext) = get_external_display() {
-                    let profile = if ext.starts_with("DP") {
+                let profile = if let Some(ref ext) = ext_opt {
+                    if ext.starts_with("DP") {
                         "docked-dp"
                     } else {
                         "docked-dual"
-                    };
-                    let _ = Command::new("kanshictl").args(["switch", profile]).status();
+                    }
                 } else {
-                    let _ = Command::new("kanshictl")
-                        .args(["switch", "undocked"])
+                    "undocked"
+                };
+
+                if !switch_kanshi(profile) {
+                    let _ = Command::new("niri")
+                        .args(["msg", "output", "eDP-1", "mode", "1920x1080@144.003"])
                         .status();
                 }
             }
             "60hz" => {
-                let _ = Command::new("niri")
-                    .args(["msg", "output", "eDP-1", "mode", "1920x1080@60.001"])
-                    .status();
-                let _ = Command::new("swaymsg")
-                    .args(["output", "eDP-1", "mode", "1920x1080@60.001Hz"])
-                    .status();
-                let _ = Command::new("wlr-randr")
-                    .args(["--output", "eDP-1", "--mode", "1920x1080@60.001Hz"])
-                    .status();
-                if let Some(ext) = get_external_display() {
-                    let profile = if ext.starts_with("DP") {
+                let profile = if let Some(ref ext) = ext_opt {
+                    if ext.starts_with("DP") {
                         "docked-dp-60hz"
                     } else {
                         "docked-dual-60hz"
-                    };
-                    let _ = Command::new("kanshictl").args(["switch", profile]).status();
+                    }
                 } else {
-                    let _ = Command::new("kanshictl")
-                        .args(["switch", "undocked-60hz"])
+                    "undocked-60hz"
+                };
+
+                if !switch_kanshi(profile) {
+                    let _ = Command::new("niri")
+                        .args(["msg", "output", "eDP-1", "mode", "1920x1080@60.001"])
                         .status();
                 }
             }
             "extend-right" => {
-                if let Some(ext) = get_external_display() {
+                if let Some(ref ext) = ext_opt {
                     let profile = if ext.starts_with("DP") {
                         "docked-dp"
                     } else {
                         "docked-dual"
                     };
-                    let _ = Command::new("kanshictl").args(["switch", profile]).status();
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", "eDP-1", "on"])
-                        .status();
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", "eDP-1", "position", "set", "0", "0"])
-                        .status();
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", &ext, "on"])
-                        .status();
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", &ext, "position", "set", "1920", "0"])
-                        .status();
-                    let _ = Command::new("swaymsg")
-                        .args(["output", "eDP-1", "enable", "pos", "0", "0"])
-                        .status();
-                    let _ = Command::new("swaymsg")
-                        .args(["output", &ext, "enable", "pos", "1920", "0"])
-                        .status();
-                    let _ = Command::new("wlr-randr")
-                        .args([
-                            "--output", "eDP-1", "--pos", "0,0", "--output", &ext, "--pos",
-                            "1920,0",
-                        ])
-                        .status();
+
+                    if !switch_kanshi(profile) {
+                        let _ = Command::new("niri")
+                            .args(["msg", "output", "eDP-1", "on"])
+                            .status();
+                        let _ = Command::new("niri")
+                            .args(["msg", "output", "eDP-1", "position", "set", "0", "0"])
+                            .status();
+                        let _ = Command::new("niri")
+                            .args(["msg", "output", ext, "on"])
+                            .status();
+                        let _ = Command::new("niri")
+                            .args(["msg", "output", ext, "position", "set", "1920", "0"])
+                            .status();
+                    }
                 }
             }
             "mirror" => {
-                if let Some(ext) = get_external_display() {
+                if let Some(ref ext) = ext_opt {
                     let profile = if ext.starts_with("DP") {
                         "docked-mirror-dp"
                     } else {
                         "docked-mirror-hdmi"
                     };
-                    let _ = Command::new("kanshictl").args(["switch", profile]).status();
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", "eDP-1", "on"])
-                        .status();
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", "eDP-1", "position", "set", "0", "0"])
-                        .status();
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", &ext, "on"])
-                        .status();
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", &ext, "position", "set", "0", "0"])
-                        .status();
-                    let _ = Command::new("swaymsg")
-                        .args(["output", "eDP-1", "enable", "pos", "0", "0"])
-                        .status();
-                    let _ = Command::new("swaymsg")
-                        .args(["output", &ext, "enable", "pos", "0", "0"])
-                        .status();
-                    let _ = Command::new("wlr-randr")
-                        .args([
-                            "--output", "eDP-1", "--pos", "0,0", "--output", &ext, "--pos", "0,0",
-                        ])
-                        .status();
+
+                    if !switch_kanshi(profile) {
+                        let _ = Command::new("niri")
+                            .args(["msg", "output", "eDP-1", "on"])
+                            .status();
+                        let _ = Command::new("niri")
+                            .args(["msg", "output", "eDP-1", "position", "set", "0", "0"])
+                            .status();
+                        let _ = Command::new("niri")
+                            .args(["msg", "output", ext, "on"])
+                            .status();
+                        let _ = Command::new("niri")
+                            .args(["msg", "output", ext, "position", "set", "0", "0"])
+                            .status();
+                    }
                 }
             }
             "laptop-only" => {
-                if let Some(ext) = get_external_display() {
+                if let Some(ref ext) = ext_opt {
                     let profile = if ext.starts_with("DP") {
                         "laptop-only-dp"
                     } else {
                         "laptop-only-hdmi"
                     };
-                    let _ = Command::new("kanshictl").args(["switch", profile]).status();
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", &ext, "off"])
-                        .status();
-                    let _ = Command::new("swaymsg")
-                        .args(["output", &ext, "disable"])
-                        .status();
-                    let _ = Command::new("wlr-randr")
-                        .args(["--output", &ext, "--off"])
-                        .status();
+
+                    if !switch_kanshi(profile) {
+                        // Crucial: Turn internal display on BEFORE turning external display off
+                        let _ = Command::new("niri")
+                            .args(["msg", "output", "eDP-1", "on"])
+                            .status();
+                        let _ = Command::new("niri")
+                            .args(["msg", "output", ext, "off"])
+                            .status();
+                    }
                 } else {
-                    let _ = Command::new("kanshictl")
-                        .args(["switch", "undocked"])
+                    let _ = switch_kanshi("undocked");
+                    let _ = Command::new("niri")
+                        .args(["msg", "output", "eDP-1", "on"])
                         .status();
                 }
-                // Ensure internal display is on before powering down external
-                let _ = Command::new("niri")
-                    .args(["msg", "output", "eDP-1", "on"])
-                    .status();
-                let _ = Command::new("swaymsg")
-                    .args(["output", "eDP-1", "enable"])
-                    .status();
-                let _ = Command::new("wlr-randr")
-                    .args(["--output", "eDP-1", "--on"])
-                    .status();
             }
             "clamshell" => {
-                if let Some(ext) = get_external_display() {
+                if let Some(ref ext) = ext_opt {
                     let profile = if ext.starts_with("DP") {
                         "clamshell-dp"
                     } else {
                         "clamshell-hdmi"
                     };
-                    let _ = Command::new("kanshictl").args(["switch", profile]).status();
-                    // Enable external display before disabling eDP-1 to prevent transient zero-output compositor state.
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", &ext, "on"])
-                        .status();
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", &ext, "position", "set", "0", "0"])
-                        .status();
-                    let _ = Command::new("swaymsg")
-                        .args(["output", &ext, "enable", "pos", "0", "0"])
-                        .status();
-                    let _ = Command::new("wlr-randr")
-                        .args(["--output", &ext, "--on", "--pos", "0,0"])
-                        .status();
 
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", "eDP-1", "off"])
-                        .status();
-                    let _ = Command::new("swaymsg")
-                        .args(["output", "eDP-1", "disable"])
-                        .status();
-                    let _ = Command::new("wlr-randr")
-                        .args(["--output", "eDP-1", "--off"])
-                        .status();
+                    if !switch_kanshi(profile) {
+                        // Crucial: Turn external display on BEFORE turning internal display off
+                        let _ = Command::new("niri")
+                            .args(["msg", "output", ext, "on"])
+                            .status();
+                        let _ = Command::new("niri")
+                            .args(["msg", "output", ext, "position", "set", "0", "0"])
+                            .status();
+                        let _ = Command::new("niri")
+                            .args(["msg", "output", "eDP-1", "off"])
+                            .status();
+                    }
                 }
             }
             "kanshi" => {
@@ -379,7 +337,16 @@ pub fn apply_preset(index: usize) {
         let home = std::env::var("HOME").unwrap_or_default();
         let wp_script = format!("{home}/.config/dotfield/scripts/wallpaper.sh");
         if std::path::Path::new(&wp_script).exists() {
-            let _ = Command::new(wp_script).spawn();
+            let _ = Command::new("systemd-run")
+                .args([
+                    "--user",
+                    "--scope",
+                    "--quiet",
+                    "sh",
+                    "-c",
+                    &format!("sleep 0.3; exec {wp_script}"),
+                ])
+                .spawn();
         }
 
         let _ = Command::new("notify-send")

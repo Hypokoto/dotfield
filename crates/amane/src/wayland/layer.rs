@@ -115,12 +115,22 @@ pub fn create(
 pub fn apply(layer_surface: &LayerSurface, settings: &Settings, scale_factor: ScaleFactor) {
     layer_surface.set_layer(to_layer(settings.layer));
 
-    layer_surface.set_size(
-        to_pixels(settings.width, scale_factor),
-        to_pixels(settings.height, scale_factor),
-    );
+    let anchor = to_anchor(settings);
+    layer_surface.set_anchor(anchor);
 
-    layer_surface.set_anchor(to_anchor(settings));
+    let mut width = to_pixels(settings.width, scale_factor);
+    let mut height = to_pixels(settings.height, scale_factor);
+
+    // Protocol guard: width 0 is only valid if both left and right anchors are set
+    if width == 0 && !anchor.contains(Anchor::LEFT | Anchor::RIGHT) {
+        width = 1;
+    }
+    // Protocol guard: height 0 is only valid if both top and bottom anchors are set
+    if height == 0 && !anchor.contains(Anchor::TOP | Anchor::BOTTOM) {
+        height = 1;
+    }
+
+    layer_surface.set_size(width, height);
 
     let margin = settings.margin;
 

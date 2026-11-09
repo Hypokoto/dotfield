@@ -72,7 +72,8 @@ pub(super) fn configure(surface: &Surface, adapter: &Adapter) -> SurfaceConfigur
                 TextureFormat::Bgra8Unorm | TextureFormat::Rgba8Unorm
             )
         })
-        .expect("failed to find a surface format without srgb conversion");
+        .or_else(|| capabilities.formats.first().copied())
+        .unwrap_or(TextureFormat::Bgra8Unorm);
 
     // premultiplied lets the compositor show the desktop through transparent pixels
     let alpha_mode = if capabilities
@@ -81,7 +82,11 @@ pub(super) fn configure(surface: &Surface, adapter: &Adapter) -> SurfaceConfigur
     {
         CompositeAlphaMode::PreMultiplied
     } else {
-        capabilities.alpha_modes[0]
+        capabilities
+            .alpha_modes
+            .first()
+            .copied()
+            .unwrap_or(CompositeAlphaMode::Auto)
     };
 
     // amane waits for frame callbacks itself, so presenting should not wait again

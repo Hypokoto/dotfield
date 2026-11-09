@@ -130,20 +130,17 @@ case "$CHOICE" in
             if [[ "$EXT" == DP* ]]; then
                 PROFILE="docked-dp"
             fi
-            if command -v kanshictl >/dev/null 2>&1; then
-                kanshictl switch "$PROFILE" 2>/dev/null || true
-            fi
-            if is_sway && command -v swaymsg >/dev/null 2>&1; then
-                swaymsg "output eDP-1 enable pos 0 0; output $EXT enable pos 1920 0" >/dev/null 2>&1 || true
-            fi
-            if is_niri && command -v niri >/dev/null 2>&1; then
-                niri msg output eDP-1 on >/dev/null 2>&1 || true
-                niri msg output eDP-1 position set 0 0 >/dev/null 2>&1 || true
-                niri msg output "$EXT" on >/dev/null 2>&1 || true
-                niri msg output "$EXT" position set 1920 0 >/dev/null 2>&1 || true
-            fi
-            if command -v wlr-randr >/dev/null 2>&1; then
-                wlr-randr --output eDP-1 --pos 0,0 --output "$EXT" --pos 1920,0 >/dev/null 2>&1 || true
+            if ! (command -v kanshictl >/dev/null 2>&1 && kanshictl switch "$PROFILE" 2>/dev/null); then
+                if is_sway && command -v swaymsg >/dev/null 2>&1; then
+                    swaymsg "output eDP-1 enable pos 0 0; output $EXT enable pos 1920 0" >/dev/null 2>&1 || true
+                elif is_niri && command -v niri >/dev/null 2>&1; then
+                    niri msg output eDP-1 on >/dev/null 2>&1 || true
+                    niri msg output eDP-1 position set 0 0 >/dev/null 2>&1 || true
+                    niri msg output "$EXT" on >/dev/null 2>&1 || true
+                    niri msg output "$EXT" position set 1920 0 >/dev/null 2>&1 || true
+                elif command -v wlr-randr >/dev/null 2>&1; then
+                    wlr-randr --output eDP-1 --pos 0,0 --output "$EXT" --pos 1920,0 >/dev/null 2>&1 || true
+                fi
             fi
             notify "Extended display to $EXT on the right"
         else
@@ -157,20 +154,17 @@ case "$CHOICE" in
             if [[ "$EXT" == DP* ]]; then
                 PROFILE="docked-mirror-dp"
             fi
-            if command -v kanshictl >/dev/null 2>&1; then
-                kanshictl switch "$PROFILE" 2>/dev/null || true
-            fi
-            if is_sway && command -v swaymsg >/dev/null 2>&1; then
-                swaymsg "output eDP-1 enable pos 0 0; output $EXT enable pos 0 0" >/dev/null 2>&1 || true
-            fi
-            if is_niri && command -v niri >/dev/null 2>&1; then
-                niri msg output eDP-1 on >/dev/null 2>&1 || true
-                niri msg output eDP-1 position set 0 0 >/dev/null 2>&1 || true
-                niri msg output "$EXT" on >/dev/null 2>&1 || true
-                niri msg output "$EXT" position set 0 0 >/dev/null 2>&1 || true
-            fi
-            if command -v wlr-randr >/dev/null 2>&1; then
-                wlr-randr --output eDP-1 --pos 0,0 --output "$EXT" --pos 0,0 >/dev/null 2>&1 || true
+            if ! (command -v kanshictl >/dev/null 2>&1 && kanshictl switch "$PROFILE" 2>/dev/null); then
+                if is_sway && command -v swaymsg >/dev/null 2>&1; then
+                    swaymsg "output eDP-1 enable pos 0 0; output $EXT enable pos 0 0" >/dev/null 2>&1 || true
+                elif is_niri && command -v niri >/dev/null 2>&1; then
+                    niri msg output eDP-1 on >/dev/null 2>&1 || true
+                    niri msg output eDP-1 position set 0 0 >/dev/null 2>&1 || true
+                    niri msg output "$EXT" on >/dev/null 2>&1 || true
+                    niri msg output "$EXT" position set 0 0 >/dev/null 2>&1 || true
+                elif command -v wlr-randr >/dev/null 2>&1; then
+                    wlr-randr --output eDP-1 --pos 0,0 --output "$EXT" --pos 0,0 >/dev/null 2>&1 || true
+                fi
             fi
             notify "Mirrored display with $EXT"
         else
@@ -184,18 +178,15 @@ case "$CHOICE" in
             if [[ "$EXT" == DP* ]]; then
                 PROFILE="laptop-only-dp"
             fi
-            if command -v kanshictl >/dev/null 2>&1; then
-                kanshictl switch "$PROFILE" 2>/dev/null || kanshictl switch undocked 2>/dev/null || true
-            fi
-            if is_sway && command -v swaymsg >/dev/null 2>&1; then
-                swaymsg "output eDP-1 enable; output $EXT disable" >/dev/null 2>&1 || true
-            fi
-            if is_niri && command -v niri >/dev/null 2>&1; then
-                niri msg output eDP-1 on >/dev/null 2>&1 || true
-                niri msg output "$EXT" off >/dev/null 2>&1 || true
-            fi
-            if command -v wlr-randr >/dev/null 2>&1; then
-                wlr-randr --output eDP-1 --on --output "$EXT" --off >/dev/null 2>&1 || true
+            if ! (command -v kanshictl >/dev/null 2>&1 && kanshictl switch "$PROFILE" 2>/dev/null); then
+                if is_sway && command -v swaymsg >/dev/null 2>&1; then
+                    swaymsg "output eDP-1 enable; output $EXT disable" >/dev/null 2>&1 || true
+                elif is_niri && command -v niri >/dev/null 2>&1; then
+                    niri msg output eDP-1 on >/dev/null 2>&1 || true
+                    niri msg output "$EXT" off >/dev/null 2>&1 || true
+                elif command -v wlr-randr >/dev/null 2>&1; then
+                    wlr-randr --output eDP-1 --on --output "$EXT" --off >/dev/null 2>&1 || true
+                fi
             fi
             notify "External display $EXT turned off"
         else
@@ -212,16 +203,16 @@ case "$CHOICE" in
             if [[ "$EXT" == DP* ]]; then
                 PROFILE="clamshell-dp"
             fi
-            if command -v kanshictl >/dev/null 2>&1; then
-                kanshictl switch "$PROFILE" 2>/dev/null || true
-            fi
-            if is_sway && command -v swaymsg >/dev/null 2>&1; then
-                swaymsg "output $EXT enable pos 0 0; output eDP-1 disable" >/dev/null 2>&1 || true
-            fi
-            if is_niri && command -v niri >/dev/null 2>&1; then
-                niri msg output "$EXT" on >/dev/null 2>&1 || true
-                niri msg output "$EXT" position set 0 0 >/dev/null 2>&1 || true
-                niri msg output eDP-1 off >/dev/null 2>&1 || true
+            if ! (command -v kanshictl >/dev/null 2>&1 && kanshictl switch "$PROFILE" 2>/dev/null); then
+                if is_sway && command -v swaymsg >/dev/null 2>&1; then
+                    swaymsg "output $EXT enable pos 0 0; output eDP-1 disable" >/dev/null 2>&1 || true
+                elif is_niri && command -v niri >/dev/null 2>&1; then
+                    niri msg output "$EXT" on >/dev/null 2>&1 || true
+                    niri msg output "$EXT" position set 0 0 >/dev/null 2>&1 || true
+                    niri msg output eDP-1 off >/dev/null 2>&1 || true
+                elif command -v wlr-randr >/dev/null 2>&1; then
+                    wlr-randr --output "$EXT" --on --pos 0,0 --output eDP-1 --off >/dev/null 2>&1 || true
+                fi
             fi
             if [[ -x "${SCRIPT_DIR}/wallpaper.sh" ]]; then
                 "${SCRIPT_DIR}/wallpaper.sh" >/dev/null 2>&1 &

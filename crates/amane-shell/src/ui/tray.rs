@@ -11,7 +11,7 @@ use crate::ui::tokens::{ThemeTokens, radius};
 pub fn render_tray_pill(
     manifest: &ShellManifest,
     font: &str,
-    monitor_name: Option<&str>,
+    _monitor_name: Option<&str>,
 ) -> Box<dyn Widget> {
     let tokens = ThemeTokens::from_manifest(manifest);
 
@@ -21,7 +21,6 @@ pub fn render_tray_pill(
     // External SNI App Items (Discord, Steam, Telegram, OBS, etc.)
     for (idx, item) in tray.items.iter().enumerate().take(6) {
         let glyph = item.glyph();
-        let mon = monitor_name.map(String::from);
         let app_pill = Rectangle::new()
             .width(22.0)
             .height(22.0)
@@ -31,9 +30,6 @@ pub fn render_tray_pill(
             .cursor(Pointer)
             .align_child(Center, Center)
             .on_click(move |btn| {
-                if let Some(ref name) = mon {
-                    amane::focus_monitor(name);
-                }
                 if btn == amane::Button::Right {
                     TrayService::context_menu(idx);
                 } else {
@@ -58,7 +54,6 @@ pub fn render_tray_pill(
         (items.len() as f32 * 26.0) + 12.0
     };
 
-    let mon_tray = monitor_name.map(String::from);
     let tray_container = Rectangle::new()
         .width(pill_w)
         .height(26.0)
@@ -74,9 +69,6 @@ pub fn render_tray_pill(
         })
         .align_child(Center, Center)
         .on_click(move |_| {
-            if let Some(ref name) = mon_tray {
-                amane::focus_monitor(name);
-            }
             crate::ui::control_center::open_view(crate::ui::control_center::ActiveView::Tray);
         })
         .child(Row::new(items).gap(4.0).align(Align::Center));

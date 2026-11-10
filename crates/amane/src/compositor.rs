@@ -65,6 +65,17 @@ pub fn focus_workspace(id: i64) {
     }
 }
 
+pub fn focus_workspace_name(name: &str) {
+    let Some(compositor) = running() else {
+        return;
+    };
+
+    match compositor {
+        Compositor::Niri => niri::focus_workspace_name(name),
+        _ => {}
+    }
+}
+
 pub fn focused_output() -> Option<String> {
     let compositor = running()?;
 

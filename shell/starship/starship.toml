@@ -1,5 +1,5 @@
 # Dotfield Starship Prompt Configuration
-# Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
+# BLACKSITE Specification — Void Black · Industrial Amber · Crimson · Steel
 
 format = """
 $username\
@@ -22,9 +22,9 @@ $character"""
 scan_timeout = 250
 command_timeout = 500
 
-palette = "controlled_chaos"
+palette = "blacksite"
 
-[palettes.controlled_chaos]
+[palettes.blacksite]
 void = "#0A0A0C"
 obsidian = "#121216"
 graphite = "#1C1C23"
@@ -32,11 +32,12 @@ iron = "#34343D"
 ash = "#A1A1AA"
 bone = "#E8E6E3"
 crimson = "#E63946"
+blood_red = "#9D0208"
 amber = "#FFB000"
 pale_amber = "#FFD166"
 steel = "#8B949E"
 green = "#7BC47F"
-blue = "#82AAFF"
+blue = "#8B949E"
 
 [character]
 success_symbol = "[❯](bold amber)"

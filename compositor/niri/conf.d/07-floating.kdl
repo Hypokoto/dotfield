@@ -1,5 +1,5 @@
 // Niri Floating Windows & Multi-Window Overlapping
-// Window rules for floating management and dialog routing
+// Window rules for floating management, authentication, pinentry, and dialog routing
 
 binds {
     // Toggle focused window between floating and tiling
@@ -41,5 +41,26 @@ window-rule {
 
 window-rule {
     match title="^Picture-in-Picture$"
+    open-floating true
+}
+
+// Dialogs, Authentication, Pinentry, and File Pickers
+window-rule {
+    match app-id="^pinentry"
+    open-floating true
+}
+
+window-rule {
+    match app-id="polkit"
+    open-floating true
+}
+
+window-rule {
+    match app-id="org.freedesktop.impl.portal.desktop"
+    open-floating true
+}
+
+window-rule {
+    match app-id="zenity"
     open-floating true
 }

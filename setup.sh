@@ -807,6 +807,7 @@ if [[ "${TARGET}" == "all" || "${TARGET}" == "niri" ]]; then
             # shellcheck disable=SC2016
             echo 'PATH=${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}' > "${HOME}/.config/environment.d/10-dotfield-path.conf"
         fi
+    fi
     ensure_config_link_or_dir "${SCRIPT_DIR}/systemd/user/amane.service" "${HOME}/.config/systemd/user/amane.service"
     ensure_config_link_or_dir "${SCRIPT_DIR}/systemd/user/kanshi.service" "${HOME}/.config/systemd/user/kanshi.service"
     if [[ ! -e "${HOME}/.config/systemd/user/dotfield-shell.service" || -L "${HOME}/.config/systemd/user/dotfield-shell.service" ]]; then

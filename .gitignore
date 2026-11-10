@@ -4,6 +4,7 @@ crates/amane/Cargo.lock
 crates/amane/target/
 
 # Dotfield runtime state, tool cache, and backups
+.10x/
 .dotfield/
 .planning/
 .claude/

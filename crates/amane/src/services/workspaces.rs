@@ -45,4 +45,9 @@ impl Workspaces {
     pub fn focus(id: i64) {
         worker::run(move || compositor::focus_workspace(id));
     }
+
+    pub fn focus_name(name: impl Into<String>) {
+        let name = name.into();
+        worker::run(move || compositor::focus_workspace_name(&name));
+    }
 }

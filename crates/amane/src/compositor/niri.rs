@@ -70,6 +70,23 @@ pub fn focus_workspace(id: i64) {
     let _ = BufReader::new(stream).read_line(&mut reply);
 }
 
+pub fn focus_workspace_name(name: &str) {
+    let request = json!({
+        "Action": {
+            "FocusWorkspace": {
+                "reference": { "Name": name }
+            }
+        }
+    });
+
+    let Some(stream) = send(&request.to_string()) else {
+        return;
+    };
+
+    let mut reply = String::new();
+    let _ = BufReader::new(stream).read_line(&mut reply);
+}
+
 pub fn parse_focused_output(reply: &str) -> Option<String> {
     let val: Value = serde_json::from_str(reply).ok()?;
     val["Ok"]["FocusedOutput"]["name"]
@@ -86,6 +103,12 @@ pub fn focused_output() -> Option<String> {
 }
 
 pub fn focus_monitor(name: &str) {
+    if let Some(current) = focused_output() {
+        if current == name {
+            return;
+        }
+    }
+
     let request = json!({
         "Action": {
             "FocusMonitor": {

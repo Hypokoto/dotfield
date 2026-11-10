@@ -3,11 +3,13 @@ use std::process::Command;
 use std::time::Duration;
 
 use amane::{
-    Align, Color, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin,
-    OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
+    Align, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, OutputTarget, Parent,
+    Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
 };
 
 use crate::config::{ConfigService, ShellManifest};
+use crate::ui::components::{action_card_interactive, modal_shell};
+use crate::ui::tokens::{ThemeTokens, radius, spacing, typography};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LaunchMode {
@@ -34,8 +36,8 @@ pub static TERMINAL_PRESETS: &[TerminalPreset] = &[
         id: "foot",
         name: "Foot",
         glyph: "󰞷",
-        description: "Ultra-fast Wayland client with minimal latency & memory footprint",
-        tag: "Wayland Native",
+        description: "Ultra-fast Wayland native client with zero latency overhead",
+        tag: "Wayland",
         bin: "foot",
         standard_cmd: "foot",
         mux_cmd: "foot -e tmux",
@@ -45,8 +47,8 @@ pub static TERMINAL_PRESETS: &[TerminalPreset] = &[
         id: "kitty",
         name: "Kitty",
         glyph: "󰄛",
-        description: "GPU-accelerated terminal with kitty graphics protocol & ligatures",
-        tag: "OpenGL GPU",
+        description: "GPU-accelerated OpenGL terminal with rich graphics & ligatures",
+        tag: "OpenGL",
         bin: "kitty",
         standard_cmd: "kitty",
         mux_cmd: "kitty -e tmux",
@@ -56,8 +58,8 @@ pub static TERMINAL_PRESETS: &[TerminalPreset] = &[
         id: "alacritty",
         name: "Alacritty",
         glyph: "󰆍",
-        description: "Hardware-accelerated terminal focused on raw rendering throughput",
-        tag: "Cross-Platform GPU",
+        description: "Cross-platform GPU terminal tuned for high throughput",
+        tag: "Vulkan/GL",
         bin: "alacritty",
         standard_cmd: "alacritty",
         mux_cmd: "alacritty -e tmux",
@@ -67,7 +69,7 @@ pub static TERMINAL_PRESETS: &[TerminalPreset] = &[
         id: "ghostty",
         name: "Ghostty",
         glyph: "󰊠",
-        description: "Next-gen GPU terminal with modern Wayland tabs & shader support",
+        description: "Next-gen modern terminal with native Wayland tab management",
         tag: "Modern GPU",
         bin: "ghostty",
         standard_cmd: "ghostty",
@@ -214,7 +216,6 @@ pub fn launch_preset(index: usize, mode: LaunchMode) {
             LaunchMode::Scratchpad => "Floating Scratchpad",
         };
 
-        // Detached spawn using discrete binary and arguments
         let mut parts = cmd.split_whitespace();
         if let Some(bin) = parts.next() {
             let args: Vec<&str> = parts.collect();
@@ -253,6 +254,37 @@ pub fn launch_preset(index: usize, mode: LaunchMode) {
     }
 }
 
+pub fn launch_in_dir(index: usize, dir: &str) {
+    if let Some(preset) = TERMINAL_PRESETS.get(index) {
+        if !is_installed(preset.bin) {
+            let mut svc = TerminalManagerService::write();
+            svc.status_message = Some(format!("{} is not installed!", preset.name));
+            return;
+        }
+
+        let mut scope_cmd = Command::new("systemd-run");
+        scope_cmd
+            .args(["--user", "--scope", "--quiet", preset.bin])
+            .current_dir(dir)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null());
+
+        if scope_cmd.spawn().is_err() {
+            use std::os::unix::process::CommandExt;
+            let _ = Command::new(preset.bin)
+                .current_dir(dir)
+                .process_group(0)
+                .stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .spawn();
+        }
+
+        close();
+    }
+}
+
 pub fn terminal_manager_overlay() -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
     let svc = TerminalManagerService::read();
@@ -270,195 +302,73 @@ pub fn terminal_manager_overlay() -> LayerWindow {
     let default_id = svc.default_terminal.clone();
     let total_presets = TERMINAL_PRESETS.len();
 
-    let tokens = crate::ui::tokens::ThemeTokens::from_manifest(&manifest);
+    let tokens = ThemeTokens::from_manifest(&manifest);
 
-    let mut rows: Vec<Box<dyn Widget>> = Vec::new();
+    let mut body_rows: Vec<Box<dyn Widget>> = Vec::new();
 
-    // Standardized Modal Header
-    let default_tag = format!("Default: {default_id}");
-    let header = crate::ui::components::modal_header(
-        "󰞷",
-        "Terminal Manager",
-        Some(&default_tag),
-        &tokens,
-        close,
-    );
-    rows.push(Box::new(header));
-
-    // Terminal preset cards in a 2x2 grid
+    // 2x2 Grid of Terminal Cards
     let mut cards: Vec<Box<dyn Widget>> = Vec::new();
-
     for (idx, preset) in TERMINAL_PRESETS.iter().enumerate() {
         let is_selected = idx == selected_idx;
         let is_hovered = svc.hover_index == Some(idx);
         let is_default = preset.id == default_id;
         let installed = is_installed(preset.bin);
 
-        let (card_bg, border_color, title_color) = if is_selected {
-            (tokens.surface_selected, tokens.border_focus, tokens.accent)
-        } else if is_hovered {
-            (
-                tokens.surface_hover,
-                tokens.border_hover,
-                tokens.text_primary,
-            )
-        } else {
-            (
-                tokens.surface_elevated,
-                tokens.border_subtle,
-                if installed {
-                    tokens.text_primary
-                } else {
-                    tokens.text_muted
-                },
-            )
-        };
-
-        let icon_color = if is_selected {
-            tokens.accent
-        } else if is_hovered {
-            tokens.text_primary
-        } else if installed {
-            tokens.text_secondary
-        } else {
-            tokens.text_muted
-        };
-
-        // Top line: Glyph + Title on left, quick number keycap on right
-        let title_left = Row::new(vec![
-            Box::new(
-                Text::new(preset.glyph)
-                    .size(crate::ui::tokens::typography::TITLE_SM)
-                    .color(icon_color)
-                    .font(&tokens.font_family),
-            ),
-            Box::new(
-                Text::new(preset.name)
-                    .size(crate::ui::tokens::typography::SECONDARY)
-                    .color(title_color)
-                    .font(&tokens.font_family),
-            ),
-        ])
-        .gap(crate::ui::tokens::spacing::GAP_SM)
-        .align(Align::Center);
-
-        let num_keycap = crate::ui::components::keycap(&format!("{}", idx + 1), &tokens);
-
-        let top_row = Row::new(vec![Box::new(title_left), Box::new(num_keycap)])
-            .width(Parent)
-            .justify(Justify::SpaceBetween)
-            .align(Align::Center);
-
-        // Middle line: Description
-        let desc_text = Text::new(preset.description)
-            .size(crate::ui::tokens::typography::CAPTION)
-            .color(if installed {
-                tokens.text_secondary
-            } else {
-                tokens.text_muted
-            })
-            .font(&tokens.font_family);
-
-        // Bottom line: Badges (Default / Not Found / Tag) on left, Launch keycap on right
-        let mut left_badges: Vec<Box<dyn Widget>> = Vec::new();
-        if is_default {
-            left_badges.push(Box::new(crate::ui::components::status_badge(
-                "Default",
-                tokens.accent,
-                &tokens,
-            )));
-        } else if !installed {
-            left_badges.push(Box::new(crate::ui::components::status_badge(
-                "Missing",
-                tokens.danger,
-                &tokens,
-            )));
-        } else {
-            left_badges.push(Box::new(crate::ui::components::status_badge(
-                preset.tag,
-                tokens.text_muted,
-                &tokens,
-            )));
-        }
-
-        let mut right_badges: Vec<Box<dyn Widget>> = Vec::new();
-        if is_selected {
-            right_badges.push(Box::new(crate::ui::components::keycap("↵ Launch", &tokens)));
-        }
-
-        let bottom_row = Row::new(vec![
-            Box::new(
-                Row::new(left_badges)
-                    .gap(crate::ui::tokens::spacing::GAP_XS)
-                    .align(Align::Center),
-            ),
-            Box::new(
-                Row::new(right_badges)
-                    .gap(crate::ui::tokens::spacing::GAP_XS)
-                    .align(Align::Center),
-            ),
-        ])
-        .width(Parent)
-        .justify(Justify::SpaceBetween)
-        .align(Align::Center);
-
-        let indicator_pill =
+        let icon_box = Box::new(
             Rectangle::new()
-                .width(3.0)
-                .height(48.0)
-                .radius(1.5)
-                .fill(if is_selected {
-                    tokens.accent
-                } else if is_hovered {
-                    tokens.border_hover
-                } else {
-                    Color::TRANSPARENT
-                });
+                .width(28.0)
+                .height(28.0)
+                .radius(radius::SM)
+                .fill(tokens.surface)
+                .border(1.0, tokens.border_subtle)
+                .align_child(Align::Center, Align::Center)
+                .child(
+                    Text::new(preset.glyph)
+                        .size(typography::TITLE_SM)
+                        .color(if is_selected {
+                            tokens.accent
+                        } else if installed {
+                            tokens.text_secondary
+                        } else {
+                            tokens.text_muted
+                        })
+                        .font(&tokens.font_family),
+                ),
+        );
 
-        let card_body = Column::new(vec![
-            Box::new(top_row),
-            Box::new(desc_text),
-            Box::new(bottom_row),
-        ])
-        .gap(crate::ui::tokens::spacing::GAP_XS)
-        .width(Parent)
-        .align(Align::Start);
+        let badge_text = if is_default {
+            "Default"
+        } else if !installed {
+            "Missing"
+        } else {
+            preset.tag
+        };
 
-        let card_content = Row::new(vec![Box::new(indicator_pill), Box::new(card_body)])
-            .width(Parent)
-            .gap(crate::ui::tokens::spacing::GAP_SM)
-            .align(Align::Center);
-
-        let card = Rectangle::new()
-            .width(240.0)
-            .height(78.0)
-            .radius(crate::ui::tokens::radius::MD)
-            .fill(card_bg)
-            .border(if is_selected { 1.5 } else { 1.0 }, border_color)
-            .padding(Padding {
-                top: 7.0,
-                bottom: 7.0,
-                left: 8.0,
-                right: 8.0,
-            })
-            .cursor(Pointer)
-            .on_hover(move |is_h| {
+        let card = action_card_interactive(
+            260.0,
+            72.0,
+            icon_box,
+            preset.name,
+            Some(preset.description),
+            Some(badge_text),
+            is_selected,
+            is_hovered,
+            move |is_h| {
                 let mut svc = TerminalManagerService::write();
                 if is_h {
                     svc.hover_index = Some(idx);
                 } else if svc.hover_index == Some(idx) {
                     svc.hover_index = None;
                 }
-            })
-            .on_click(move |_| {
+            },
+            move || {
                 launch_preset(idx, LaunchMode::Standard);
-            })
-            .child(card_content);
-
+            },
+            &tokens,
+        );
         cards.push(Box::new(card));
     }
 
-    // Assemble 2x2 Grid Box
     if cards.len() >= 4 {
         let card3 = cards.pop().unwrap();
         let card2 = cards.pop().unwrap();
@@ -477,42 +387,93 @@ pub fn terminal_manager_overlay() -> LayerWindow {
 
         let grid_container = Column::new(vec![Box::new(grid_row_0), Box::new(grid_row_1)])
             .width(Parent)
-            .gap(crate::ui::tokens::spacing::GAP_MD);
+            .gap(spacing::GAP_MD);
 
-        rows.push(Box::new(grid_container));
-    } else {
-        let grid_container = Column::new(cards)
-            .width(Parent)
-            .gap(crate::ui::tokens::spacing::GAP_SM);
-        rows.push(Box::new(grid_container));
+        body_rows.push(Box::new(grid_container));
     }
 
-    // Status message banner
+    // Status message if any
     if let Some(ref msg) = svc.status_message {
         let status_box = Rectangle::new()
             .width(Parent)
-            .height(22.0)
-            .radius(crate::ui::tokens::radius::SM)
+            .height(24.0)
+            .radius(radius::SM)
             .fill(tokens.surface_elevated)
             .border(1.0, tokens.border_focus)
             .align_child(Align::Center, Align::Center)
             .child(
                 Text::new(msg)
-                    .size(crate::ui::tokens::typography::CAPTION)
+                    .size(typography::CAPTION)
                     .color(tokens.accent)
                     .font(&tokens.font_family),
             );
-        rows.push(Box::new(status_box));
+        body_rows.push(Box::new(status_box));
     }
 
-    // Quick actions tray (Multiplexer, Scratchpad, Set Default)
+    // Directory bookmarks pills row
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/home".to_string());
+    let dotfield_dir = format!("{}/dev/projects/dotfield", home);
+    let home_dir = home.clone();
+
+    let bookmark_home = Rectangle::new()
+        .width(110.0)
+        .height(26.0)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
+        .cursor(Pointer)
+        .align_child(Align::Center, Align::Center)
+        .on_click(move |_| {
+            launch_in_dir(selected_idx, &home_dir);
+        })
+        .child(
+            Text::new("󰋜 Home (~)")
+                .size(typography::BADGE)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_family),
+        );
+
+    let bookmark_dotfield = Rectangle::new()
+        .width(130.0)
+        .height(26.0)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
+        .cursor(Pointer)
+        .align_child(Align::Center, Align::Center)
+        .on_click(move |_| {
+            launch_in_dir(selected_idx, &dotfield_dir);
+        })
+        .child(
+            Text::new("󰲋 Dotfield Project")
+                .size(typography::BADGE)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_family),
+        );
+
+    let bookmarks_row = Row::new(vec![
+        Box::new(
+            Text::new("Open in:")
+                .size(typography::BADGE)
+                .color(tokens.text_muted)
+                .font(&tokens.font_family),
+        ),
+        Box::new(bookmark_home),
+        Box::new(bookmark_dotfield),
+    ])
+    .gap(spacing::GAP_SM)
+    .align(Align::Center);
+
+    body_rows.push(Box::new(bookmarks_row));
+
+    // Mode Buttons: Multiplexer, Scratchpad, Set Default
     let sel_preset = TERMINAL_PRESETS.get(selected_idx);
     let sel_name = sel_preset.map(|p| p.name).unwrap_or("Terminal");
 
     let mux_btn = Rectangle::new()
-        .width(156.0)
+        .width(170.0)
         .height(28.0)
-        .radius(crate::ui::tokens::radius::SM)
+        .radius(radius::SM)
         .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
@@ -521,16 +482,16 @@ pub fn terminal_manager_overlay() -> LayerWindow {
             launch_preset(selected_idx, LaunchMode::Multiplexer);
         })
         .child(
-            Text::new(format!("󰒋 {sel_name} + Tmux"))
-                .size(crate::ui::tokens::typography::BADGE)
+            Text::new(format!("󰒋 {} + Tmux", sel_name))
+                .size(typography::BADGE)
                 .color(tokens.text_primary)
                 .font(&tokens.font_family),
         );
 
     let scratch_btn = Rectangle::new()
-        .width(156.0)
+        .width(170.0)
         .height(28.0)
-        .radius(crate::ui::tokens::radius::SM)
+        .radius(radius::SM)
         .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
@@ -539,16 +500,16 @@ pub fn terminal_manager_overlay() -> LayerWindow {
             launch_preset(selected_idx, LaunchMode::Scratchpad);
         })
         .child(
-            Text::new(format!("󰖲 {sel_name} Floating"))
-                .size(crate::ui::tokens::typography::BADGE)
+            Text::new(format!("󰖲 {} Float", sel_name))
+                .size(typography::BADGE)
                 .color(tokens.text_primary)
                 .font(&tokens.font_family),
         );
 
     let default_btn = Rectangle::new()
-        .width(156.0)
+        .width(170.0)
         .height(28.0)
-        .radius(crate::ui::tokens::radius::SM)
+        .radius(radius::SM)
         .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
@@ -557,138 +518,51 @@ pub fn terminal_manager_overlay() -> LayerWindow {
             set_default_terminal(selected_idx);
         })
         .child(
-            Text::new(format!("★ Make {sel_name} Default"))
-                .size(crate::ui::tokens::typography::BADGE)
+            Text::new(format!("★ Make {} Default", sel_name))
+                .size(typography::BADGE)
                 .color(tokens.accent)
                 .font(&tokens.font_family),
         );
 
-    let actions_row = Rectangle::new().width(Parent).height(28.0).child(
-        Row::new(vec![
-            Box::new(mux_btn),
-            Box::new(scratch_btn),
-            Box::new(default_btn),
-        ])
-        .width(Parent)
-        .justify(Justify::SpaceBetween)
-        .align(Align::Center),
-    );
-
-    rows.push(Box::new(actions_row));
-
-    // Footer navigation key hints
-    let footer_hints = Row::new(vec![
-        Box::new(crate::ui::components::keycap("1-4", &tokens)),
-        Box::new(
-            Text::new("Pick")
-                .size(crate::ui::tokens::typography::BADGE)
-                .color(tokens.text_secondary)
-                .font(&tokens.font_family),
-        ),
-        Box::new(
-            Text::new("•")
-                .size(crate::ui::tokens::typography::BADGE)
-                .color(tokens.text_muted)
-                .font(&tokens.font_family),
-        ),
-        Box::new(crate::ui::components::keycap("↵", &tokens)),
-        Box::new(
-            Text::new("Launch")
-                .size(crate::ui::tokens::typography::BADGE)
-                .color(tokens.text_secondary)
-                .font(&tokens.font_family),
-        ),
-        Box::new(
-            Text::new("•")
-                .size(crate::ui::tokens::typography::BADGE)
-                .color(tokens.text_muted)
-                .font(&tokens.font_family),
-        ),
-        Box::new(crate::ui::components::keycap("m", &tokens)),
-        Box::new(
-            Text::new("Tmux")
-                .size(crate::ui::tokens::typography::BADGE)
-                .color(tokens.text_secondary)
-                .font(&tokens.font_family),
-        ),
-        Box::new(
-            Text::new("•")
-                .size(crate::ui::tokens::typography::BADGE)
-                .color(tokens.text_muted)
-                .font(&tokens.font_family),
-        ),
-        Box::new(crate::ui::components::keycap("s", &tokens)),
-        Box::new(
-            Text::new("Float")
-                .size(crate::ui::tokens::typography::BADGE)
-                .color(tokens.text_secondary)
-                .font(&tokens.font_family),
-        ),
-        Box::new(
-            Text::new("•")
-                .size(crate::ui::tokens::typography::BADGE)
-                .color(tokens.text_muted)
-                .font(&tokens.font_family),
-        ),
-        Box::new(crate::ui::components::keycap("d", &tokens)),
-        Box::new(
-            Text::new("Default")
-                .size(crate::ui::tokens::typography::BADGE)
-                .color(tokens.text_secondary)
-                .font(&tokens.font_family),
-        ),
-        Box::new(
-            Text::new("•")
-                .size(crate::ui::tokens::typography::BADGE)
-                .color(tokens.text_muted)
-                .font(&tokens.font_family),
-        ),
-        Box::new(crate::ui::components::keycap("Esc", &tokens)),
-        Box::new(
-            Text::new("Dismiss")
-                .size(crate::ui::tokens::typography::BADGE)
-                .color(tokens.text_secondary)
-                .font(&tokens.font_family),
-        ),
+    let actions_row = Row::new(vec![
+        Box::new(mux_btn),
+        Box::new(scratch_btn),
+        Box::new(default_btn),
     ])
-    .gap(5.0)
+    .width(Parent)
+    .justify(Justify::SpaceBetween)
     .align(Align::Center);
 
-    let footer_row = Rectangle::new()
-        .width(Parent)
-        .height(18.0)
-        .align_child(Align::Center, Align::Center)
-        .child(footer_hints);
+    body_rows.push(Box::new(actions_row));
 
-    rows.push(Box::new(footer_row));
+    let body_column = Column::new(body_rows).width(Parent).gap(spacing::GAP_MD);
 
-    // Main Modal Dialog Container (520x340)
-    let dialog = Rectangle::new()
-        .width(520.0)
-        .height(340.0)
-        .radius(crate::ui::tokens::radius::LG)
-        .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
-        .padding(Padding {
-            top: 14.0,
-            bottom: 12.0,
-            left: 14.0,
-            right: 14.0,
-        })
-        .child(Column::new(rows).width(Parent).gap(8.0));
+    let default_tag = format!("Default: {}", default_id);
+    let dialog = modal_shell(
+        560.0,
+        410.0,
+        "󰞷",
+        "Terminal Manager",
+        Some(&default_tag),
+        Box::new(body_column),
+        vec![
+            ("1-4", "Quick Pick"),
+            ("↵", "Launch"),
+            ("m", "Tmux"),
+            ("s", "Float"),
+            ("d", "Default"),
+            ("Esc", "Dismiss"),
+        ],
+        close,
+        &tokens,
+    );
 
     LayerWindow::new()
-        .width(520.0)
-        .height(340.0)
+        .width(560.0)
+        .height(410.0)
         .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Middle)
         .anchor_horizontal(Horizontal::Middle)
-        .margin(Margin {
-            top: 0,
-            bottom: 0,
-            left: 0,
-            right: 0,
-        })
         .layer(Layer::Overlay)
         .keyboard(Keyboard::OnDemand)
         .on_key(move |key| {

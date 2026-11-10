@@ -1,9 +1,9 @@
 use chrono::Local;
 
 use amane::{
-    Align, Audio, Battery, Bluetooth, Center, Color, Cpu, Full, Justify, Layer, LayerWindow,
-    Memory, Network, Notifications, Padding, Parent, Pointer, Rectangle, Row, Scroll, Service,
-    Text, Vertical, Widget, Workspaces, Zone,
+    Align, Audio, Battery, Bluetooth, Center, Color, Cpu, Full, Layer, LayerWindow, Memory,
+    Network, Notifications, Padding, Parent, Pointer, Rectangle, Row, Scroll, Service, Text,
+    Vertical, Widget, Workspaces, Zone,
 };
 
 use crate::config::{ConfigService, ShellManifest};
@@ -14,6 +14,14 @@ pub fn top_bar_monitor(monitor: &amane::Monitor) -> LayerWindow {
     build_top_bar(Some(&monitor.name))
 }
 
+const CANONICAL_WORKSPACES: [&str; 5] = [
+    "01 DEV",
+    "02 SYSTEM",
+    "03 RESEARCH",
+    "04 SECURITY",
+    "05 SCRATCH",
+];
+
 fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
     let bar_cfg = &manifest.bar;
@@ -21,38 +29,54 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
 
     let height = bar_cfg.height as f32;
 
-    let mut sections: Vec<Box<dyn Widget>> = Vec::new();
-
-    // Left section: Workspace Radar and Active Window Title
+    // Left section: BLACKSITE Brand & Arch Indicator & Active Window Title
     let mut left_items: Vec<Box<dyn Widget>> = Vec::new();
-    if bar_cfg.show_workspaces {
-        left_items.push(Box::new(render_workspaces(
-            &manifest,
-            &tokens,
-            monitor_name,
-        )));
-    }
+    left_items.push(Box::new(render_brand(&manifest, &tokens)));
     if bar_cfg.show_title {
         left_items.push(Box::new(render_title(&manifest, &tokens)));
     }
-    if !left_items.is_empty() {
-        sections.push(Box::new(
+    let left_container = Rectangle::new()
+        .width(Parent)
+        .height(Parent)
+        .align_child(Align::Start, Align::Center)
+        .child(
             Row::new(left_items)
                 .gap(spacing::GAP_MD)
                 .align(Align::Center),
-        ));
-    }
+        );
+
+    // Center section: 5 Workspaces
+    let (center_widget, ws_width) = if bar_cfg.show_workspaces {
+        render_workspaces(&manifest, &tokens, monitor_name)
+    } else {
+        (Row::new(Vec::new()), 0.0)
+    };
+    let center_container = Rectangle::new()
+        .width(ws_width)
+        .height(Parent)
+        .align_child(Center, Center)
+        .child(center_widget);
 
     // Right section: System Telemetry
-    if bar_cfg.show_telemetry {
-        sections.push(Box::new(render_telemetry(&manifest, &tokens, monitor_name)));
-    }
-
-    let content_row = Row::new(sections)
+    let right_widget = if bar_cfg.show_telemetry {
+        render_telemetry(&manifest, &tokens, monitor_name)
+    } else {
+        Rectangle::new().width(0.0).height(0.0)
+    };
+    let right_container = Rectangle::new()
         .width(Parent)
         .height(Parent)
-        .justify(Justify::SpaceBetween)
-        .align(Align::Center);
+        .align_child(Align::End, Align::Center)
+        .child(right_widget);
+
+    let content_row = Row::new(vec![
+        Box::new(left_container),
+        Box::new(center_container),
+        Box::new(right_container),
+    ])
+    .width(Parent)
+    .height(Parent)
+    .align(Align::Center);
 
     let background_container = Rectangle::new()
         .width(Parent)
@@ -76,11 +100,52 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
         .child(background_container)
 }
 
+fn render_brand(manifest: &ShellManifest, tokens: &ThemeTokens) -> Rectangle {
+    let font = &manifest.theme.font_family;
+    Rectangle::new()
+        .width(108.0)
+        .height(26.0)
+        .radius(radius::SM)
+        .fill(tokens.surface)
+        .border(1.0, tokens.border_subtle)
+        .cursor(Pointer)
+        .padding(Padding {
+            top: 2.0,
+            bottom: 2.0,
+            left: 8.0,
+            right: 8.0,
+        })
+        .align_child(Center, Center)
+        .on_click(|_| {
+            crate::ui::launcher::toggle();
+        })
+        .child(
+            Row::new(vec![
+                Box::new(
+                    Text::new("󰣇")
+                        .size(13.0)
+                        .color(tokens.accent)
+                        .font(font)
+                        .tight(),
+                ),
+                Box::new(
+                    Text::new("BLACKSITE")
+                        .size(typography::CAPTION + 0.5)
+                        .color(tokens.text_primary)
+                        .font(font)
+                        .tight(),
+                ),
+            ])
+            .gap(6.0)
+            .align(Align::Center),
+        )
+}
+
 fn render_workspaces(
     manifest: &ShellManifest,
     tokens: &ThemeTokens,
     monitor_name: Option<&str>,
-) -> Rectangle {
+) -> (Row, f32) {
     let workspaces = Workspaces::read();
     let font = &manifest.theme.font_family;
 
@@ -98,70 +163,92 @@ fn render_workspaces(
         })
         .collect();
 
-    for ws in relevant_workspaces {
-        let id = ws.id();
-        let idx = ws.index();
-        let label = format!("{idx}");
+    let mut total_width = 0.0;
+    let gap = 6.0;
 
-        let fill = if ws.focused() {
+    for (idx, canonical_name) in CANONICAL_WORKSPACES.iter().enumerate() {
+        let ws_match = relevant_workspaces.iter().find(|ws| {
+            if let Some(name) = ws.name() {
+                name == *canonical_name || name.trim() == *canonical_name
+            } else {
+                ws.index() as usize == idx + 1
+            }
+        });
+
+        let is_focused = ws_match.map(|ws| ws.focused()).unwrap_or(false);
+        let is_urgent = ws_match.map(|ws| ws.urgent()).unwrap_or(false);
+        let is_occupied = ws_match.map(|ws| ws.windows() > 0).unwrap_or(false);
+        let ws_id = ws_match.map(|ws| ws.id());
+
+        let pill_width = match idx {
+            0 => 68.0,
+            1 => 86.0,
+            2 => 98.0,
+            3 => 98.0,
+            4 => 98.0,
+            _ => (canonical_name.chars().count() as f32 * 7.5 + 20.0).max(68.0),
+        };
+
+        let fill = if is_focused {
             tokens.accent
-        } else if ws.urgent() {
+        } else if is_urgent {
             tokens.danger
-        } else if ws.windows() > 0 {
+        } else if is_occupied {
             tokens.surface_elevated
         } else {
             tokens.surface
         };
 
-        let tile_border = if ws.focused() {
-            tokens.border_focus
-        } else if ws.urgent() {
+        let tile_border = if is_focused {
+            tokens.accent
+        } else if is_urgent {
             tokens.border_danger
         } else {
             tokens.border_subtle
         };
 
-        let text_color = if ws.focused() {
-            Color::BLACK
-        } else {
+        let text_color = if is_focused {
+            tokens.bg
+        } else if is_urgent || is_occupied {
             tokens.text_primary
+        } else {
+            tokens.text_secondary
         };
-        let mon = monitor_name.map(String::from);
+
+        let target_name = canonical_name.to_string();
 
         let tile = Rectangle::new()
-            .width(28.0)
-            .height(24.0)
+            .width(pill_width)
+            .height(26.0)
             .radius(radius::SM)
             .fill(fill)
             .border(1.0, tile_border)
             .cursor(Pointer)
             .align_child(Center, Center)
             .on_click(move |_| {
-                if let Some(ref name) = mon {
-                    amane::focus_monitor(name);
+                if let Some(id) = ws_id {
+                    Workspaces::focus(id);
+                } else {
+                    Workspaces::focus_name(target_name.clone());
                 }
-                Workspaces::focus(id);
             })
             .child(
-                Text::new(label)
-                    .size(typography::SECONDARY)
+                Text::new(*canonical_name)
+                    .size(typography::CAPTION + 0.5)
                     .color(text_color)
-                    .font(font),
+                    .font(font)
+                    .tight(),
             );
 
         buttons.push(Box::new(tile));
+        total_width += pill_width;
     }
 
-    let ws_width = if buttons.is_empty() {
-        28.0
-    } else {
-        (buttons.len() as f32 * 28.0) + ((buttons.len().saturating_sub(1)) as f32 * 6.0)
-    };
+    if buttons.len() > 1 {
+        total_width += (buttons.len() - 1) as f32 * gap;
+    }
 
-    Rectangle::new()
-        .width(ws_width)
-        .height(Parent)
-        .child(Row::new(buttons).gap(6.0).align(Align::Center))
+    (Row::new(buttons).gap(gap).align(Align::Center), total_width)
 }
 
 fn render_title(manifest: &ShellManifest, tokens: &ThemeTokens) -> Rectangle {
@@ -229,10 +316,10 @@ fn render_telemetry(
     } else if cpu > 50 {
         tokens.accent
     } else {
-        tokens.text_primary
+        tokens.steel
     };
     let cpu_pill = Rectangle::new()
-        .width(66.0)
+        .width(58.0)
         .height(26.0)
         .radius(radius::SM)
         .fill(tokens.surface)
@@ -259,10 +346,10 @@ fn render_telemetry(
     } else if mem > 70 {
         tokens.accent
     } else {
-        tokens.text_primary
+        tokens.steel
     };
     let mem_pill = Rectangle::new()
-        .width(66.0)
+        .width(58.0)
         .height(26.0)
         .radius(radius::SM)
         .fill(tokens.surface)
@@ -292,9 +379,8 @@ fn render_telemetry(
     } else {
         format!("󰕾 {}%", audio.volume())
     };
-    let mon_audio = monitor_name.map(String::from);
     let vol_pill = Rectangle::new()
-        .width(88.0)
+        .width(76.0)
         .height(26.0)
         .radius(radius::SM)
         .fill(tokens.surface)
@@ -310,13 +396,10 @@ fn render_telemetry(
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,
-            left: 8.0,
-            right: 8.0,
+            left: 6.0,
+            right: 6.0,
         })
         .on_click(move |_| {
-            if let Some(ref name) = mon_audio {
-                amane::focus_monitor(name);
-            }
             crate::ui::control_center::open_view(crate::ui::control_center::ActiveView::Audio);
         })
         .on_scroll(|scroll: Scroll| {
@@ -332,7 +415,7 @@ fn render_telemetry(
                 .color(if audio.muted() {
                     tokens.danger
                 } else {
-                    tokens.text_primary
+                    tokens.steel
                 })
                 .font(font),
         );
@@ -351,7 +434,7 @@ fn render_telemetry(
         };
         let bat_text = format!("{} {}%", bat_icon, battery.percent());
         let bat_pill = Rectangle::new()
-            .width(76.0)
+            .width(68.0)
             .height(26.0)
             .radius(radius::SM)
             .fill(tokens.surface)
@@ -359,8 +442,8 @@ fn render_telemetry(
             .padding(Padding {
                 top: 2.0,
                 bottom: 2.0,
-                left: 8.0,
-                right: 8.0,
+                left: 6.0,
+                right: 6.0,
             })
             .align_child(Center, Center)
             .child(
@@ -369,7 +452,7 @@ fn render_telemetry(
                     .color(if battery.percent() < 20 && !battery.charging() {
                         tokens.danger
                     } else {
-                        tokens.text_primary
+                        tokens.steel
                     })
                     .font(font),
             );
@@ -387,9 +470,8 @@ fn render_telemetry(
     } else {
         "󰤭 Offline".to_string()
     };
-    let mon_net = monitor_name.map(String::from);
     let net_pill = Rectangle::new()
-        .width(96.0)
+        .width(84.0)
         .height(26.0)
         .radius(radius::SM)
         .fill(tokens.surface)
@@ -398,21 +480,18 @@ fn render_telemetry(
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,
-            left: 8.0,
-            right: 8.0,
+            left: 6.0,
+            right: 6.0,
         })
         .align_child(Center, Center)
         .on_click(move |_| {
-            if let Some(ref name) = mon_net {
-                amane::focus_monitor(name);
-            }
             crate::ui::control_center::open_view(crate::ui::control_center::ActiveView::Network);
         })
         .child(
             Text::new(net_text)
                 .size(typography::SECONDARY)
                 .color(if network.connected() {
-                    tokens.text_primary
+                    tokens.steel
                 } else {
                     tokens.danger
                 })
@@ -432,9 +511,8 @@ fn render_telemetry(
         } else {
             "󰂯 On".to_string()
         };
-        let mon_bt = monitor_name.map(String::from);
         let bt_pill = Rectangle::new()
-            .width(62.0)
+            .width(54.0)
             .height(26.0)
             .radius(radius::SM)
             .fill(tokens.surface)
@@ -455,9 +533,6 @@ fn render_telemetry(
             })
             .align_child(Center, Center)
             .on_click(move |_| {
-                if let Some(ref name) = mon_bt {
-                    amane::focus_monitor(name);
-                }
                 crate::ui::control_center::open_view(
                     crate::ui::control_center::ActiveView::Bluetooth,
                 );
@@ -468,7 +543,7 @@ fn render_telemetry(
                     .color(if connected_count > 0 {
                         tokens.accent
                     } else if bt_powered {
-                        tokens.text_primary
+                        tokens.steel
                     } else {
                         tokens.text_muted
                     })
@@ -481,7 +556,6 @@ fn render_telemetry(
     let notifs = Notifications::read();
     let notifs_count = notifs.list().len();
     if notifs_count > 0 {
-        let mon_notif = monitor_name.map(String::from);
         let notif_pill = Rectangle::new()
             .width(52.0)
             .height(26.0)
@@ -497,9 +571,6 @@ fn render_telemetry(
             })
             .align_child(Center, Center)
             .on_click(move |_| {
-                if let Some(ref name) = mon_notif {
-                    amane::focus_monitor(name);
-                }
                 crate::ui::control_center::toggle();
             })
             .child(
@@ -528,7 +599,6 @@ fn render_telemetry(
         let mins = rec_elapsed / 60;
         let secs = rec_elapsed % 60;
         let rec_text = format!("󰑋 REC {mins:02}:{secs:02}");
-        let mon_rec = monitor_name.map(String::from);
         let rec_pill = Rectangle::new()
             .width(108.0)
             .height(26.0)
@@ -544,9 +614,6 @@ fn render_telemetry(
             })
             .align_child(Center, Center)
             .on_click(move |_| {
-                if let Some(ref name) = mon_rec {
-                    amane::focus_monitor(name);
-                }
                 crate::ui::screen_record::toggle();
             })
             .child(
@@ -560,9 +627,8 @@ fn render_telemetry(
 
     // Clock (clickable: toggles interactive monthly Calendar)
     let now = Local::now().format("%a %b %d  %H:%M").to_string();
-    let mon_clock = monitor_name.map(String::from);
     let clock_pill = Rectangle::new()
-        .width(162.0)
+        .width(132.0)
         .height(26.0)
         .radius(radius::SM)
         .fill(tokens.surface)
@@ -571,14 +637,11 @@ fn render_telemetry(
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,
-            left: 8.0,
-            right: 8.0,
+            left: 6.0,
+            right: 6.0,
         })
         .align_child(Center, Center)
         .on_click(move |_| {
-            if let Some(ref name) = mon_clock {
-                amane::focus_monitor(name);
-            }
             crate::ui::calendar::toggle();
         })
         .child(
@@ -590,7 +653,6 @@ fn render_telemetry(
     pills.push(Box::new(clock_pill));
 
     // Powermenu icon button (Crimson #E63946)
-    let mon_power = monitor_name.map(String::from);
     let power_pill = Rectangle::new()
         .width(28.0)
         .height(26.0)
@@ -600,21 +662,18 @@ fn render_telemetry(
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(move |_| {
-            if let Some(ref name) = mon_power {
-                amane::focus_monitor(name);
-            }
             crate::ui::powermenu::toggle();
         })
         .child(Text::new("󰐥").size(12.0).color(tokens.danger).font(font));
     pills.push(Box::new(power_pill));
 
     let pills_count = pills.len();
-    let mut telemetry_w: f32 = 66.0 + 66.0 + 88.0 + 96.0 + 162.0 + 28.0;
+    let mut telemetry_w: f32 = 58.0 + 58.0 + 76.0 + 84.0 + 132.0 + 28.0;
     if battery.present() {
-        telemetry_w += 76.0;
+        telemetry_w += 68.0;
     }
     if bluetooth.available() {
-        telemetry_w += 62.0;
+        telemetry_w += 54.0;
     }
     if notifs_count > 0 {
         telemetry_w += 52.0;

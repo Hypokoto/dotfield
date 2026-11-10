@@ -8,6 +8,8 @@ opt.relativenumber = true
 opt.signcolumn = "yes"
 opt.cursorline = true
 opt.showmode = false
+opt.laststatus = 3
+opt.statusline = "%#StatusLine# %f %m%r%=%#StatusLineNC# %y │ %l:%c │ %p%% "
 
 -- Indentation & Tabs
 opt.tabstop = 4

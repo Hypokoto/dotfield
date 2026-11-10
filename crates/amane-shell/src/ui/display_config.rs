@@ -322,13 +322,39 @@ pub fn apply_preset(index: usize) {
                 }
             }
             "kanshi" => {
-                let _ = Command::new("kanshictl").arg("reload").status();
+                // Clean up any stale sockets before restarting
+                if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR")
+                    && let Ok(entries) = std::fs::read_dir(&runtime_dir)
+                {
+                    for entry in entries.flatten() {
+                        if let Ok(name) = entry.file_name().into_string()
+                            && name.starts_with("fr.emersion.kanshi")
+                        {
+                            let _ = std::fs::remove_file(entry.path());
+                        }
+                    }
+                }
+                // Restart daemon cleanly via systemd or process restart
                 let status = Command::new("systemctl")
                     .args(["--user", "restart", "kanshi.service"])
                     .status();
                 if !status.is_ok_and(|s| s.success()) {
                     let _ = Command::new("pkill").args(["-HUP", "kanshi"]).status();
                 }
+                std::thread::sleep(std::time::Duration::from_millis(150));
+                let _ = Command::new("kanshictl").arg("reload").status();
+
+                // Auto-activate matching profile if display is connected
+                let auto_profile = if let Some(ref ext) = ext_opt {
+                    if ext.starts_with("DP") {
+                        "docked-dp"
+                    } else {
+                        "docked-dual"
+                    }
+                } else {
+                    "undocked"
+                };
+                let _ = switch_kanshi(auto_profile);
             }
             _ => {}
         }

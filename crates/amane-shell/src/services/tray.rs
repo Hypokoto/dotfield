@@ -67,7 +67,23 @@ impl Service for TrayService {
     }
 
     fn interval() -> Duration {
-        Duration::from_secs(3600)
+        Duration::from_secs(1)
+    }
+
+    fn update(&mut self) -> bool {
+        let bus = Bus::session();
+        let initial_len = self.items.len();
+        self.items.retain(|item| {
+            let res = bus.call(
+                "org.freedesktop.DBus",
+                "/org/freedesktop/DBus",
+                "org.freedesktop.DBus",
+                "NameHasOwner",
+                &[Argument::from(item.service.as_str())],
+            );
+            res.bool()
+        });
+        self.items.len() != initial_len
     }
 
     fn listen() {

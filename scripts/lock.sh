@@ -50,6 +50,8 @@ resolve_wallpaper() {
 
     # Fallback paths
     local candidates=(
+        "${HOME}/.config/dotfield/background/Wallpapers/Imgs/W4.png"
+        "${DOTFIELD_ROOT}/Wallpapers/Imgs/W4.png"
         "${HOME}/.config/dotfield/background/Wallpapers/Imgs/W1.jpeg"
         "${DOTFIELD_ROOT}/Wallpapers/Imgs/W1.jpeg"
         "${DOTFIELD_ROOT}/Wallpapers/Imgs/W2.png"

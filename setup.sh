@@ -853,7 +853,11 @@ if [[ -d "${SCRIPT_DIR}/Wallpapers" ]]; then
         info "[dry-run] ln -sfn ${SCRIPT_DIR}/Wallpapers ${HOME}/.config/dotfield/background/Wallpapers"
     else
         mkdir -p "${HOME}/.config/dotfield/background"
-        ln -sfn "${SCRIPT_DIR}/Wallpapers" "${HOME}/.config/dotfield/background/Wallpapers"
+        if [[ -d "${HOME}/.config/dotfield/background/Wallpapers" && ! -L "${HOME}/.config/dotfield/background/Wallpapers" ]]; then
+            cp -rn "${SCRIPT_DIR}/Wallpapers/"* "${HOME}/.config/dotfield/background/Wallpapers/" 2>/dev/null || true
+        else
+            ln -sfn "${SCRIPT_DIR}/Wallpapers" "${HOME}/.config/dotfield/background/Wallpapers"
+        fi
     fi
 fi
 if [[ -d "${SCRIPT_DIR}/Wallpapers/Gifs" ]]; then

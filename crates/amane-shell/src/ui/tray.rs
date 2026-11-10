@@ -54,24 +54,27 @@ pub fn render_tray_pill(
         (items.len() as f32 * 26.0) + 12.0
     };
 
-    let tray_container = Rectangle::new()
+    let mut tray_container = Rectangle::new()
         .width(pill_w)
         .height(26.0)
         .radius(radius::SM)
         .fill(tokens.surface)
         .border(1.0, tokens.border_subtle)
-        .cursor(Pointer)
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,
             left: 6.0,
             right: 6.0,
         })
-        .align_child(Center, Center)
-        .on_click(move |_| {
+        .align_child(Center, Center);
+
+    if tray.items.is_empty() {
+        tray_container = tray_container.cursor(Pointer).on_click(move |_| {
             crate::ui::control_center::open_view(crate::ui::control_center::ActiveView::Tray);
-        })
-        .child(Row::new(items).gap(4.0).align(Align::Center));
+        });
+    }
+
+    let tray_container = tray_container.child(Row::new(items).gap(4.0).align(Align::Center));
 
     Box::new(tray_container)
 }

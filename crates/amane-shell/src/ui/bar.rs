@@ -103,7 +103,7 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
 fn render_brand(manifest: &ShellManifest, tokens: &ThemeTokens) -> Rectangle {
     let font = &manifest.theme.font_family;
     Rectangle::new()
-        .width(108.0)
+        .width(116.0)
         .height(26.0)
         .radius(radius::SM)
         .fill(tokens.surface)
@@ -121,19 +121,12 @@ fn render_brand(manifest: &ShellManifest, tokens: &ThemeTokens) -> Rectangle {
         })
         .child(
             Row::new(vec![
-                Box::new(
-                    Text::new("󰣇")
-                        .size(13.0)
-                        .color(tokens.accent)
-                        .font(font)
-                        .tight(),
-                ),
+                Box::new(Text::new("󰣇").size(13.0).color(tokens.accent).font(font)),
                 Box::new(
                     Text::new("BLACKSITE")
                         .size(typography::CAPTION + 0.5)
                         .color(tokens.text_primary)
-                        .font(font)
-                        .tight(),
+                        .font(font),
                 ),
             ])
             .gap(6.0)
@@ -163,31 +156,40 @@ fn render_workspaces(
         })
         .collect();
 
+    let max_idx = relevant_workspaces
+        .iter()
+        .map(|ws| ws.index() as usize)
+        .max()
+        .unwrap_or(0)
+        .max(5);
+
     let mut total_width = 0.0;
     let gap = 6.0;
 
-    for (idx, canonical_name) in CANONICAL_WORKSPACES.iter().enumerate() {
+    for num in 1..=max_idx {
         let ws_match = relevant_workspaces.iter().find(|ws| {
-            if let Some(name) = ws.name() {
-                name == *canonical_name || name.trim() == *canonical_name
-            } else {
-                ws.index() as usize == idx + 1
+            if ws.index() as usize == num {
+                return true;
             }
+            if let Some(name) = ws.name() {
+                let trimmed = name.trim();
+                let prefix2 = format!("{num:02}");
+                let prefix1 = format!("{num}");
+                if trimmed.starts_with(&prefix2) || trimmed.starts_with(&prefix1) {
+                    return true;
+                }
+            }
+            false
         });
 
-        let is_focused = ws_match.map(|ws| ws.focused()).unwrap_or(false);
+        let is_focused = ws_match
+            .map(|ws| ws.focused() || ws.active())
+            .unwrap_or(false);
         let is_urgent = ws_match.map(|ws| ws.urgent()).unwrap_or(false);
         let is_occupied = ws_match.map(|ws| ws.windows() > 0).unwrap_or(false);
         let ws_id = ws_match.map(|ws| ws.id());
 
-        let pill_width = match idx {
-            0 => 68.0,
-            1 => 86.0,
-            2 => 98.0,
-            3 => 98.0,
-            4 => 98.0,
-            _ => (canonical_name.chars().count() as f32 * 7.5 + 20.0).max(68.0),
-        };
+        let pill_width = 34.0;
 
         let fill = if is_focused {
             tokens.accent
@@ -212,10 +214,16 @@ fn render_workspaces(
         } else if is_urgent || is_occupied {
             tokens.text_primary
         } else {
-            tokens.text_secondary
+            tokens.steel
         };
 
-        let target_name = canonical_name.to_string();
+        let target_name = if num <= CANONICAL_WORKSPACES.len() {
+            CANONICAL_WORKSPACES[num - 1].to_string()
+        } else {
+            format!("{num}")
+        };
+
+        let label = format!("{num:02}");
 
         let tile = Rectangle::new()
             .width(pill_width)
@@ -224,6 +232,12 @@ fn render_workspaces(
             .fill(fill)
             .border(1.0, tile_border)
             .cursor(Pointer)
+            .padding(Padding {
+                top: 2.0,
+                bottom: 2.0,
+                left: 4.0,
+                right: 4.0,
+            })
             .align_child(Center, Center)
             .on_click(move |_| {
                 if let Some(id) = ws_id {
@@ -233,11 +247,10 @@ fn render_workspaces(
                 }
             })
             .child(
-                Text::new(*canonical_name)
+                Text::new(label)
                     .size(typography::CAPTION + 0.5)
                     .color(text_color)
-                    .font(font)
-                    .tight(),
+                    .font(font),
             );
 
         buttons.push(Box::new(tile));
@@ -271,7 +284,7 @@ fn render_title(manifest: &ShellManifest, tokens: &ThemeTokens) -> Rectangle {
     };
 
     let font = &manifest.theme.font_family;
-    let title_w = (display_text.chars().count() as f32 * 7.2 + 34.0).clamp(64.0, 240.0);
+    let title_w = (display_text.chars().count() as f32 * 8.5 + 40.0).clamp(64.0, 280.0);
 
     Rectangle::new()
         .width(title_w)
@@ -282,8 +295,8 @@ fn render_title(manifest: &ShellManifest, tokens: &ThemeTokens) -> Rectangle {
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,
-            left: spacing::PAD_SM,
-            right: spacing::PAD_SM,
+            left: 8.0,
+            right: 8.0,
         })
         .align_child(Center, Center)
         .child(

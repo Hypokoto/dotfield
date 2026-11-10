@@ -41,7 +41,7 @@ find_gif() {
 }
 
 find_img() {
-    local names=("W1.jpeg" "W2.png" "W3.png")
+    local names=("W4.png" "W1.jpeg" "W2.png" "W3.png")
     for name in "${names[@]}"; do
         for p in "${WP_DIR}/Imgs/${name}" "${WP_DIR}/${name}" "${HOME}/dev/projects/dotfield/Wallpapers/Imgs/${name}"; do
             if [[ -f "${p}" ]]; then
@@ -53,7 +53,7 @@ find_img() {
     return 1
 }
 
-# 1. Niri Compositor Flow: awww-daemon + awww img (L12.gif animated background)
+# 1. Niri Compositor Flow: awww-daemon + awww img (defaults to W4.png)
 if is_niri; then
     pkill -x swaybg 2>/dev/null || true
 
@@ -88,20 +88,15 @@ if is_niri; then
     if [[ -n "${TARGET}" && "${TARGET}" != "--niri" && -f "${TARGET}" ]]; then
         NIRI_WALLPAPER="${TARGET}"
     elif [[ -n "${TARGET}" && "${TARGET}" != "--niri" ]]; then
-        NIRI_WALLPAPER=$(find_gif "${TARGET}" || true)
+        NIRI_WALLPAPER=$(find_gif "${TARGET}" || find_img || true)
     fi
 
     if [[ -z "${NIRI_WALLPAPER}" ]]; then
-        NIRI_WALLPAPER=$(find_gif "L12.gif" || true)
+        NIRI_WALLPAPER=$(find_img || find_gif "L12.gif" || true)
     fi
 
     if [[ -n "${NIRI_WALLPAPER}" && -f "${NIRI_WALLPAPER}" ]]; then
-        STATIC_FALLBACK=$(find_img || true)
-        if [[ -n "${TARGET}" && -f "${TARGET}" && "${TARGET}" =~ \.(png|jpe?g)$ ]]; then
-            cache_wallpaper "${TARGET}"
-        elif [[ -n "${STATIC_FALLBACK}" ]]; then
-            cache_wallpaper "${STATIC_FALLBACK}"
-        fi
+        cache_wallpaper "${NIRI_WALLPAPER}"
 
         # If the requested wallpaper is already active and awww-daemon is running, skip redundant re-decoding
         if [[ -f "${CACHE_DIR}/current_niri_wallpaper" ]] && \

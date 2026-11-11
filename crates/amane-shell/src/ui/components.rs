@@ -265,35 +265,67 @@ pub fn action_card(
         tokens.text_primary
     };
 
+    let avail_width = (width - spacing::PAD_MD * 2.0).max(60.0);
+    let (badge_widget, badge_space) = if let Some(badge_text) = badge {
+        let badge_w = (badge_text.chars().count() as f32 * 7.5 + 14.0).max(22.0);
+        (Some(keycap(badge_text, tokens)), badge_w + spacing::GAP_MD)
+    } else {
+        (None, 0.0)
+    };
+
+    let text_max_w = (avail_width - 30.0 - spacing::GAP_MD - badge_space).max(40.0);
+    let max_title_chars = (text_max_w / 7.5) as usize;
+    let max_sub_chars = (text_max_w / 6.5) as usize;
+
+    let safe_title = if title.chars().count() > max_title_chars && max_title_chars > 3 {
+        format!(
+            "{}…",
+            title.chars().take(max_title_chars - 1).collect::<String>()
+        )
+    } else {
+        title.to_string()
+    };
+
     let mut text_elements: Vec<Box<dyn Widget>> = vec![Box::new(
-        Text::new(title)
+        Text::new(safe_title)
             .size(typography::BODY)
             .color(title_color)
-            .font(&tokens.font_family),
+            .font(&tokens.font_family)
+            .elide(),
     )];
 
     if let Some(sub) = subtitle {
+        let safe_sub = if sub.chars().count() > max_sub_chars && max_sub_chars > 3 {
+            format!(
+                "{}…",
+                sub.chars().take(max_sub_chars - 1).collect::<String>()
+            )
+        } else {
+            sub.to_string()
+        };
         text_elements.push(Box::new(
-            Text::new(sub)
+            Text::new(safe_sub)
                 .size(typography::SECONDARY)
                 .color(tokens.text_secondary)
-                .font(&tokens.font_family),
+                .font(&tokens.font_family)
+                .elide(),
         ));
     }
 
     let text_column = Column::new(text_elements)
+        .width(text_max_w)
         .gap(spacing::GAP_XS)
         .align(Align::Start);
 
     let left_items: Vec<Box<dyn Widget>> = vec![icon, Box::new(text_column)];
 
     let card_row = Row::new(left_items)
+        .width(avail_width - badge_space)
         .gap(spacing::GAP_MD)
         .align(Align::Center);
 
-    let outer_row = if let Some(badge_text) = badge {
-        let badge_widget = keycap(badge_text, tokens);
-        Row::new(vec![Box::new(card_row), Box::new(badge_widget)])
+    let outer_row = if let Some(badge_w) = badge_widget {
+        Row::new(vec![Box::new(card_row), Box::new(badge_w)])
             .width(Parent)
             .justify(Justify::SpaceBetween)
             .align(Align::Center)

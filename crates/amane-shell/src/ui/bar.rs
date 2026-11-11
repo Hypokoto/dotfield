@@ -8,7 +8,7 @@ use amane::{
 
 use crate::config::{ConfigService, ShellManifest};
 use crate::services::niri::NiriWindowService;
-use crate::ui::tokens::{ThemeTokens, border, radius, spacing, typography};
+use crate::ui::tokens::{ThemeTokens, radius, spacing, typography};
 
 pub fn top_bar_monitor(monitor: &amane::Monitor) -> LayerWindow {
     build_top_bar(Some(&monitor.name))
@@ -82,7 +82,6 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
         .width(Parent)
         .height(Parent)
         .fill(tokens.bg)
-        .border(border::THIN, tokens.border_subtle)
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,

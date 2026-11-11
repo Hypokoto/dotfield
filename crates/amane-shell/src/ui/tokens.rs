@@ -27,6 +27,21 @@ pub mod radius {
     pub const PILL: f32 = 999.0; // Fully rounded pills, radar dots
 }
 
+/// Border thickness tokens (thin, subtle, technical)
+pub mod border {
+    pub const THIN: f32 = 1.0; // Minimal subtle perimeter outline
+    pub const FOCUS: f32 = 1.5; // High-priority active / focused element border
+}
+
+/// Restrained animation durations (120-180ms tactical timing)
+pub mod animation {
+    use std::time::Duration;
+
+    pub const DURATION_FAST: Duration = Duration::from_millis(120); // Quick state transitions, micro-interactions
+    pub const DURATION_NORMAL: Duration = Duration::from_millis(150); // Workspace switch, column glide, telemetry fade
+    pub const DURATION_MODAL: Duration = Duration::from_millis(180); // Restrained dashboard summon & dismissal
+}
+
 /// Typography size scale
 pub mod typography {
     pub const CAPTION: f32 = 10.0; // Micro tags, shortcut keycaps

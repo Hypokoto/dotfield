@@ -2,7 +2,7 @@ use amane::{
     Align, Center, Color, Column, Justify, Padding, Parent, Pointer, Rectangle, Row, Text, Widget,
 };
 
-use crate::ui::tokens::{ThemeTokens, radius, spacing, typography};
+use crate::ui::tokens::{ThemeTokens, border, radius, spacing, typography};
 
 /// Standardized action button for closing overlays and modals
 pub fn close_button(on_click_fn: impl Fn() + 'static, tokens: &ThemeTokens) -> Rectangle {
@@ -11,7 +11,7 @@ pub fn close_button(on_click_fn: impl Fn() + 'static, tokens: &ThemeTokens) -> R
         .height(26.0)
         .radius(radius::SM)
         .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
+        .border(border::THIN, tokens.border_subtle)
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(move |_| on_click_fn())
@@ -83,7 +83,7 @@ pub fn keycap(key_text: &str, tokens: &ThemeTokens) -> Rectangle {
         .height(20.0)
         .radius(radius::SM)
         .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
+        .border(border::THIN, tokens.border_subtle)
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,
@@ -128,7 +128,7 @@ pub fn status_badge(label: &str, dot_color: Color, tokens: &ThemeTokens) -> Rect
         .height(20.0)
         .radius(radius::PILL)
         .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
+        .border(border::THIN, tokens.border_subtle)
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,
@@ -227,7 +227,7 @@ pub fn modal_shell(
         .height(height)
         .radius(radius::LG)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(border::THIN, tokens.border_subtle)
         .padding(Padding {
             top: spacing::PAD_MD,
             bottom: spacing::PAD_MD,
@@ -308,7 +308,14 @@ pub fn action_card(
         .height(height)
         .radius(radius::MD)
         .fill(bg)
-        .border(if selected { 1.5 } else { 1.0 }, border)
+        .border(
+            if selected {
+                border::FOCUS
+            } else {
+                border::THIN
+            },
+            border,
+        )
         .cursor(Pointer)
         .padding(Padding {
             top: spacing::PAD_SM,
@@ -375,7 +382,7 @@ pub fn telemetry_module(icon: &str, text: &str, warn: bool, tokens: &ThemeTokens
         .height(24.0)
         .radius(radius::SM)
         .fill(tokens.surface_elevated)
-        .border(1.0, border_color)
+        .border(border::THIN, border_color)
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,

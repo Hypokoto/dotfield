@@ -189,6 +189,12 @@ fn render_workspaces(
         let is_occupied = ws_match.map(|ws| ws.windows() > 0).unwrap_or(false);
         let ws_id = ws_match.map(|ws| ws.id());
 
+        // Only display workspace if it has open applications (occupied), is active/focused, or urgent
+        let should_display = is_focused || is_occupied || is_urgent;
+        if !should_display {
+            continue;
+        }
+
         let pill_width = 34.0;
 
         let fill = if is_focused {
@@ -250,6 +256,38 @@ fn render_workspaces(
                 Text::new(label)
                     .size(typography::CAPTION + 0.5)
                     .color(text_color)
+                    .font(font),
+            );
+
+        buttons.push(Box::new(tile));
+        total_width += pill_width;
+    }
+
+    // Fallback: If no workspace is occupied or focused yet, at least show workspace 01
+    if buttons.is_empty() {
+        let pill_width = 34.0;
+        let target_name = CANONICAL_WORKSPACES[0].to_string();
+        let tile = Rectangle::new()
+            .width(pill_width)
+            .height(26.0)
+            .radius(radius::SM)
+            .fill(tokens.accent)
+            .border(1.0, tokens.accent)
+            .cursor(Pointer)
+            .padding(Padding {
+                top: 2.0,
+                bottom: 2.0,
+                left: 4.0,
+                right: 4.0,
+            })
+            .align_child(Center, Center)
+            .on_click(move |_| {
+                Workspaces::focus_name(target_name.clone());
+            })
+            .child(
+                Text::new("01")
+                    .size(typography::CAPTION + 0.5)
+                    .color(tokens.bg)
                     .font(font),
             );
 

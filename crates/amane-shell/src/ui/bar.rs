@@ -81,7 +81,7 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
     let background_container = Rectangle::new()
         .width(Parent)
         .height(Parent)
-        .fill(tokens.bg)
+        .fill(Color::TRANSPARENT)
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,

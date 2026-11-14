@@ -56,13 +56,82 @@ impl IpcHandlers {
         self.by_name.insert(String::from(name), handler);
     }
 
-    // the reply is whatever the handler returns, so an unknown name answers in words too
-    pub fn run(&self, call: &IpcCall) -> String {
-        let Some(handler) = self.by_name.get(&call.name) else {
-            return format!("no handler named {}", call.name);
+    // Fast-path byte opcodes (0x01..=0x1F) for zero-allocation IPC dispatch
+    pub fn run_name_and_args(&self, name: &str, args: &[String]) -> String {
+        let Some(handler) = self.by_name.get(name) else {
+            return format!("no handler named {name}");
         };
 
-        handler(&call.arguments)
+        handler(args)
+    }
+
+    // the reply is whatever the handler returns, so an unknown name answers in words too
+    pub fn run(&self, call: &IpcCall) -> String {
+        self.run_name_and_args(&call.name, &call.arguments)
+    }
+}
+
+pub const OP_LAUNCHER: u8 = 0x01;
+pub const OP_TERMINAL_MGR: u8 = 0x02;
+pub const OP_DISPLAY_CFG: u8 = 0x03;
+pub const OP_CONTROL_CTR: u8 = 0x04;
+pub const OP_NETWORK: u8 = 0x05;
+pub const OP_AUDIO: u8 = 0x06;
+pub const OP_BLUETOOTH: u8 = 0x07;
+pub const OP_TRAY: u8 = 0x08;
+pub const OP_POWERMENU: u8 = 0x09;
+pub const OP_CALENDAR: u8 = 0x0A;
+pub const OP_SCREEN_REC: u8 = 0x0B;
+pub const OP_RELOAD: u8 = 0x0C;
+pub const OP_OSD_VOL_UP: u8 = 0x10;
+pub const OP_OSD_VOL_DOWN: u8 = 0x11;
+pub const OP_OSD_VOL_MUTE: u8 = 0x12;
+pub const OP_OSD_BRIGHT_UP: u8 = 0x13;
+pub const OP_OSD_BRIGHT_DN: u8 = 0x14;
+
+pub fn opcode_to_name(opcode: u8) -> Option<(&'static str, &'static [&'static str])> {
+    match opcode {
+        OP_LAUNCHER => Some(("launcher", &[])),
+        OP_TERMINAL_MGR => Some(("terminal-manager", &[])),
+        OP_DISPLAY_CFG => Some(("display-config", &[])),
+        OP_CONTROL_CTR => Some(("control-center", &[])),
+        OP_NETWORK => Some(("network", &[])),
+        OP_AUDIO => Some(("audio", &[])),
+        OP_BLUETOOTH => Some(("bluetooth", &[])),
+        OP_TRAY => Some(("tray", &[])),
+        OP_POWERMENU => Some(("powermenu", &[])),
+        OP_CALENDAR => Some(("calendar", &[])),
+        OP_SCREEN_REC => Some(("screen-recorder", &[])),
+        OP_RELOAD => Some(("reload", &[])),
+        OP_OSD_VOL_UP => Some(("osd", &["volume-up"])),
+        OP_OSD_VOL_DOWN => Some(("osd", &["volume-down"])),
+        OP_OSD_VOL_MUTE => Some(("osd", &["volume-mute"])),
+        OP_OSD_BRIGHT_UP => Some(("osd", &["brightness-up"])),
+        OP_OSD_BRIGHT_DN => Some(("osd", &["brightness-down"])),
+        _ => None,
+    }
+}
+
+pub fn name_to_opcode(name: &str) -> Option<u8> {
+    match name {
+        "launcher" => Some(OP_LAUNCHER),
+        "terminal-manager" | "terminals" => Some(OP_TERMINAL_MGR),
+        "display-config" => Some(OP_DISPLAY_CFG),
+        "control-center" => Some(OP_CONTROL_CTR),
+        "network" => Some(OP_NETWORK),
+        "audio" => Some(OP_AUDIO),
+        "bluetooth" => Some(OP_BLUETOOTH),
+        "tray" => Some(OP_TRAY),
+        "powermenu" => Some(OP_POWERMENU),
+        "calendar" => Some(OP_CALENDAR),
+        "screen-recorder" => Some(OP_SCREEN_REC),
+        "reload" => Some(OP_RELOAD),
+        "volume-up" => Some(OP_OSD_VOL_UP),
+        "volume-down" => Some(OP_OSD_VOL_DOWN),
+        "volume-mute" => Some(OP_OSD_VOL_MUTE),
+        "brightness-up" => Some(OP_OSD_BRIGHT_UP),
+        "brightness-down" => Some(OP_OSD_BRIGHT_DN),
+        _ => None,
     }
 }
 
@@ -72,4 +141,34 @@ pub fn ipc_socket() -> PathBuf {
         env::var_os("XDG_RUNTIME_DIR").expect("failed to find socket: XDG_RUNTIME_DIR is not set");
 
     PathBuf::from(runtime_directory).join("amane.sock")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_opcode_mappings() {
+        assert_eq!(name_to_opcode("launcher"), Some(OP_LAUNCHER));
+        assert_eq!(name_to_opcode("terminal-manager"), Some(OP_TERMINAL_MGR));
+        assert_eq!(name_to_opcode("terminals"), Some(OP_TERMINAL_MGR));
+        assert_eq!(name_to_opcode("display-config"), Some(OP_DISPLAY_CFG));
+        assert_eq!(name_to_opcode("unknown-cmd"), None);
+
+        assert_eq!(opcode_to_name(OP_LAUNCHER), Some(("launcher", &[][..])));
+        let (osd, args) = opcode_to_name(OP_OSD_VOL_UP).unwrap();
+        assert_eq!(osd, "osd");
+        assert_eq!(args, &["volume-up"]);
+    }
+
+    #[test]
+    fn test_ipc_handlers_run_name_and_args() {
+        let mut handlers = IpcHandlers::default();
+        handlers.insert("test", |_| "ok".to_string());
+        assert_eq!(handlers.run_name_and_args("test", &[]), "ok");
+        assert_eq!(
+            handlers.run_name_and_args("missing", &[]),
+            "no handler named missing"
+        );
+    }
 }

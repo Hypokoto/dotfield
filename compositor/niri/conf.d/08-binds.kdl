@@ -5,20 +5,20 @@ binds {
     // Core Application Launchers
     // Super + Return launches configured default terminal directly
     Mod+Return { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
-    Mod+Shift+Return { spawn "sh" "-c" "PATH=\"${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}\" exec amane --terminal-manager"; }
-    Mod+Space { spawn "sh" "-c" "PATH=\"${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}\" exec amane --launcher"; }
-    Mod+Shift+Space { spawn "sh" "-c" "PATH=\"${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}\" exec amane --control-center"; }
+    Mod+Shift+Return { spawn "amane-msg" "terminal-manager"; }
+    Mod+Space { spawn "amane-msg" "launcher"; }
+    Mod+Shift+Space { spawn "amane-msg" "control-center"; }
     Mod+Q { close-window; }
-    Mod+Shift+E { spawn "sh" "-c" "PATH=\"${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}\" exec amane --powermenu"; }
+    Mod+Shift+E { spawn "amane-msg" "powermenu"; }
 
     // Dotfield Interactive Hardware & System Widgets
-    Mod+Shift+N { spawn "sh" "-c" "PATH=\"${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}\" exec amane --network"; }
-    Mod+Shift+A { spawn "sh" "-c" "PATH=\"${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}\" exec amane --audio"; }
-    Mod+Shift+B { spawn "sh" "-c" "PATH=\"${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}\" exec amane --bluetooth"; }
-    Mod+Shift+T { spawn "sh" "-c" "PATH=\"${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}\" exec amane --tray"; }
-    Mod+Shift+D { spawn "sh" "-c" "PATH=\"${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}\" exec amane --display-config"; }
-    Mod+Shift+C { spawn "sh" "-c" "PATH=\"${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}\" exec amane --calendar"; }
-    Mod+Shift+R { spawn "sh" "-c" "PATH=\"${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}\" exec amane --screen-recorder"; }
+    Mod+Shift+N { spawn "amane-msg" "network"; }
+    Mod+Shift+A { spawn "amane-msg" "audio"; }
+    Mod+Shift+B { spawn "amane-msg" "bluetooth"; }
+    Mod+Shift+T { spawn "amane-msg" "tray"; }
+    Mod+Shift+D { spawn "amane-msg" "display-config"; }
+    Mod+Shift+C { spawn "amane-msg" "calendar"; }
+    Mod+Shift+R { spawn "amane-msg" "screen-recorder"; }
     Mod+Escape { spawn "sh" "-c" "~/.config/dotfield/scripts/lock.sh"; }
 
     // Screen Capturing

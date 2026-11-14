@@ -1,5 +1,5 @@
 use std::fs;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::time::Duration;
 
@@ -7,7 +7,7 @@ use smithay_client_toolkit::reexports::calloop::{
     Interest, LoopHandle, Mode, PostAction, generic::Generic,
 };
 
-use crate::ipc::{IpcCall, IpcHandlers, ipc_socket};
+use crate::ipc::{IpcCall, IpcHandlers, ipc_socket, opcode_to_name};
 
 use super::WaylandState;
 
@@ -52,13 +52,34 @@ fn listen() -> UnixListener {
 
 fn answer(mut stream: UnixStream, handlers: &IpcHandlers) {
     // a client that never finishes sending must not freeze the shell
-    let timeout = Some(Duration::from_secs(1));
+    let timeout = Some(Duration::from_millis(500));
 
     if stream.set_read_timeout(timeout).is_err() {
         return;
     }
 
-    let Ok(call) = IpcCall::read(&stream) else {
+    let mut first_byte = [0u8; 1];
+    if stream.read_exact(&mut first_byte).is_err() {
+        return;
+    }
+
+    let b = first_byte[0];
+    if b < 0x20 {
+        // Fast-path byte opcode
+        if let Some((name, args)) = opcode_to_name(b) {
+            let args_vec: Vec<String> = args.iter().map(|&s| s.to_string()).collect();
+            let _ = handlers.run_name_and_args(name, &args_vec);
+            // Write 1-byte ACK
+            let _ = stream.write_all(&[0x00]);
+        } else {
+            let _ = stream.write_all(b"err: unknown opcode\n");
+        }
+        return;
+    }
+
+    // Fallback: line-based string protocol
+    let reader = std::io::Cursor::new(first_byte).chain(&mut stream);
+    let Ok(call) = IpcCall::read(reader) else {
         return;
     };
 

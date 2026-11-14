@@ -1,12 +1,12 @@
 use std::collections::HashMap;
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 use std::thread;
 use std::time::Duration;
 
 use amane::Service;
+use arc_swap::ArcSwap;
 use niri_ipc::socket::Socket;
 use niri_ipc::{Action, Event, Request, Response, Window};
-use parking_lot::RwLock;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct NiriFocusedWindow {
@@ -15,8 +15,8 @@ pub struct NiriFocusedWindow {
     pub app_id: String,
 }
 
-static FOCUSED_WINDOW: LazyLock<RwLock<NiriFocusedWindow>> =
-    LazyLock::new(|| RwLock::new(NiriFocusedWindow::default()));
+static FOCUSED_WINDOW: LazyLock<ArcSwap<NiriFocusedWindow>> =
+    LazyLock::new(|| ArcSwap::from_pointee(NiriFocusedWindow::default()));
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct NiriWindowService {
@@ -60,9 +60,14 @@ impl NiriService {
         std::env::var_os("NIRI_SOCKET").is_some()
     }
 
-    /// Returns the currently focused window info.
+    /// Returns the currently focused window info via lock-free atomic load.
     pub fn focused_window() -> NiriFocusedWindow {
-        FOCUSED_WINDOW.read().clone()
+        (**FOCUSED_WINDOW.load()).clone()
+    }
+
+    /// Returns an Arc pointer to the currently focused window info with zero allocations.
+    pub fn focused_window_arc() -> Arc<NiriFocusedWindow> {
+        FOCUSED_WINDOW.load_full()
     }
 
     /// Sends an Action request to Niri over IPC.
@@ -97,11 +102,11 @@ impl NiriService {
     }
 
     fn update_active_window(id: u64, title: &str, app_id: &str, count: usize) {
-        *FOCUSED_WINDOW.write() = NiriFocusedWindow {
+        FOCUSED_WINDOW.store(Arc::new(NiriFocusedWindow {
             id,
             title: title.to_string(),
             app_id: app_id.to_string(),
-        };
+        }));
 
         let mut svc = NiriWindowService::write();
         svc.id = id;
@@ -174,14 +179,14 @@ impl NiriService {
                     windows.insert(id, window);
                     let total = windows.len();
 
-                    if is_focused || FOCUSED_WINDOW.read().id == id {
+                    if is_focused || FOCUSED_WINDOW.load().id == id {
                         Self::update_active_window(id, &title, &app_id, total);
                     }
                 }
                 Event::WindowClosed { id } => {
                     windows.remove(&id);
                     let total = windows.len();
-                    if FOCUSED_WINDOW.read().id == id {
+                    if FOCUSED_WINDOW.load().id == id {
                         Self::update_active_window(0, "", "", total);
                     } else {
                         NiriWindowService::write().window_count = total;
@@ -262,5 +267,45 @@ mod tests {
             let result = NiriService::close_focused_window();
             assert!(result.is_err());
         }
+    }
+
+    #[test]
+    fn test_niri_lock_free_concurrent_access() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+
+        let running = Arc::new(AtomicBool::new(true));
+        let mut handles = vec![];
+
+        // Spawn 4 reader threads
+        for _ in 0..4 {
+            let r = Arc::clone(&running);
+            handles.push(thread::spawn(move || {
+                let mut read_count = 0;
+                while r.load(Ordering::Relaxed) {
+                    let win = NiriService::focused_window();
+                    let _ = win.id;
+                    read_count += 1;
+                }
+                read_count
+            }));
+        }
+
+        // Writer thread updates active window 1000 times
+        let writer = thread::spawn(|| {
+            for i in 1..=1000 {
+                NiriService::update_active_window(i, "Ghostty", "ghostty", 1);
+            }
+        });
+
+        writer.join().unwrap();
+        running.store(false, Ordering::Relaxed);
+
+        for handle in handles {
+            let count = handle.join().unwrap();
+            assert!(count > 0, "reader should have performed lock-free reads");
+        }
+
+        // Reset
+        NiriService::update_active_window(0, "", "", 0);
     }
 }

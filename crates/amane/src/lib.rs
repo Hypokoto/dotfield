@@ -34,10 +34,14 @@ pub use graphics::{Cap, Color, Gradient, Weight};
 pub use input::cursor_names::{
     Crosshair, Default, Grab, Grabbing, Move, NotAllowed, Pointer, ResizeBottom, ResizeBottomLeft,
     ResizeBottomRight, ResizeHorizontal, ResizeLeft, ResizeRight, ResizeTop, ResizeTopLeft,
-    ResizeTopRight, ResizeVertical, Text, Wait,
 };
 pub use input::{Button, Cursor, Key, Point, Scroll};
-pub use ipc::{IpcCall, ipc_socket};
+pub use ipc::{
+    IpcCall, ipc_socket, name_to_opcode, opcode_to_name, OP_AUDIO, OP_BLUETOOTH, OP_CALENDAR,
+    OP_CONTROL_CTR, OP_DISPLAY_CFG, OP_LAUNCHER, OP_NETWORK, OP_OSD_BRIGHT_DN, OP_OSD_BRIGHT_UP,
+    OP_OSD_VOL_DOWN, OP_OSD_VOL_MUTE, OP_OSD_VOL_UP, OP_POWERMENU, OP_RELOAD, OP_SCREEN_REC,
+    OP_TERMINAL_MGR, OP_TRAY,
+};
 pub use layer_window::{
     Horizontal, InputArea, Keyboard, Layer, LayerWindow, Margin, OutputTarget, Vertical,
     WindowSize, Zone,

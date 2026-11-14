@@ -10,6 +10,10 @@ repository.workspace = true
 name = "amane"
 path = "src/main.rs"
 
+[[bin]]
+name = "amane-msg"
+path = "src/bin/amane-msg.rs"
+
 [dependencies]
 amane = { path = "../amane" }
 clap = { workspace = true }
@@ -21,6 +25,7 @@ thiserror = { workspace = true }
 colored = { workspace = true }
 chrono = { workspace = true }
 parking_lot = "0.12"
+arc-swap = "1.7"
 niri-ipc = "26.4.0"
 libc = "0.2"
 

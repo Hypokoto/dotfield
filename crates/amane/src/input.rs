@@ -97,7 +97,7 @@ pub enum Cursor {
 }
 
 pub mod cursor_names {
-    #![allow(non_upper_case_globals)]
+    #![allow(non_upper_case_globals, dead_code)]
 
     use super::Cursor;
 

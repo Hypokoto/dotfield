@@ -1,37 +1,37 @@
 /*
  * Dotfield SwayOSD GTK Theme
- * Controlled Chaos — Void Black · Crimson · Industrial Amber · Steel
+ * BLACKSITE Industrial Noir — Tactical Interface
  */
 
 window {
-    background: alpha(#121216, 0.95);
-    border: 2px solid #FFB000;
-    border-radius: 8px;
+    background: alpha(#08080A, 0.96);
+    border: 1px solid #FFB000;
+    border-radius: 2px;
     padding: 12px 16px;
 }
 
 progressbar {
-    background-color: #1C1C23;
-    border-radius: 4px;
+    background-color: #181920;
+    border-radius: 2px;
 }
 
 progressbar trough {
-    background-color: #1C1C23;
-    border-radius: 4px;
-    min-height: 8px;
+    background-color: #181920;
+    border-radius: 2px;
+    min-height: 6px;
 }
 
 progressbar progress {
     background-color: #FFB000;
-    border-radius: 4px;
-    min-height: 8px;
+    border-radius: 2px;
+    min-height: 6px;
 }
 
 label {
     font-family: 'JetBrainsMono Nerd Font', monospace;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
-    color: #E8E6E3;
+    color: #E6E6EB;
 }
 
 image {

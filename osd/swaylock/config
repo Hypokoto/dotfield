@@ -1,5 +1,6 @@
 # Swaylock configuration managed by Dotfield
-# Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
+# BLACKSITE Industrial Noir — Tactical Interface
+# Void #08080A · Obsidian #111216 · Graphite #181920 · Iron #282A36 · Bone #E6E6EB · Amber #FFB000 · Crimson #E63946
 
 daemonize
 ignore-empty-password
@@ -10,24 +11,24 @@ indicator-idle-visible
 
 # Typography & Indicator Geometry
 font=JetBrainsMono Nerd Font
-font-size=14
+font-size=13
 indicator-radius=110
 indicator-thickness=8
 
 # Base Canvas (Default Void Black)
-color=0A0A0C
+color=08080A
 scaling=fill
 
 # Indicator Center Disc (Semi-translucent Obsidian & Graphite)
-inside-color=121216cc
-inside-clear-color=1C1C23ee
-inside-ver-color=1C1C23ee
-inside-wrong-color=221014ee
-inside-caps-lock-color=221014cc
+inside-color=111216ee
+inside-clear-color=181920ee
+inside-ver-color=181920ee
+inside-wrong-color=282A36ee
+inside-caps-lock-color=282A36ee
 
-# Indicator Ring Outer Boundary
-ring-color=34343D
-ring-clear-color=FFD166
+# Indicator Ring Outer Boundary (Hairline Iron & Tactical Amber)
+ring-color=282A36
+ring-clear-color=FFB000
 ring-ver-color=FFB000
 ring-wrong-color=E63946
 ring-caps-lock-color=E63946
@@ -47,13 +48,13 @@ caps-lock-key-hl-color=FFB000
 caps-lock-bs-hl-color=E63946
 
 # Center Text & Status Labels
-text-color=E8E6E3
-text-clear-color=FFD166
+text-color=E6E6EB
+text-clear-color=FFB000
 text-ver-color=FFB000
 text-wrong-color=E63946
 text-caps-lock-color=E63946
 
 # Keyboard Layout Badge Box
-layout-bg-color=1C1C23dd
-layout-border-color=34343D
-layout-text-color=E8E6E3
+layout-bg-color=181920ee
+layout-border-color=282A36
+layout-text-color=E6E6EB

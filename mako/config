@@ -1,5 +1,5 @@
 # Mako notification daemon configuration managed by Dotfield
-# Controlled Chaos color palette — Void Black · Crimson · Industrial Amber · Steel
+# BLACKSITE Industrial Noir — Tactical Interface (65-20-8-5-2 palette)
 
 # Typography & Geometry
 font=JetBrainsMono Nerd Font 10
@@ -69,23 +69,23 @@ border-color=#FFB000
 
 # Screenshot Notifications
 [app-name=Screenshot]
-border-color=#FFD166
+border-color=#FFB000
 
-# Battery Alerts (Controlled Chaos Low & Critical Warnings)
+# Battery Alerts (Industrial Noir Low & Critical Warnings)
 [app-name=battery-alert]
 border-color=#FFB000
 default-timeout=8000
 
 [category=battery-low]
 border-color=#FFB000
-background-color=#181822
-text-color=#E8E6E3
+background-color=#111216
+text-color=#E6E6EB
 default-timeout=10000
 
 [category=battery-critical]
 border-color=#E63946
-background-color=#1C1014
-text-color=#FFFFFF
+background-color=#181920
+text-color=#E6E6EB
 default-timeout=0
 ignore-timeout=1
 

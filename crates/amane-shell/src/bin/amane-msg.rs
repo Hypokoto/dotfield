@@ -24,6 +24,9 @@ Usage:
 Fast-Path Opcodes (0-alloc byte frames, <0.2ms):
   launcher              Toggle application launcher modal
   terminal-manager      Toggle terminal selector
+  topology              Toggle project topology & worktree switcher (alias)
+  presentation          Toggle zero-disruption presentation mode shield
+  sidecar               Spawn or focus companion sidecar for active window
   display-config        Toggle interactive display configurator
   control-center        Toggle control center
   network               Toggle network settings

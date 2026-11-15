@@ -6,13 +6,16 @@ use std::time::Duration;
 use amane::Service;
 use arc_swap::ArcSwap;
 use niri_ipc::socket::Socket;
-use niri_ipc::{Action, Event, Request, Response, Window};
+use niri_ipc::{Action, Event, Request, Response, Window, WorkspaceReferenceArg};
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+use crate::services::topology::ProjectTarget;
+
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct NiriFocusedWindow {
     pub id: u64,
     pub title: String,
     pub app_id: String,
+    pub is_full_width: bool,
 }
 
 static FOCUSED_WINDOW: LazyLock<ArcSwap<NiriFocusedWindow>> =
@@ -101,11 +104,161 @@ impl NiriService {
         Self::perform_action(Action::CloseWindow { id: None })
     }
 
-    fn update_active_window(id: u64, title: &str, app_id: &str, count: usize) {
+    /// Focus a specific window ID on Niri's spatial ribbon.
+    pub fn focus_window(id: u64) -> anyhow::Result<()> {
+        Self::perform_action(Action::FocusWindow { id })
+    }
+
+    /// Focus a workspace by name (e.g. "01 DEV").
+    pub fn focus_workspace(name: &str) -> anyhow::Result<()> {
+        Self::perform_action(Action::FocusWorkspace {
+            reference: WorkspaceReferenceArg::Name(name.to_string()),
+        })
+    }
+
+    /// Query the current list of open windows from Niri IPC.
+    pub fn query_windows() -> anyhow::Result<Vec<Window>> {
+        let mut socket = Socket::connect()?;
+        match socket.send(Request::Windows)? {
+            Ok(Response::Windows(wins)) => Ok(wins),
+            Ok(other) => anyhow::bail!("Unexpected response querying windows: {other:?}"),
+            Err(e) => anyhow::bail!("Niri error: {e}"),
+        }
+    }
+
+    /// Warp to an existing project window on the ribbon or spawn an atomic worktree cell pair.
+    pub fn jump_or_spawn_project(target: &ProjectTarget) -> anyhow::Result<()> {
+        let expected_app_id = format!("dev.{}", target.slug);
+
+        // 1. Check if a window matching app_id == dev.<slug> already exists
+        if let Ok(windows) = Self::query_windows() {
+            for win in windows {
+                if let Some(app_id) = win.app_id.as_deref()
+                    && app_id == expected_app_id
+                {
+                    return Self::focus_window(win.id);
+                }
+            }
+        }
+
+        // 2. Unmaterialized target: ensure workspace "01 DEV" is active
+        let _ = Self::focus_workspace("01 DEV");
+
+        // Small delay to allow workspace focus before window placement
+        thread::sleep(Duration::from_millis(50));
+
+        let path_str = target.path.to_string_lossy().to_string();
+
+        // Spawn primary terminal (2/3 width via window rule) with dev.<slug> app-id
+        // attaching to or creating a tmux session with the slug name
+        let _ = std::process::Command::new("kitty")
+            .args([
+                "--app-id",
+                &expected_app_id,
+                "-d",
+                &path_str,
+                "-e",
+                "tmux",
+                "new-session",
+                "-A",
+                "-s",
+                &target.slug,
+            ])
+            .spawn();
+
+        // Spawn linked companion sidecar (1/3 width via window rule with open-focused false)
+        let sidecar_app_id = format!("sidecar-{}", target.slug);
+        let _ = std::process::Command::new("kitty")
+            .args(["--app-id", &sidecar_app_id, "-d", &path_str])
+            .spawn();
+
+        Ok(())
+    }
+
+    /// Inspect current focused window and spawn a companion sidecar if not already present.
+    pub fn spawn_sidecar_for_focused() -> anyhow::Result<()> {
+        let focused = Self::focused_window();
+        let slug = if focused.app_id.starts_with("dev.") {
+            focused.app_id.trim_start_matches("dev.").to_string()
+        } else if !focused.app_id.is_empty() && focused.app_id != "amane" {
+            ProjectTarget::slugify(&focused.app_id)
+        } else {
+            "scratch".to_string()
+        };
+
+        let sidecar_app_id = format!("sidecar-{slug}");
+
+        // Check if sidecar is already open
+        if let Ok(windows) = Self::query_windows() {
+            for win in windows {
+                if let Some(app_id) = win.app_id.as_deref()
+                    && app_id == sidecar_app_id
+                {
+                    return Self::focus_window(win.id);
+                }
+            }
+        }
+
+        // Spawn companion sidecar
+        std::process::Command::new("kitty")
+            .args(["--app-id", &sidecar_app_id])
+            .spawn()?;
+
+        Ok(())
+    }
+
+    /// Quarantines external/secondary outputs for presentation mode.
+    /// Focuses each external output and routes its active view to "05 PRESENTATION" (or "03 RESEARCH").
+    /// Finally refocuses the primary internal display (eDP-1 if present).
+    pub fn quarantine_external_outputs_for_presentation() -> anyhow::Result<()> {
+        if !Self::is_available() {
+            return Ok(());
+        }
+
+        let mut socket = Socket::connect()?;
+        let outputs = match socket.send(Request::Outputs)? {
+            Ok(Response::Outputs(outs)) => outs,
+            Ok(other) => anyhow::bail!("Unexpected response querying outputs: {other:?}"),
+            Err(e) => anyhow::bail!("Niri error: {e}"),
+        };
+
+        let external_outputs: Vec<String> = outputs
+            .keys()
+            .filter(|name| !name.starts_with("eDP"))
+            .cloned()
+            .collect();
+
+        if external_outputs.is_empty() {
+            return Ok(());
+        }
+
+        for ext_out in external_outputs {
+            let _ = Self::perform_action(Action::FocusMonitor { output: ext_out });
+            let _ = Self::focus_workspace("05 PRESENTATION")
+                .or_else(|_| Self::focus_workspace("03 RESEARCH"));
+        }
+
+        if let Some(primary) = outputs.keys().find(|k| k.starts_with("eDP")) {
+            let _ = Self::perform_action(Action::FocusMonitor {
+                output: primary.clone(),
+            });
+        }
+
+        Ok(())
+    }
+
+    pub fn update_active_window(
+        id: u64,
+        title: &str,
+        app_id: &str,
+        count: usize,
+        is_full_width: bool,
+    ) {
         FOCUSED_WINDOW.store(Arc::new(NiriFocusedWindow {
             id,
             title: title.to_string(),
             app_id: app_id.to_string(),
+            is_full_width,
         }));
 
         let mut svc = NiriWindowService::write();
@@ -115,8 +268,23 @@ impl NiriService {
         svc.window_count = count;
     }
 
+    fn is_window_full_width(win: &Window, max_output_width: f64) -> bool {
+        !win.is_floating && win.layout.tile_size.0 >= (0.90 * max_output_width).max(1200.0)
+    }
+
     fn run_event_loop() -> std::io::Result<()> {
         let mut socket = Socket::connect()?;
+
+        let mut max_output_width = 1920.0f64;
+        if let Ok(Ok(Response::Outputs(outputs))) = socket.send(Request::Outputs) {
+            for (_, out) in outputs {
+                if let Some(logical) = out.logical
+                    && logical.width as f64 > max_output_width
+                {
+                    max_output_width = logical.width as f64;
+                }
+            }
+        }
 
         let mut windows: HashMap<u64, Window> = HashMap::new();
 
@@ -124,7 +292,8 @@ impl NiriService {
         if let Ok(Ok(Response::FocusedWindow(Some(win)))) = socket.send(Request::FocusedWindow) {
             let title = win.title.clone().unwrap_or_default();
             let app_id = win.app_id.clone().unwrap_or_default();
-            Self::update_active_window(win.id, &title, &app_id, 1);
+            let full_w = Self::is_window_full_width(&win, max_output_width);
+            Self::update_active_window(win.id, &title, &app_id, 1, full_w);
             windows.insert(win.id, win);
         }
 
@@ -135,7 +304,8 @@ impl NiriService {
                 if win.is_focused {
                     let title = win.title.clone().unwrap_or_default();
                     let app_id = win.app_id.clone().unwrap_or_default();
-                    Self::update_active_window(win.id, &title, &app_id, total);
+                    let full_w = Self::is_window_full_width(&win, max_output_width);
+                    Self::update_active_window(win.id, &title, &app_id, total, full_w);
                 }
                 windows.insert(win.id, win);
             }
@@ -162,13 +332,14 @@ impl NiriService {
                         if win.is_focused {
                             let title = win.title.clone().unwrap_or_default();
                             let app_id = win.app_id.clone().unwrap_or_default();
-                            Self::update_active_window(win.id, &title, &app_id, total);
+                            let full_w = Self::is_window_full_width(&win, max_output_width);
+                            Self::update_active_window(win.id, &title, &app_id, total, full_w);
                             found_focused = true;
                         }
                         windows.insert(win.id, win);
                     }
                     if !found_focused && windows.is_empty() {
-                        Self::update_active_window(0, "", "", 0);
+                        Self::update_active_window(0, "", "", 0, false);
                     }
                 }
                 Event::WindowOpenedOrChanged { window } => {
@@ -176,18 +347,19 @@ impl NiriService {
                     let is_focused = window.is_focused;
                     let title = window.title.clone().unwrap_or_default();
                     let app_id = window.app_id.clone().unwrap_or_default();
+                    let full_w = Self::is_window_full_width(&window, max_output_width);
                     windows.insert(id, window);
                     let total = windows.len();
 
                     if is_focused || FOCUSED_WINDOW.load().id == id {
-                        Self::update_active_window(id, &title, &app_id, total);
+                        Self::update_active_window(id, &title, &app_id, total, full_w);
                     }
                 }
                 Event::WindowClosed { id } => {
                     windows.remove(&id);
                     let total = windows.len();
                     if FOCUSED_WINDOW.load().id == id {
-                        Self::update_active_window(0, "", "", total);
+                        Self::update_active_window(0, "", "", total, false);
                     } else {
                         NiriWindowService::write().window_count = total;
                     }
@@ -199,13 +371,14 @@ impl NiriService {
                             if let Some(win) = windows.get(&win_id) {
                                 let title = win.title.clone().unwrap_or_default();
                                 let app_id = win.app_id.clone().unwrap_or_default();
-                                Self::update_active_window(win.id, &title, &app_id, total);
+                                let full_w = Self::is_window_full_width(win, max_output_width);
+                                Self::update_active_window(win.id, &title, &app_id, total, full_w);
                             } else {
-                                Self::update_active_window(win_id, "", "", total);
+                                Self::update_active_window(win_id, "", "", total, false);
                             }
                         }
                         None => {
-                            Self::update_active_window(0, "", "", total);
+                            Self::update_active_window(0, "", "", total, false);
                         }
                     }
                 }
@@ -238,6 +411,8 @@ mod tests {
         assert!(ws.app_id.is_empty());
     }
 
+    static TEST_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     #[test]
     fn test_niri_service_availability() {
         let available = NiriService::is_available();
@@ -247,17 +422,20 @@ mod tests {
 
     #[test]
     fn test_niri_update_active_window() {
-        NiriService::update_active_window(42, "Foot Terminal", "foot", 3);
+        let _lock = TEST_MUTEX.lock().unwrap();
+        NiriService::update_active_window(42, "Foot Terminal", "foot", 3, true);
         let focused = NiriService::focused_window();
         assert_eq!(focused.id, 42);
         assert_eq!(focused.title, "Foot Terminal");
         assert_eq!(focused.app_id, "foot");
+        assert!(focused.is_full_width);
 
         // Clean up
-        NiriService::update_active_window(0, "", "", 0);
+        NiriService::update_active_window(0, "", "", 0, false);
         let reset = NiriService::focused_window();
         assert_eq!(reset.id, 0);
         assert!(reset.title.is_empty());
+        assert!(!reset.is_full_width);
     }
 
     #[test]
@@ -271,6 +449,7 @@ mod tests {
 
     #[test]
     fn test_niri_lock_free_concurrent_access() {
+        let _lock = TEST_MUTEX.lock().unwrap();
         use std::sync::atomic::{AtomicBool, Ordering};
 
         let running = Arc::new(AtomicBool::new(true));
@@ -293,7 +472,7 @@ mod tests {
         // Writer thread updates active window 1000 times
         let writer = thread::spawn(|| {
             for i in 1..=1000 {
-                NiriService::update_active_window(i, "Ghostty", "ghostty", 1);
+                NiriService::update_active_window(i, "Ghostty", "ghostty", 1, false);
             }
         });
 
@@ -306,6 +485,41 @@ mod tests {
         }
 
         // Reset
-        NiriService::update_active_window(0, "", "", 0);
+        NiriService::update_active_window(0, "", "", 0, false);
+    }
+
+    #[test]
+    fn test_app_id_slug_matching() {
+        let target = ProjectTarget {
+            name: "dotfield".to_string(),
+            slug: "dotfield".to_string(),
+            path: std::path::PathBuf::from("/home/hypokoto/dev/projects/dotfield"),
+            branch: Some("main".to_string()),
+            is_worktree: false,
+            is_tmux_active: false,
+            glyph: "󰘐",
+        };
+
+        let expected_app_id = format!("dev.{}", target.slug);
+        let sidecar_app_id = format!("sidecar-{}", target.slug);
+        assert_eq!(expected_app_id, "dev.dotfield");
+        assert_eq!(sidecar_app_id, "sidecar-dotfield");
+    }
+
+    #[test]
+    fn test_sidecar_slug_derivation() {
+        let dev_app_id = "dev.hackathon";
+        assert_eq!(dev_app_id.trim_start_matches("dev."), "hackathon");
+
+        let custom_app_id = "foot";
+        assert_eq!(ProjectTarget::slugify(custom_app_id), "foot");
+    }
+
+    #[test]
+    fn test_quarantine_external_outputs_offline_graceful() {
+        if !NiriService::is_available() {
+            let res = NiriService::quarantine_external_outputs_for_presentation();
+            assert!(res.is_ok(), "offline niri service should no-op cleanly");
+        }
     }
 }

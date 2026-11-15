@@ -103,10 +103,8 @@ pub fn focused_output() -> Option<String> {
 }
 
 pub fn focus_monitor(name: &str) {
-    if let Some(current) = focused_output() {
-        if current == name {
-            return;
-        }
+    if focused_output().as_deref() == Some(name) {
+        return;
     }
 
     let request = json!({

@@ -14,7 +14,7 @@ pub struct Write<S: 'static> {
 
 impl<S> Write<S> {
     // finishes without waking any window, for a poll that found nothing new
-    pub(crate) fn quiet(&mut self) {
+    pub fn quiet(&mut self) {
         self.quiet = true;
     }
 }

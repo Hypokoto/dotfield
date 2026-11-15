@@ -1,5 +1,5 @@
 use std::process::Command;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use amane::{
     Align, Column, Horizontal, Key, Keyboard, Layer, LayerWindow, Margin, OutputTarget, Parent,
@@ -72,6 +72,7 @@ pub static PRESETS: &[DisplayPreset] = &[
 
 pub struct DisplayConfigService {
     pub open: bool,
+    pub open_time: Option<Instant>,
     pub selected: usize,
     pub hover_index: Option<usize>,
     pub status_message: Option<String>,
@@ -81,6 +82,7 @@ impl Service for DisplayConfigService {
     fn new() -> Self {
         Self {
             open: false,
+            open_time: None,
             selected: 0,
             hover_index: None,
             status_message: None,
@@ -93,24 +95,44 @@ impl Service for DisplayConfigService {
 }
 
 pub fn toggle() {
-    let mut svc = DisplayConfigService::write();
-    svc.open = !svc.open;
-    svc.selected = 0;
-    svc.hover_index = None;
-    svc.status_message = None;
+    let is_open = {
+        let mut svc = DisplayConfigService::write();
+        svc.open = !svc.open;
+        svc.open_time = if svc.open { Some(Instant::now()) } else { None };
+        svc.selected = 0;
+        svc.hover_index = None;
+        svc.status_message = None;
+        svc.open
+    };
+    if is_open {
+        crate::ui::control_center::close();
+        crate::ui::calendar::close();
+        crate::ui::launcher::close();
+        crate::ui::terminal_manager::close();
+        crate::ui::powermenu::close();
+    }
 }
 
 pub fn open() {
     let mut svc = DisplayConfigService::write();
     svc.open = true;
+    svc.open_time = Some(Instant::now());
     svc.selected = 0;
     svc.hover_index = None;
     svc.status_message = None;
+    drop(svc);
+
+    crate::ui::control_center::close();
+    crate::ui::calendar::close();
+    crate::ui::launcher::close();
+    crate::ui::terminal_manager::close();
+    crate::ui::powermenu::close();
 }
 
 pub fn close() {
     let mut svc = DisplayConfigService::write();
     svc.open = false;
+    svc.open_time = None;
     svc.hover_index = None;
     svc.status_message = None;
 }
@@ -395,6 +417,16 @@ pub fn display_config_overlay() -> LayerWindow {
     let svc = DisplayConfigService::read();
 
     let is_visible = svc.open;
+    if !is_visible {
+        return LayerWindow::new()
+            .width(1.0)
+            .height(1.0)
+            .target_output(OutputTarget::Active)
+            .layer(Layer::Overlay)
+            .visible(false)
+            .namespace("dotfield-shell-display-config");
+    }
+
     let selected_idx = svc.selected;
     let hover_idx = svc.hover_index;
 
@@ -485,6 +517,12 @@ pub fn display_config_overlay() -> LayerWindow {
         &tokens,
     );
 
+    let transition = crate::ui::animation::ModalTransition::compute(
+        svc.open_time,
+        crate::ui::animation::DEFAULT_MODAL_ANIMATION_DURATION,
+    );
+    let dialog = transition.apply(dialog);
+
     LayerWindow::new()
         .width(480.0)
         .height(520.0)
@@ -553,13 +591,17 @@ mod tests {
 
     #[test]
     fn test_display_toggle_and_close() {
+        let _lock = crate::ui::TEST_UI_MUTEX.lock().unwrap();
         close();
         assert!(!DisplayConfigService::read().open);
+        assert!(DisplayConfigService::read().open_time.is_none());
 
         toggle();
         assert!(DisplayConfigService::read().open);
+        assert!(DisplayConfigService::read().open_time.is_some());
 
         close();
         assert!(!DisplayConfigService::read().open);
+        assert!(DisplayConfigService::read().open_time.is_none());
     }
 }

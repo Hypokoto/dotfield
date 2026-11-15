@@ -70,9 +70,8 @@ pub fn focus_workspace_name(name: &str) {
         return;
     };
 
-    match compositor {
-        Compositor::Niri => niri::focus_workspace_name(name),
-        _ => {}
+    if let Compositor::Niri = compositor {
+        niri::focus_workspace_name(name);
     }
 }
 

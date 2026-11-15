@@ -68,13 +68,32 @@ impl Service for ScreenRecordService {
 }
 
 pub fn toggle() {
-    let mut rec = ScreenRecordService::write();
-    rec.open = !rec.open;
+    let is_open = {
+        let mut rec = ScreenRecordService::write();
+        rec.open = !rec.open;
+        rec.open
+    };
+    if is_open {
+        crate::ui::control_center::close();
+        crate::ui::calendar::close();
+        crate::ui::launcher::close();
+        crate::ui::display_config::close();
+        crate::ui::terminal_manager::close();
+        crate::ui::powermenu::close();
+    }
 }
 
 pub fn open() {
     let mut rec = ScreenRecordService::write();
     rec.open = true;
+    drop(rec);
+
+    crate::ui::control_center::close();
+    crate::ui::calendar::close();
+    crate::ui::launcher::close();
+    crate::ui::display_config::close();
+    crate::ui::terminal_manager::close();
+    crate::ui::powermenu::close();
 }
 
 pub fn close() {
@@ -161,6 +180,7 @@ pub fn screen_record_overlay() -> LayerWindow {
             .width(1.0)
             .height(1.0)
             .target_output(OutputTarget::Active)
+            .layer(Layer::Overlay)
             .visible(false)
             .namespace("dotfield-shell-screen-record");
     }
@@ -438,6 +458,7 @@ mod tests {
 
     #[test]
     fn test_screen_record_toggle_and_close() {
+        let _lock = crate::ui::TEST_UI_MUTEX.lock().unwrap();
         ScreenRecordService::write().open = false;
         toggle();
         assert!(ScreenRecordService::read().open);

@@ -1,15 +1,25 @@
 use std::path::PathBuf;
 use std::process::Command;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use amane::{
-    Align, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, OutputTarget, Parent,
-    Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
+    Align, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, OutputTarget, Padding,
+    Parent, Pointer, Rectangle, Row, Scroll, Service, Text, TextInput, Vertical, Widget, Zone,
 };
 
 use crate::config::{ConfigService, ShellManifest};
-use crate::ui::components::{action_card_interactive, modal_shell};
+use crate::services::niri::NiriService;
+use crate::services::topology::{ProjectTarget, TopologyService};
+use crate::ui::components::{action_card_interactive, modal_shell, status_badge};
 use crate::ui::tokens::{ThemeTokens, radius, spacing, typography};
+
+pub const VISIBLE_PROJECT_ROWS: usize = 5;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ManagerTab {
+    Projects,
+    Terminals,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LaunchMode {
@@ -80,7 +90,11 @@ pub static TERMINAL_PRESETS: &[TerminalPreset] = &[
 
 pub struct TerminalManagerService {
     pub open: bool,
+    pub open_time: Option<Instant>,
+    pub active_tab: ManagerTab,
+    pub search_query: String,
     pub selected: usize,
+    pub scroll_offset: usize,
     pub hover_index: Option<usize>,
     pub default_terminal: String,
     pub status_message: Option<String>,
@@ -91,7 +105,11 @@ impl Service for TerminalManagerService {
         let default_term = detect_default_terminal();
         Self {
             open: false,
+            open_time: None,
+            active_tab: ManagerTab::Projects,
+            search_query: String::new(),
             selected: 0,
+            scroll_offset: 0,
             hover_index: None,
             default_terminal: default_term,
             status_message: None,
@@ -104,26 +122,61 @@ impl Service for TerminalManagerService {
 }
 
 pub fn toggle() {
-    let mut svc = TerminalManagerService::write();
-    svc.open = !svc.open;
-    svc.selected = 0;
-    svc.hover_index = None;
-    svc.status_message = None;
-    svc.default_terminal = detect_default_terminal();
+    let is_open = {
+        let mut svc = TerminalManagerService::write();
+        svc.open = !svc.open;
+        svc.open_time = if svc.open { Some(Instant::now()) } else { None };
+        svc.active_tab = ManagerTab::Projects;
+        svc.search_query.clear();
+        svc.selected = 0;
+        svc.scroll_offset = 0;
+        svc.hover_index = None;
+        svc.status_message = None;
+        svc.default_terminal = detect_default_terminal();
+        TextInput::set_text("terminal-manager-search", "");
+        if svc.open {
+            TopologyService::refresh_async();
+        }
+        svc.open
+    };
+    if is_open {
+        crate::ui::control_center::close();
+        crate::ui::calendar::close();
+        crate::ui::launcher::close();
+        crate::ui::display_config::close();
+        crate::ui::powermenu::close();
+    }
 }
 
 pub fn open() {
     let mut svc = TerminalManagerService::write();
     svc.open = true;
+    svc.open_time = Some(Instant::now());
+    svc.active_tab = ManagerTab::Projects;
+    svc.search_query.clear();
     svc.selected = 0;
+    svc.scroll_offset = 0;
     svc.hover_index = None;
     svc.status_message = None;
     svc.default_terminal = detect_default_terminal();
+    TextInput::set_text("terminal-manager-search", "");
+    TopologyService::refresh_async();
+    drop(svc);
+
+    crate::ui::control_center::close();
+    crate::ui::calendar::close();
+    crate::ui::launcher::close();
+    crate::ui::display_config::close();
+    crate::ui::powermenu::close();
 }
 
 pub fn close() {
     let mut svc = TerminalManagerService::write();
     svc.open = false;
+    svc.open_time = None;
+    svc.search_query.clear();
+    svc.selected = 0;
+    svc.scroll_offset = 0;
     svc.hover_index = None;
     svc.status_message = None;
 }
@@ -167,10 +220,8 @@ pub fn set_default_terminal(index: usize) {
         svc.status_message = Some(format!("Default set to {}", preset.name));
         drop(svc);
 
-        // Update active in-memory config
         ConfigService::write().manifest.terminal.default = term_id.to_string();
 
-        // Update ~/.config/dotfield/shell.toml
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
         let shell_path = PathBuf::from(&home).join(".config/dotfield/shell.toml");
         if shell_path.exists()
@@ -285,6 +336,28 @@ pub fn launch_in_dir(index: usize, dir: &str) {
     }
 }
 
+pub fn get_filtered_projects(query: &str) -> Vec<ProjectTarget> {
+    let all = TopologyService::list();
+    let q = query.trim().to_lowercase();
+    if q.is_empty() {
+        return all.to_vec();
+    }
+
+    all.iter()
+        .filter(|t| {
+            t.name.to_lowercase().contains(&q)
+                || t.slug.to_lowercase().contains(&q)
+                || t.branch
+                    .as_deref()
+                    .unwrap_or("")
+                    .to_lowercase()
+                    .contains(&q)
+                || t.path.to_string_lossy().to_lowercase().contains(&q)
+        })
+        .cloned()
+        .collect()
+}
+
 pub fn terminal_manager_overlay() -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
     let svc = TerminalManagerService::read();
@@ -295,104 +368,497 @@ pub fn terminal_manager_overlay() -> LayerWindow {
             .width(1.0)
             .height(1.0)
             .target_output(OutputTarget::Active)
+            .layer(Layer::Overlay)
             .visible(false)
             .namespace("dotfield-shell-terminal-manager");
     }
-    let selected_idx = svc.selected;
-    let default_id = svc.default_terminal.clone();
-    let total_presets = TERMINAL_PRESETS.len();
 
     let tokens = ThemeTokens::from_manifest(&manifest);
+    let active_tab = svc.active_tab;
+    let selected_idx = svc.selected;
+    let default_id = svc.default_terminal.clone();
 
-    let mut body_rows: Vec<Box<dyn Widget>> = Vec::new();
+    // Tab switcher row
+    let tab_projects = Rectangle::new()
+        .width(120.0)
+        .height(28.0)
+        .radius(radius::SM)
+        .fill(if active_tab == ManagerTab::Projects {
+            tokens.surface_selected
+        } else {
+            tokens.surface_elevated
+        })
+        .border(
+            1.0,
+            if active_tab == ManagerTab::Projects {
+                tokens.border_focus
+            } else {
+                tokens.border_subtle
+            },
+        )
+        .cursor(Pointer)
+        .align_child(Align::Center, Align::Center)
+        .on_click(|_| {
+            let mut svc = TerminalManagerService::write();
+            svc.active_tab = ManagerTab::Projects;
+            svc.selected = 0;
+            svc.scroll_offset = 0;
+            svc.hover_index = None;
+        })
+        .child(
+            Text::new("󰘬 Projects")
+                .size(typography::BADGE)
+                .color(if active_tab == ManagerTab::Projects {
+                    tokens.accent
+                } else {
+                    tokens.text_secondary
+                })
+                .font(&tokens.font_family),
+        );
 
-    // 2x2 Grid of Terminal Cards
-    let mut cards: Vec<Box<dyn Widget>> = Vec::new();
-    for (idx, preset) in TERMINAL_PRESETS.iter().enumerate() {
-        let is_selected = idx == selected_idx;
-        let is_hovered = svc.hover_index == Some(idx);
-        let is_default = preset.id == default_id;
-        let installed = is_installed(preset.bin);
+    let tab_terminals = Rectangle::new()
+        .width(140.0)
+        .height(28.0)
+        .radius(radius::SM)
+        .fill(if active_tab == ManagerTab::Terminals {
+            tokens.surface_selected
+        } else {
+            tokens.surface_elevated
+        })
+        .border(
+            1.0,
+            if active_tab == ManagerTab::Terminals {
+                tokens.border_focus
+            } else {
+                tokens.border_subtle
+            },
+        )
+        .cursor(Pointer)
+        .align_child(Align::Center, Align::Center)
+        .on_click(|_| {
+            let mut svc = TerminalManagerService::write();
+            svc.active_tab = ManagerTab::Terminals;
+            svc.selected = 0;
+            svc.hover_index = None;
+        })
+        .child(
+            Text::new("󰆍 Quick Terminals")
+                .size(typography::BADGE)
+                .color(if active_tab == ManagerTab::Terminals {
+                    tokens.accent
+                } else {
+                    tokens.text_secondary
+                })
+                .font(&tokens.font_family),
+        );
 
-        let icon_box = Box::new(
-            Rectangle::new()
-                .width(28.0)
-                .height(28.0)
-                .radius(radius::SM)
-                .fill(tokens.surface)
+    let tabs_row = Row::new(vec![Box::new(tab_projects), Box::new(tab_terminals)])
+        .gap(spacing::GAP_SM)
+        .align(Align::Center);
+
+    let mut body_rows: Vec<Box<dyn Widget>> = vec![Box::new(tabs_row)];
+
+    let total_items = match active_tab {
+        ManagerTab::Projects => {
+            let filtered = get_filtered_projects(&svc.search_query);
+            let count = filtered.len();
+
+            let count_badge = status_badge(
+                &if count > 0 {
+                    format!("{}/{} projects", (selected_idx + 1).min(count), count)
+                } else {
+                    "0 projects".to_string()
+                },
+                tokens.accent,
+                &tokens,
+            );
+
+            let search_icon = Text::new("󰍉")
+                .size(typography::TITLE_SM)
+                .color(tokens.accent)
+                .font(&tokens.font_family)
+                .tight();
+
+            let search_input = TextInput::new("terminal-manager-search")
+                .size(typography::BODY)
+                .color(tokens.text_primary)
+                .placeholder("Search project, branch, or worktree...")
+                .focused()
+                .on_change(|text| {
+                    let mut svc = TerminalManagerService::write();
+                    svc.search_query = text;
+                    svc.selected = 0;
+                    svc.scroll_offset = 0;
+                })
+                .on_submit(|_| {
+                    submit_selection();
+                });
+
+            let search_row = Row::new(vec![
+                Box::new(search_icon),
+                Box::new(search_input),
+                Box::new(count_badge),
+            ])
+            .gap(spacing::GAP_MD)
+            .align(Align::Center);
+
+            let search_box = Rectangle::new()
+                .width(Parent)
+                .height(40.0)
+                .radius(radius::MD)
+                .fill(tokens.surface_elevated)
                 .border(1.0, tokens.border_subtle)
-                .align_child(Align::Center, Align::Center)
-                .child(
-                    Text::new(preset.glyph)
-                        .size(typography::TITLE_SM)
-                        .color(if is_selected {
-                            tokens.accent
-                        } else if installed {
-                            tokens.text_secondary
+                .padding(Padding {
+                    top: 2.0,
+                    bottom: 2.0,
+                    left: spacing::PAD_MD,
+                    right: spacing::PAD_MD,
+                })
+                .align_child(Align::Start, Align::Center)
+                .child(search_row);
+
+            body_rows.push(Box::new(search_box));
+
+            let scroll_offset = svc.scroll_offset;
+            let mut project_cards: Vec<Box<dyn Widget>> = Vec::new();
+
+            if count == 0 {
+                let empty_card = Rectangle::new()
+                    .width(Parent)
+                    .height(80.0)
+                    .radius(radius::MD)
+                    .fill(tokens.surface_elevated)
+                    .border(1.0, tokens.border_subtle)
+                    .align_child(Align::Center, Align::Center)
+                    .child(
+                        Text::new(if svc.search_query.is_empty() {
+                            "No project targets discovered in ~/dev/projects/".to_string()
                         } else {
-                            tokens.text_muted
+                            format!("No projects matching \"{}\"", svc.search_query)
                         })
+                        .size(typography::SECONDARY)
+                        .color(tokens.text_secondary)
+                        .font(&tokens.font_family),
+                    );
+                project_cards.push(Box::new(empty_card));
+            } else {
+                for (rel_idx, target) in filtered
+                    .iter()
+                    .skip(scroll_offset)
+                    .take(VISIBLE_PROJECT_ROWS)
+                    .enumerate()
+                {
+                    let abs_idx = scroll_offset + rel_idx;
+                    let is_selected = abs_idx == selected_idx;
+                    let is_hovered = svc.hover_index == Some(abs_idx);
+
+                    let glyph = if target.is_worktree {
+                        "󰘬"
+                    } else if target.is_tmux_active {
+                        "󰓩"
+                    } else {
+                        "󰲋"
+                    };
+
+                    let icon_box = Box::new(
+                        Rectangle::new()
+                            .width(28.0)
+                            .height(28.0)
+                            .radius(radius::SM)
+                            .fill(tokens.surface)
+                            .border(1.0, tokens.border_subtle)
+                            .align_child(Align::Center, Align::Center)
+                            .child(
+                                Text::new(glyph)
+                                    .size(typography::TITLE_SM)
+                                    .color(if is_selected {
+                                        tokens.accent
+                                    } else {
+                                        tokens.text_secondary
+                                    })
+                                    .font(&tokens.font_family),
+                            ),
+                    );
+
+                    let badge_text = if target.is_worktree {
+                        target.branch.as_deref().unwrap_or("worktree")
+                    } else if target.is_tmux_active {
+                        "tmux"
+                    } else {
+                        "dev"
+                    };
+
+                    let path_str = target.path.to_string_lossy().to_string();
+                    let target_clone = target.clone();
+
+                    let card = action_card_interactive(
+                        548.0,
+                        46.0,
+                        icon_box,
+                        &target.name,
+                        Some(&path_str),
+                        Some(badge_text),
+                        is_selected,
+                        is_hovered,
+                        move |is_h| {
+                            let mut svc = TerminalManagerService::write();
+                            if is_h {
+                                svc.hover_index = Some(abs_idx);
+                            } else if svc.hover_index == Some(abs_idx) {
+                                svc.hover_index = None;
+                            }
+                        },
+                        move || {
+                            let _ = NiriService::jump_or_spawn_project(&target_clone);
+                            close();
+                        },
+                        &tokens,
+                    );
+                    project_cards.push(Box::new(card));
+                }
+            }
+
+            let list_col = Column::new(project_cards)
+                .width(Parent)
+                .gap(spacing::GAP_SM);
+            let scroll_container = Rectangle::new()
+                .width(Parent)
+                .height(260.0)
+                .cursor(Pointer)
+                .on_scroll(move |scroll: Scroll| {
+                    let mut svc = TerminalManagerService::write();
+                    if scroll.y < 0.0 {
+                        if svc.scroll_offset + VISIBLE_PROJECT_ROWS < count {
+                            svc.scroll_offset += 1;
+                            if svc.selected < svc.scroll_offset {
+                                svc.selected = svc.scroll_offset;
+                            }
+                        }
+                    } else if svc.scroll_offset > 0 {
+                        svc.scroll_offset = svc.scroll_offset.saturating_sub(1);
+                        if svc.selected >= svc.scroll_offset + VISIBLE_PROJECT_ROWS {
+                            svc.selected = svc.scroll_offset + VISIBLE_PROJECT_ROWS - 1;
+                        }
+                    }
+                })
+                .child(list_col);
+
+            body_rows.push(Box::new(scroll_container));
+            count
+        }
+        ManagerTab::Terminals => {
+            let total_presets = TERMINAL_PRESETS.len();
+            let mut cards: Vec<Box<dyn Widget>> = Vec::new();
+            for (idx, preset) in TERMINAL_PRESETS.iter().enumerate() {
+                let is_selected = idx == selected_idx;
+                let is_hovered = svc.hover_index == Some(idx);
+                let is_default = preset.id == default_id;
+                let installed = is_installed(preset.bin);
+
+                let icon_box = Box::new(
+                    Rectangle::new()
+                        .width(28.0)
+                        .height(28.0)
+                        .radius(radius::SM)
+                        .fill(tokens.surface)
+                        .border(1.0, tokens.border_subtle)
+                        .align_child(Align::Center, Align::Center)
+                        .child(
+                            Text::new(preset.glyph)
+                                .size(typography::TITLE_SM)
+                                .color(if is_selected {
+                                    tokens.accent
+                                } else if installed {
+                                    tokens.text_secondary
+                                } else {
+                                    tokens.text_muted
+                                })
+                                .font(&tokens.font_family),
+                        ),
+                );
+
+                let badge_text = if is_default {
+                    "Default"
+                } else if !installed {
+                    "Missing"
+                } else {
+                    preset.tag
+                };
+
+                let card = action_card_interactive(
+                    266.0,
+                    66.0,
+                    icon_box,
+                    preset.name,
+                    Some(preset.description),
+                    Some(badge_text),
+                    is_selected,
+                    is_hovered,
+                    move |is_h| {
+                        let mut svc = TerminalManagerService::write();
+                        if is_h {
+                            svc.hover_index = Some(idx);
+                        } else if svc.hover_index == Some(idx) {
+                            svc.hover_index = None;
+                        }
+                    },
+                    move || {
+                        launch_preset(idx, LaunchMode::Standard);
+                    },
+                    &tokens,
+                );
+                cards.push(Box::new(card));
+            }
+
+            if cards.len() >= 4 {
+                let card3 = cards.pop().unwrap();
+                let card2 = cards.pop().unwrap();
+                let card1 = cards.pop().unwrap();
+                let card0 = cards.pop().unwrap();
+
+                let grid_row_0 = Row::new(vec![card0, card1])
+                    .width(Parent)
+                    .justify(Justify::SpaceBetween)
+                    .align(Align::Center);
+
+                let grid_row_1 = Row::new(vec![card2, card3])
+                    .width(Parent)
+                    .justify(Justify::SpaceBetween)
+                    .align(Align::Center);
+
+                let grid_container = Column::new(vec![Box::new(grid_row_0), Box::new(grid_row_1)])
+                    .width(Parent)
+                    .gap(spacing::GAP_SM);
+
+                body_rows.push(Box::new(grid_container));
+            }
+
+            let home = std::env::var("HOME").unwrap_or_else(|_| "/home".to_string());
+            let dotfield_dir = format!("{}/dev/projects/dotfield", home);
+            let home_dir = home.clone();
+
+            let bookmark_home = Rectangle::new()
+                .width(110.0)
+                .height(26.0)
+                .radius(radius::SM)
+                .fill(tokens.surface_elevated)
+                .border(1.0, tokens.border_subtle)
+                .cursor(Pointer)
+                .align_child(Align::Center, Align::Center)
+                .on_click(move |_| {
+                    launch_in_dir(selected_idx, &home_dir);
+                })
+                .child(
+                    Text::new("󰋜 Home (~)")
+                        .size(typography::BADGE)
+                        .color(tokens.text_secondary)
+                        .font(&tokens.font_family),
+                );
+
+            let bookmark_dotfield = Rectangle::new()
+                .width(130.0)
+                .height(26.0)
+                .radius(radius::SM)
+                .fill(tokens.surface_elevated)
+                .border(1.0, tokens.border_subtle)
+                .cursor(Pointer)
+                .align_child(Align::Center, Align::Center)
+                .on_click(move |_| {
+                    launch_in_dir(selected_idx, &dotfield_dir);
+                })
+                .child(
+                    Text::new("󰲋 Dotfield")
+                        .size(typography::BADGE)
+                        .color(tokens.text_secondary)
+                        .font(&tokens.font_family),
+                );
+
+            let bookmarks_row = Row::new(vec![
+                Box::new(
+                    Text::new("Open in:")
+                        .size(typography::BADGE)
+                        .color(tokens.text_muted)
                         .font(&tokens.font_family),
                 ),
-        );
+                Box::new(bookmark_home),
+                Box::new(bookmark_dotfield),
+            ])
+            .gap(spacing::GAP_SM)
+            .align(Align::Center);
 
-        let badge_text = if is_default {
-            "Default"
-        } else if !installed {
-            "Missing"
-        } else {
-            preset.tag
-        };
+            body_rows.push(Box::new(bookmarks_row));
 
-        let card = action_card_interactive(
-            260.0,
-            72.0,
-            icon_box,
-            preset.name,
-            Some(preset.description),
-            Some(badge_text),
-            is_selected,
-            is_hovered,
-            move |is_h| {
-                let mut svc = TerminalManagerService::write();
-                if is_h {
-                    svc.hover_index = Some(idx);
-                } else if svc.hover_index == Some(idx) {
-                    svc.hover_index = None;
-                }
-            },
-            move || {
-                launch_preset(idx, LaunchMode::Standard);
-            },
-            &tokens,
-        );
-        cards.push(Box::new(card));
-    }
+            let sel_preset = TERMINAL_PRESETS.get(selected_idx);
+            let sel_name = sel_preset.map(|p| p.name).unwrap_or("Terminal");
 
-    if cards.len() >= 4 {
-        let card3 = cards.pop().unwrap();
-        let card2 = cards.pop().unwrap();
-        let card1 = cards.pop().unwrap();
-        let card0 = cards.pop().unwrap();
+            let mux_btn = Rectangle::new()
+                .width(176.0)
+                .height(28.0)
+                .radius(radius::SM)
+                .fill(tokens.surface_elevated)
+                .border(1.0, tokens.border_subtle)
+                .cursor(Pointer)
+                .align_child(Align::Center, Align::Center)
+                .on_click(move |_| {
+                    launch_preset(selected_idx, LaunchMode::Multiplexer);
+                })
+                .child(
+                    Text::new(format!("󰒋 {} + Tmux", sel_name))
+                        .size(typography::BADGE)
+                        .color(tokens.text_primary)
+                        .font(&tokens.font_family),
+                );
 
-        let grid_row_0 = Row::new(vec![card0, card1])
+            let scratch_btn = Rectangle::new()
+                .width(176.0)
+                .height(28.0)
+                .radius(radius::SM)
+                .fill(tokens.surface_elevated)
+                .border(1.0, tokens.border_subtle)
+                .cursor(Pointer)
+                .align_child(Align::Center, Align::Center)
+                .on_click(move |_| {
+                    launch_preset(selected_idx, LaunchMode::Scratchpad);
+                })
+                .child(
+                    Text::new(format!("󰖲 {} Float", sel_name))
+                        .size(typography::BADGE)
+                        .color(tokens.text_primary)
+                        .font(&tokens.font_family),
+                );
+
+            let default_btn = Rectangle::new()
+                .width(176.0)
+                .height(28.0)
+                .radius(radius::SM)
+                .fill(tokens.surface_elevated)
+                .border(1.0, tokens.border_subtle)
+                .cursor(Pointer)
+                .align_child(Align::Center, Align::Center)
+                .on_click(move |_| {
+                    set_default_terminal(selected_idx);
+                })
+                .child(
+                    Text::new(format!("★ Make {} Default", sel_name))
+                        .size(typography::BADGE)
+                        .color(tokens.accent)
+                        .font(&tokens.font_family),
+                );
+
+            let actions_row = Row::new(vec![
+                Box::new(mux_btn),
+                Box::new(scratch_btn),
+                Box::new(default_btn),
+            ])
             .width(Parent)
             .justify(Justify::SpaceBetween)
             .align(Align::Center);
 
-        let grid_row_1 = Row::new(vec![card2, card3])
-            .width(Parent)
-            .justify(Justify::SpaceBetween)
-            .align(Align::Center);
+            body_rows.push(Box::new(actions_row));
+            total_presets
+        }
+    };
 
-        let grid_container = Column::new(vec![Box::new(grid_row_0), Box::new(grid_row_1)])
-            .width(Parent)
-            .gap(spacing::GAP_MD);
-
-        body_rows.push(Box::new(grid_container));
-    }
-
-    // Status message if any
     if let Some(ref msg) = svc.status_message {
         let status_box = Rectangle::new()
             .width(Parent)
@@ -410,142 +876,22 @@ pub fn terminal_manager_overlay() -> LayerWindow {
         body_rows.push(Box::new(status_box));
     }
 
-    // Directory bookmarks pills row
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/home".to_string());
-    let dotfield_dir = format!("{}/dev/projects/dotfield", home);
-    let home_dir = home.clone();
-
-    let bookmark_home = Rectangle::new()
-        .width(110.0)
-        .height(26.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .cursor(Pointer)
-        .align_child(Align::Center, Align::Center)
-        .on_click(move |_| {
-            launch_in_dir(selected_idx, &home_dir);
-        })
-        .child(
-            Text::new("󰋜 Home (~)")
-                .size(typography::BADGE)
-                .color(tokens.text_secondary)
-                .font(&tokens.font_family),
-        );
-
-    let bookmark_dotfield = Rectangle::new()
-        .width(130.0)
-        .height(26.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .cursor(Pointer)
-        .align_child(Align::Center, Align::Center)
-        .on_click(move |_| {
-            launch_in_dir(selected_idx, &dotfield_dir);
-        })
-        .child(
-            Text::new("󰲋 Dotfield Project")
-                .size(typography::BADGE)
-                .color(tokens.text_secondary)
-                .font(&tokens.font_family),
-        );
-
-    let bookmarks_row = Row::new(vec![
-        Box::new(
-            Text::new("Open in:")
-                .size(typography::BADGE)
-                .color(tokens.text_muted)
-                .font(&tokens.font_family),
-        ),
-        Box::new(bookmark_home),
-        Box::new(bookmark_dotfield),
-    ])
-    .gap(spacing::GAP_SM)
-    .align(Align::Center);
-
-    body_rows.push(Box::new(bookmarks_row));
-
-    // Mode Buttons: Multiplexer, Scratchpad, Set Default
-    let sel_preset = TERMINAL_PRESETS.get(selected_idx);
-    let sel_name = sel_preset.map(|p| p.name).unwrap_or("Terminal");
-
-    let mux_btn = Rectangle::new()
-        .width(170.0)
-        .height(28.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .cursor(Pointer)
-        .align_child(Align::Center, Align::Center)
-        .on_click(move |_| {
-            launch_preset(selected_idx, LaunchMode::Multiplexer);
-        })
-        .child(
-            Text::new(format!("󰒋 {} + Tmux", sel_name))
-                .size(typography::BADGE)
-                .color(tokens.text_primary)
-                .font(&tokens.font_family),
-        );
-
-    let scratch_btn = Rectangle::new()
-        .width(170.0)
-        .height(28.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .cursor(Pointer)
-        .align_child(Align::Center, Align::Center)
-        .on_click(move |_| {
-            launch_preset(selected_idx, LaunchMode::Scratchpad);
-        })
-        .child(
-            Text::new(format!("󰖲 {} Float", sel_name))
-                .size(typography::BADGE)
-                .color(tokens.text_primary)
-                .font(&tokens.font_family),
-        );
-
-    let default_btn = Rectangle::new()
-        .width(170.0)
-        .height(28.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .cursor(Pointer)
-        .align_child(Align::Center, Align::Center)
-        .on_click(move |_| {
-            set_default_terminal(selected_idx);
-        })
-        .child(
-            Text::new(format!("★ Make {} Default", sel_name))
-                .size(typography::BADGE)
-                .color(tokens.accent)
-                .font(&tokens.font_family),
-        );
-
-    let actions_row = Row::new(vec![
-        Box::new(mux_btn),
-        Box::new(scratch_btn),
-        Box::new(default_btn),
-    ])
-    .width(Parent)
-    .justify(Justify::SpaceBetween)
-    .align(Align::Center);
-
-    body_rows.push(Box::new(actions_row));
-
     let body_column = Column::new(body_rows).width(Parent).gap(spacing::GAP_MD);
 
-    let default_tag = format!("Default: {}", default_id);
-    let dialog = modal_shell(
-        560.0,
-        410.0,
-        "󰞷",
-        "Terminal Manager",
-        Some(&default_tag),
-        Box::new(body_column),
-        vec![
+    let header_tag = match active_tab {
+        ManagerTab::Projects => "01 DEV Ribbon",
+        ManagerTab::Terminals => &format!("Default: {}", default_id),
+    };
+
+    let footer_hints = match active_tab {
+        ManagerTab::Projects => vec![
+            ("Tab", "Switch Tab"),
+            ("↑/↓", "Navigate"),
+            ("↵", "Jump / Spawn"),
+            ("Esc", "Dismiss"),
+        ],
+        ManagerTab::Terminals => vec![
+            ("Tab", "Switch Tab"),
             ("1-4", "Quick Pick"),
             ("↵", "Launch"),
             ("m", "Tmux"),
@@ -553,20 +899,36 @@ pub fn terminal_manager_overlay() -> LayerWindow {
             ("d", "Default"),
             ("Esc", "Dismiss"),
         ],
+    };
+
+    let dialog = modal_shell(
+        580.0,
+        450.0,
+        "󰞷",
+        "Topology & Terminals",
+        Some(header_tag),
+        Box::new(body_column),
+        footer_hints,
         close,
         &tokens,
     );
 
+    let transition = crate::ui::animation::ModalTransition::compute(
+        svc.open_time,
+        crate::ui::animation::DEFAULT_MODAL_ANIMATION_DURATION,
+    );
+    let dialog = transition.apply(dialog);
+
     LayerWindow::new()
-        .width(560.0)
-        .height(410.0)
+        .width(580.0)
+        .height(450.0)
         .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Middle)
         .anchor_horizontal(Horizontal::Middle)
         .layer(Layer::Overlay)
         .keyboard(Keyboard::OnDemand)
         .on_key(move |key| {
-            handle_key(key, total_presets);
+            handle_key(key, total_items);
         })
         .space(Zone::Ignore)
         .visible(is_visible)
@@ -575,6 +937,71 @@ pub fn terminal_manager_overlay() -> LayerWindow {
 }
 
 fn handle_key(key: Key, count: usize) {
+    let active_tab = TerminalManagerService::read().active_tab;
+
+    match key {
+        Key::Tab => {
+            let mut svc = TerminalManagerService::write();
+            svc.active_tab = match svc.active_tab {
+                ManagerTab::Projects => ManagerTab::Terminals,
+                ManagerTab::Terminals => ManagerTab::Projects,
+            };
+            svc.selected = 0;
+            svc.scroll_offset = 0;
+            svc.hover_index = None;
+        }
+        Key::Escape => {
+            close();
+        }
+        Key::Enter => {
+            submit_selection();
+        }
+        _ => match active_tab {
+            ManagerTab::Projects => handle_key_projects(key, count),
+            ManagerTab::Terminals => handle_key_terminals(key, count),
+        },
+    }
+}
+
+fn handle_key_projects(key: Key, count: usize) {
+    match key {
+        Key::Down => {
+            let mut svc = TerminalManagerService::write();
+            if count > 0 && svc.selected + 1 < count {
+                svc.selected += 1;
+                if svc.selected >= svc.scroll_offset + VISIBLE_PROJECT_ROWS {
+                    svc.scroll_offset = svc.selected + 1 - VISIBLE_PROJECT_ROWS;
+                }
+            }
+        }
+        Key::Up => {
+            let mut svc = TerminalManagerService::write();
+            if svc.selected > 0 {
+                svc.selected -= 1;
+                if svc.selected < svc.scroll_offset {
+                    svc.scroll_offset = svc.selected;
+                }
+            }
+        }
+        Key::Home => {
+            let mut svc = TerminalManagerService::write();
+            svc.selected = 0;
+            svc.scroll_offset = 0;
+        }
+        Key::End => {
+            let mut svc = TerminalManagerService::write();
+            if count > 0 {
+                svc.selected = count - 1;
+                if svc.selected >= svc.scroll_offset + VISIBLE_PROJECT_ROWS {
+                    svc.scroll_offset = svc.selected + 1 - VISIBLE_PROJECT_ROWS;
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+fn handle_key_terminals(key: Key, count: usize) {
     match key {
         Key::Down => {
             let mut svc = TerminalManagerService::write();
@@ -612,25 +1039,6 @@ fn handle_key(key: Key, count: usize) {
         Key::Character('4') => {
             launch_preset(3, LaunchMode::Standard);
         }
-        Key::Home => {
-            let mut svc = TerminalManagerService::write();
-            svc.selected = 0;
-        }
-        Key::End => {
-            let mut svc = TerminalManagerService::write();
-            if count > 0 {
-                svc.selected = count - 1;
-            }
-        }
-        Key::Escape => {
-            close();
-        }
-        Key::Enter => {
-            let svc = TerminalManagerService::read();
-            let sel = svc.selected;
-            drop(svc);
-            launch_preset(sel, LaunchMode::Standard);
-        }
         Key::Character('m') | Key::Character('M') => {
             let svc = TerminalManagerService::read();
             let sel = svc.selected;
@@ -653,6 +1061,27 @@ fn handle_key(key: Key, count: usize) {
     }
 }
 
+fn submit_selection() {
+    let svc = TerminalManagerService::read();
+    let tab = svc.active_tab;
+    let selected = svc.selected;
+    let query = svc.search_query.clone();
+    drop(svc);
+
+    match tab {
+        ManagerTab::Projects => {
+            let filtered = get_filtered_projects(&query);
+            if let Some(target) = filtered.get(selected) {
+                let _ = NiriService::jump_or_spawn_project(target);
+                close();
+            }
+        }
+        ManagerTab::Terminals => {
+            launch_preset(selected, LaunchMode::Standard);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -671,18 +1100,30 @@ mod tests {
         let svc = TerminalManagerService::new();
         assert!(!svc.open);
         assert_eq!(svc.selected, 0);
+        assert_eq!(svc.active_tab, ManagerTab::Projects);
+        assert!(svc.search_query.is_empty());
         assert!(svc.hover_index.is_none());
     }
 
     #[test]
     fn test_terminal_toggle_and_close() {
+        let _lock = crate::ui::TEST_UI_MUTEX.lock().unwrap();
         close();
         assert!(!TerminalManagerService::read().open);
+        assert!(TerminalManagerService::read().open_time.is_none());
 
         toggle();
         assert!(TerminalManagerService::read().open);
+        assert!(TerminalManagerService::read().open_time.is_some());
 
         close();
         assert!(!TerminalManagerService::read().open);
+        assert!(TerminalManagerService::read().open_time.is_none());
+    }
+
+    #[test]
+    fn test_get_filtered_projects_empty() {
+        let projects = get_filtered_projects("nonexistent_random_pattern_xyz_123");
+        assert!(projects.is_empty());
     }
 }

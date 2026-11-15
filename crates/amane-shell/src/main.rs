@@ -72,6 +72,10 @@ struct Cli {
     #[arg(long)]
     screen_recorder: bool,
 
+    /// Toggle zero-disruption presentation mode
+    #[arg(long)]
+    presentation: bool,
+
     /// Reload shell configuration
     #[arg(long)]
     reload: bool,
@@ -313,6 +317,13 @@ fn ipc_terminal_manager_handler(_args: &[String]) -> String {
     "terminal-manager toggled".to_string()
 }
 
+fn ipc_sidecar_handler(_args: &[String]) -> String {
+    match services::niri::NiriService::spawn_sidecar_for_focused() {
+        Ok(()) => "sidecar spawned".to_string(),
+        Err(e) => format!("sidecar error: {e}"),
+    }
+}
+
 fn ipc_powermenu_handler(_args: &[String]) -> String {
     ui::powermenu::toggle();
     "powermenu toggled".to_string()
@@ -326,6 +337,20 @@ fn ipc_calendar_handler(_args: &[String]) -> String {
 fn ipc_screen_record_handler(_args: &[String]) -> String {
     ui::screen_record::toggle();
     "screen-recorder toggled".to_string()
+}
+
+fn ipc_presentation_handler(_args: &[String]) -> String {
+    let now_active = services::presentation::PresentationService::global().toggle();
+    if now_active {
+        let _ = services::niri::NiriService::quarantine_external_outputs_for_presentation();
+        "presentation mode active".to_string()
+    } else {
+        let drained = ui::notifications::drain_presentation_buffer();
+        format!(
+            "presentation mode disabled (drained {} notifications)",
+            drained.len()
+        )
+    }
 }
 
 fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
@@ -357,10 +382,12 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         let _ = std::fs::remove_file(&sock);
     }
 
-    // Start background event watchers (e.g. Niri socket, StatusNotifierWatcher tray, battery monitor)
+    // Start background event watchers (e.g. Niri socket, StatusNotifierWatcher tray, battery monitor, telemetry, topology)
     services::niri::NiriService::start();
     services::tray::TrayService::start();
     services::battery::BatteryMonitor::start();
+    services::telemetry::TelemetryService::start();
+    services::topology::TopologyService::refresh_async();
 
     // Start notification auto-dismiss timer worker
     ui::notifications::start_expiry_worker();
@@ -379,6 +406,8 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         .ipc("tray", ipc_tray_handler)
         .ipc("display-config", ipc_display_config_handler)
         .ipc("terminal-manager", ipc_terminal_manager_handler)
+        .ipc("sidecar", ipc_sidecar_handler)
+        .ipc("presentation", ipc_presentation_handler)
         .ipc("powermenu", ipc_powermenu_handler)
         .ipc("calendar", ipc_calendar_handler)
         .ipc("screen-recorder", ipc_screen_record_handler);
@@ -433,6 +462,8 @@ fn main() -> anyhow::Result<()> {
         target_action = Some("calendar".to_string());
     } else if cli.screen_recorder {
         target_action = Some("screen-recorder".to_string());
+    } else if cli.presentation {
+        target_action = Some("presentation".to_string());
     } else if cli.reload {
         target_action = Some("reload".to_string());
     } else if let Some(osd_args) = cli.osd {

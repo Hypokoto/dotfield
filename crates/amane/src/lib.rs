@@ -37,10 +37,10 @@ pub use input::cursor_names::{
 };
 pub use input::{Button, Cursor, Key, Point, Scroll};
 pub use ipc::{
-    IpcCall, ipc_socket, name_to_opcode, opcode_to_name, OP_AUDIO, OP_BLUETOOTH, OP_CALENDAR,
-    OP_CONTROL_CTR, OP_DISPLAY_CFG, OP_LAUNCHER, OP_NETWORK, OP_OSD_BRIGHT_DN, OP_OSD_BRIGHT_UP,
-    OP_OSD_VOL_DOWN, OP_OSD_VOL_MUTE, OP_OSD_VOL_UP, OP_POWERMENU, OP_RELOAD, OP_SCREEN_REC,
-    OP_TERMINAL_MGR, OP_TRAY,
+    IpcCall, OP_AUDIO, OP_BLUETOOTH, OP_CALENDAR, OP_CONTROL_CTR, OP_DISPLAY_CFG, OP_LAUNCHER,
+    OP_NETWORK, OP_OSD_BRIGHT_DN, OP_OSD_BRIGHT_UP, OP_OSD_VOL_DOWN, OP_OSD_VOL_MUTE,
+    OP_OSD_VOL_UP, OP_POWERMENU, OP_RELOAD, OP_SCREEN_REC, OP_TERMINAL_MGR, OP_TRAY, ipc_socket,
+    name_to_opcode, opcode_to_name,
 };
 pub use layer_window::{
     Horizontal, InputArea, Keyboard, Layer, LayerWindow, Margin, OutputTarget, Vertical,

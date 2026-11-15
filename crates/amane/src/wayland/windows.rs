@@ -219,9 +219,9 @@ impl WaylandState {
     pub fn current_focused_output(&self) -> Option<WlOutput> {
         // 1. Authoritative compositor query for active/focused monitor
         if let Some(matched) = crate::compositor::focused_output().and_then(|comp_output| {
-            self.output
-                .outputs()
-                .find(|out| self.output.info(out).and_then(|i| i.name).as_deref() == Some(&comp_output))
+            self.output.outputs().find(|out| {
+                self.output.info(out).and_then(|i| i.name).as_deref() == Some(&comp_output)
+            })
         }) {
             return Some(matched);
         }

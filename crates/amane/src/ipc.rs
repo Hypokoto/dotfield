@@ -83,6 +83,8 @@ pub const OP_POWERMENU: u8 = 0x09;
 pub const OP_CALENDAR: u8 = 0x0A;
 pub const OP_SCREEN_REC: u8 = 0x0B;
 pub const OP_RELOAD: u8 = 0x0C;
+pub const OP_SIDECAR: u8 = 0x0D;
+pub const OP_PRESENTATION: u8 = 0x0E;
 pub const OP_OSD_VOL_UP: u8 = 0x10;
 pub const OP_OSD_VOL_DOWN: u8 = 0x11;
 pub const OP_OSD_VOL_MUTE: u8 = 0x12;
@@ -103,6 +105,8 @@ pub fn opcode_to_name(opcode: u8) -> Option<(&'static str, &'static [&'static st
         OP_CALENDAR => Some(("calendar", &[])),
         OP_SCREEN_REC => Some(("screen-recorder", &[])),
         OP_RELOAD => Some(("reload", &[])),
+        OP_SIDECAR => Some(("sidecar", &[])),
+        OP_PRESENTATION => Some(("presentation", &[])),
         OP_OSD_VOL_UP => Some(("osd", &["volume-up"])),
         OP_OSD_VOL_DOWN => Some(("osd", &["volume-down"])),
         OP_OSD_VOL_MUTE => Some(("osd", &["volume-mute"])),
@@ -115,7 +119,7 @@ pub fn opcode_to_name(opcode: u8) -> Option<(&'static str, &'static [&'static st
 pub fn name_to_opcode(name: &str) -> Option<u8> {
     match name {
         "launcher" => Some(OP_LAUNCHER),
-        "terminal-manager" | "terminals" => Some(OP_TERMINAL_MGR),
+        "terminal-manager" | "terminals" | "topology" => Some(OP_TERMINAL_MGR),
         "display-config" => Some(OP_DISPLAY_CFG),
         "control-center" => Some(OP_CONTROL_CTR),
         "network" => Some(OP_NETWORK),
@@ -126,6 +130,8 @@ pub fn name_to_opcode(name: &str) -> Option<u8> {
         "calendar" => Some(OP_CALENDAR),
         "screen-recorder" => Some(OP_SCREEN_REC),
         "reload" => Some(OP_RELOAD),
+        "sidecar" => Some(OP_SIDECAR),
+        "presentation" => Some(OP_PRESENTATION),
         "volume-up" => Some(OP_OSD_VOL_UP),
         "volume-down" => Some(OP_OSD_VOL_DOWN),
         "volume-mute" => Some(OP_OSD_VOL_MUTE),
@@ -152,10 +158,15 @@ mod tests {
         assert_eq!(name_to_opcode("launcher"), Some(OP_LAUNCHER));
         assert_eq!(name_to_opcode("terminal-manager"), Some(OP_TERMINAL_MGR));
         assert_eq!(name_to_opcode("terminals"), Some(OP_TERMINAL_MGR));
+        assert_eq!(name_to_opcode("topology"), Some(OP_TERMINAL_MGR));
+        assert_eq!(name_to_opcode("sidecar"), Some(OP_SIDECAR));
+        assert_eq!(name_to_opcode("presentation"), Some(OP_PRESENTATION));
         assert_eq!(name_to_opcode("display-config"), Some(OP_DISPLAY_CFG));
         assert_eq!(name_to_opcode("unknown-cmd"), None);
 
         assert_eq!(opcode_to_name(OP_LAUNCHER), Some(("launcher", &[][..])));
+        assert_eq!(opcode_to_name(OP_SIDECAR), Some(("sidecar", &[][..])));
+        assert_eq!(opcode_to_name(OP_PRESENTATION), Some(("presentation", &[][..])));
         let (osd, args) = opcode_to_name(OP_OSD_VOL_UP).unwrap();
         assert_eq!(osd, "osd");
         assert_eq!(args, &["volume-up"]);

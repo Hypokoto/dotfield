@@ -80,9 +80,19 @@ impl Service for PowermenuService {
 }
 
 pub fn toggle() {
-    let mut menu = PowermenuService::write();
-    menu.open = !menu.open;
-    menu.selected = 0;
+    let is_open = {
+        let mut menu = PowermenuService::write();
+        menu.open = !menu.open;
+        menu.selected = 0;
+        menu.open
+    };
+    if is_open {
+        crate::ui::control_center::close();
+        crate::ui::calendar::close();
+        crate::ui::launcher::close();
+        crate::ui::display_config::close();
+        crate::ui::terminal_manager::close();
+    }
 }
 
 pub fn close() {
@@ -162,6 +172,7 @@ pub fn powermenu_overlay() -> LayerWindow {
             .width(1.0)
             .height(1.0)
             .target_output(OutputTarget::Active)
+            .layer(Layer::Overlay)
             .visible(false)
             .namespace("dotfield-shell-powermenu");
     }
@@ -429,6 +440,7 @@ mod tests {
 
     #[test]
     fn test_powermenu_toggle_and_navigation() {
+        let _lock = crate::ui::TEST_UI_MUTEX.lock().unwrap();
         PowermenuService::write().open = false;
         toggle();
         assert!(PowermenuService::read().open);

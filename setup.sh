@@ -630,7 +630,14 @@ if [[ "${DO_BUILD}" == true ]]; then
         mkdir -p "${PREFIX}"
         install -m 0755 "${SCRIPT_DIR}/target/release/amane" "${PREFIX}/amane"
         ln -sf amane "${PREFIX}/dotfield-shell"
-        success "Installed amane (and dotfield-shell symlink) to ${PREFIX}"
+        if [[ -f "${SCRIPT_DIR}/target/release/amane-msg" ]]; then
+            install -m 0755 "${SCRIPT_DIR}/target/release/amane-msg" "${PREFIX}/amane-msg"
+        fi
+        if [[ -d "${HOME}/.cargo/bin" ]]; then
+            ln -sf "${PREFIX}/amane" "${HOME}/.cargo/bin/amane"
+            ln -sf "${PREFIX}/amane-msg" "${HOME}/.cargo/bin/amane-msg"
+        fi
+        success "Installed amane and amane-msg to ${PREFIX} (and ~/.cargo/bin symlinks)"
     fi
 fi
 

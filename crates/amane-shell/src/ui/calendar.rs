@@ -33,13 +33,23 @@ impl Service for CalendarService {
 }
 
 pub fn toggle() {
-    let mut cal = CalendarService::write();
-    cal.open = !cal.open;
-    if cal.open {
-        let now = Local::now();
-        cal.view_year = now.year();
-        cal.view_month = now.month();
-        cal.selected_day = Some(now.day());
+    let is_open = {
+        let mut cal = CalendarService::write();
+        cal.open = !cal.open;
+        if cal.open {
+            let now = Local::now();
+            cal.view_year = now.year();
+            cal.view_month = now.month();
+            cal.selected_day = Some(now.day());
+        }
+        cal.open
+    };
+    if is_open {
+        crate::ui::control_center::close();
+        crate::ui::launcher::close();
+        crate::ui::display_config::close();
+        crate::ui::terminal_manager::close();
+        crate::ui::powermenu::close();
     }
 }
 
@@ -50,6 +60,13 @@ pub fn open() {
     cal.view_year = now.year();
     cal.view_month = now.month();
     cal.selected_day = Some(now.day());
+    drop(cal);
+
+    crate::ui::control_center::close();
+    crate::ui::launcher::close();
+    crate::ui::display_config::close();
+    crate::ui::terminal_manager::close();
+    crate::ui::powermenu::close();
 }
 
 pub fn close() {
@@ -98,6 +115,7 @@ pub fn calendar_overlay() -> LayerWindow {
             .width(1.0)
             .height(1.0)
             .target_output(OutputTarget::Active)
+            .layer(Layer::Overlay)
             .visible(false)
             .namespace("dotfield-shell-calendar");
     }
@@ -396,7 +414,7 @@ pub fn calendar_overlay() -> LayerWindow {
             bottom: 0,
             left: 0,
         })
-        .layer(Layer::Top)
+        .layer(Layer::Overlay)
         .space(Zone::Ignore)
         .keyboard(if is_visible {
             Keyboard::OnDemand
@@ -438,6 +456,7 @@ mod tests {
 
     #[test]
     fn test_calendar_navigation() {
+        let _lock = crate::ui::TEST_UI_MUTEX.lock().unwrap();
         CalendarService::write().open = false;
         toggle();
         assert!(CalendarService::read().open);

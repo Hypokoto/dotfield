@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use amane::{
     Align, Audio, Battery, Bluetooth, Brightness, Center, Color, Column, Cpu, Horizontal, Justify,
@@ -23,6 +23,7 @@ pub enum ActiveView {
 
 pub struct ControlCenterService {
     pub open: bool,
+    pub open_time: Option<Instant>,
     pub dnd: bool,
     pub view: ActiveView,
 }
@@ -31,6 +32,7 @@ impl Service for ControlCenterService {
     fn new() -> Self {
         Self {
             open: false,
+            open_time: None,
             dnd: false,
             view: ActiveView::Main,
         }
@@ -42,22 +44,54 @@ impl Service for ControlCenterService {
 }
 
 pub fn toggle() {
-    let mut cc = ControlCenterService::write();
-    cc.open = !cc.open;
-    if !cc.open {
-        cc.view = ActiveView::Main;
+    let is_open = {
+        let mut cc = ControlCenterService::write();
+        cc.open = !cc.open;
+        cc.open_time = if cc.open { Some(Instant::now()) } else { None };
+        if !cc.open {
+            cc.view = ActiveView::Main;
+        }
+        cc.open
+    };
+    if is_open {
+        crate::ui::calendar::close();
+        crate::ui::launcher::close();
+        crate::ui::display_config::close();
+        crate::ui::terminal_manager::close();
+        crate::ui::powermenu::close();
     }
 }
 
 pub fn open_view(view: ActiveView) {
-    let mut cc = ControlCenterService::write();
-    cc.open = true;
-    cc.view = view;
+    let should_open = {
+        let mut cc = ControlCenterService::write();
+        if cc.open && cc.view == view {
+            cc.open = false;
+            cc.open_time = None;
+            cc.view = ActiveView::Main;
+            false
+        } else {
+            if !cc.open {
+                cc.open_time = Some(Instant::now());
+            }
+            cc.open = true;
+            cc.view = view;
+            true
+        }
+    };
+    if should_open {
+        crate::ui::calendar::close();
+        crate::ui::launcher::close();
+        crate::ui::display_config::close();
+        crate::ui::terminal_manager::close();
+        crate::ui::powermenu::close();
+    }
 }
 
 pub fn close() {
     let mut cc = ControlCenterService::write();
     cc.open = false;
+    cc.open_time = None;
     cc.view = ActiveView::Main;
 }
 
@@ -71,6 +105,7 @@ pub fn control_center_panel() -> LayerWindow {
             .width(1.0)
             .height(1.0)
             .target_output(OutputTarget::Active)
+            .layer(Layer::Overlay)
             .visible(false)
             .namespace("dotfield-shell-control-center");
     }
@@ -161,6 +196,12 @@ pub fn control_center_panel() -> LayerWindow {
         })
         .child(content);
 
+    let transition = crate::ui::animation::ModalTransition::compute(
+        cc.open_time,
+        crate::ui::animation::DEFAULT_MODAL_ANIMATION_DURATION,
+    );
+    let panel = transition.apply(panel);
+
     LayerWindow::new()
         .width(380.0)
         .height(panel_height)
@@ -173,7 +214,7 @@ pub fn control_center_panel() -> LayerWindow {
             bottom: 0,
             left: 0,
         })
-        .layer(Layer::Top)
+        .layer(Layer::Overlay)
         .keyboard(if is_visible {
             Keyboard::OnDemand
         } else {
@@ -1117,19 +1158,24 @@ mod tests {
 
     #[test]
     fn test_control_center_lifecycle_and_views() {
+        let _lock = crate::ui::TEST_UI_MUTEX.lock().unwrap();
         close();
         assert!(!ControlCenterService::read().open);
+        assert!(ControlCenterService::read().open_time.is_none());
         assert_eq!(ControlCenterService::read().view, ActiveView::Main);
 
         toggle();
         assert!(ControlCenterService::read().open);
+        assert!(ControlCenterService::read().open_time.is_some());
 
         close();
         assert!(!ControlCenterService::read().open);
+        assert!(ControlCenterService::read().open_time.is_none());
         assert_eq!(ControlCenterService::read().view, ActiveView::Main);
 
         open_view(ActiveView::Network);
         assert!(ControlCenterService::read().open);
+        assert!(ControlCenterService::read().open_time.is_some());
         assert_eq!(ControlCenterService::read().view, ActiveView::Network);
 
         open_view(ActiveView::Audio);

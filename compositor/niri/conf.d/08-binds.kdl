@@ -5,7 +5,9 @@ binds {
     // Core Application Launchers
     // Super + Return launches configured default terminal directly
     Mod+Return { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
-    Mod+Shift+Return { spawn "amane-msg" "terminal-manager"; }
+    Mod+Shift+Return { spawn "amane-msg" "topology"; }
+    Mod+Alt+Return { spawn "amane-msg" "sidecar"; }
+    Mod+Ctrl+Return { spawn "kitty" "--app-id=floating-term"; }
     Mod+Space { spawn "amane-msg" "launcher"; }
     Mod+Shift+Space { spawn "amane-msg" "control-center"; }
     Mod+Q { close-window; }
@@ -19,6 +21,7 @@ binds {
     Mod+Shift+D { spawn "amane-msg" "display-config"; }
     Mod+Shift+C { spawn "amane-msg" "calendar"; }
     Mod+Shift+R { spawn "amane-msg" "screen-recorder"; }
+    Mod+Shift+P { spawn "amane-msg" "presentation"; }
     Mod+Escape { spawn "sh" "-c" "~/.config/dotfield/scripts/lock.sh"; }
 
     // Screen Capturing

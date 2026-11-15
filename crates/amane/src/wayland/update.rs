@@ -44,6 +44,7 @@ impl OpenWindow {
         // the rest waits until the window shows again, which sends every setting
         if !settings.visible {
             if was_visible {
+                layer::apply(layer_surface, &settings, self.scale_factor);
                 self.hide();
             }
 

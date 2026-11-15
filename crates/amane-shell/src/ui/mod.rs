@@ -1,3 +1,4 @@
+pub mod animation;
 pub mod bar;
 pub mod calendar;
 pub mod components;
@@ -12,3 +13,7 @@ pub mod terminal_manager;
 pub mod tokens;
 pub mod tray;
 pub mod widgets;
+
+#[cfg(test)]
+pub(crate) static TEST_UI_MUTEX: std::sync::LazyLock<std::sync::Mutex<()>> =
+    std::sync::LazyLock::new(|| std::sync::Mutex::new(()));

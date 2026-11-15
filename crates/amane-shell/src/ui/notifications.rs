@@ -1,11 +1,74 @@
+use std::collections::VecDeque;
+use std::sync::{LazyLock, Mutex};
+use std::time::SystemTime;
+
 use amane::{
     Align, Center, Color, Column, Horizontal, Justify, Layer, LayerWindow, Margin, Notification,
     Notifications, OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Urgency,
-    Vertical, Widget, Zone,
+    Vertical, Widget, Workspaces, Zone,
 };
 
 use crate::config::{ConfigService, ShellManifest};
+use crate::services::presentation::PresentationService;
 use crate::ui::tokens::{ThemeTokens, radius, spacing, typography};
+
+/// Maximum capacity of suppressed notifications preserved in memory during presentation.
+pub const PRESENTATION_BUFFER_MAX_CAPACITY: usize = 50;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BufferedNotification {
+    pub id: u32,
+    pub app_name: String,
+    pub summary: String,
+    pub body: String,
+    pub urgency: Urgency,
+    pub received: SystemTime,
+}
+
+impl From<&Notification> for BufferedNotification {
+    fn from(n: &Notification) -> Self {
+        Self {
+            id: n.id(),
+            app_name: n.app_name().to_string(),
+            summary: n.summary().to_string(),
+            body: n.body().to_string(),
+            urgency: n.urgency(),
+            received: n.received(),
+        }
+    }
+}
+
+static PRESENTATION_BUFFER: LazyLock<Mutex<VecDeque<BufferedNotification>>> =
+    LazyLock::new(|| Mutex::new(VecDeque::with_capacity(PRESENTATION_BUFFER_MAX_CAPACITY)));
+
+/// Append a notification into the FIFO presentation buffer (caps at 50 with oldest evicted).
+pub fn buffer_notification(item: BufferedNotification) {
+    let mut buffer = match PRESENTATION_BUFFER.lock() {
+        Ok(b) => b,
+        Err(p) => p.into_inner(),
+    };
+    if buffer.len() >= PRESENTATION_BUFFER_MAX_CAPACITY {
+        buffer.pop_front();
+    }
+    buffer.push_back(item);
+}
+
+/// Drain all buffered notifications sequentially upon presentation exit.
+pub fn drain_presentation_buffer() -> Vec<BufferedNotification> {
+    let mut buffer = match PRESENTATION_BUFFER.lock() {
+        Ok(b) => b,
+        Err(p) => p.into_inner(),
+    };
+    buffer.drain(..).collect()
+}
+
+/// Current number of suppressed notifications held in memory.
+pub fn presentation_buffer_len() -> usize {
+    match PRESENTATION_BUFFER.lock() {
+        Ok(b) => b.len(),
+        Err(p) => p.into_inner().len(),
+    }
+}
 
 pub fn notification_popups() -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
@@ -24,11 +87,55 @@ pub fn notification_popups() -> LayerWindow {
     let notifs_list = notifications.list();
     let cc_open = crate::ui::control_center::ControlCenterService::read().open;
 
-    if notifs_list.is_empty() || cc_open {
+    let presentation_active = PresentationService::global().is_active();
+
+    // In presentation mode, capture non-critical notifications into FIFO buffer without rendering
+    if presentation_active {
+        let mut buffer = match PRESENTATION_BUFFER.lock() {
+            Ok(b) => b,
+            Err(p) => p.into_inner(),
+        };
+        for n in notifs_list {
+            if n.urgency() != Urgency::Critical && !buffer.iter().any(|b| b.id == n.id()) {
+                if buffer.len() >= PRESENTATION_BUFFER_MAX_CAPACITY {
+                    buffer.pop_front();
+                }
+                buffer.push_back(BufferedNotification::from(n));
+            }
+        }
+    }
+
+    let in_focus_shield = Workspaces::read().list().iter().any(|ws| {
+        (ws.focused() || ws.active())
+            && ws
+                .name()
+                .map(|n| n.contains("01 DEV") || n.contains("04 SECURITY"))
+                .unwrap_or(false)
+    });
+
+    // Contextual Focus Shield & Presentation Shield:
+    // In presentation mode or 01 DEV / 04 SECURITY, suppress non-critical notification popups.
+    // Critical urgency alerts (e.g. Battery < 5%) bypass suppression.
+    let visible_notifs: Vec<_> = if presentation_active || in_focus_shield {
+        notifs_list
+            .iter()
+            .filter(|n| n.urgency() == Urgency::Critical)
+            .collect()
+    } else {
+        notifs_list.iter().collect()
+    };
+
+    let target_out = if presentation_active {
+        OutputTarget::Named("eDP-1")
+    } else {
+        OutputTarget::Active
+    };
+
+    if visible_notifs.is_empty() || cc_open {
         return LayerWindow::new()
             .width(1.0)
             .height(1.0)
-            .target_output(OutputTarget::Active)
+            .target_output(target_out)
             .visible(false)
             .namespace("dotfield-shell-notifications");
     }
@@ -37,7 +144,7 @@ pub fn notification_popups() -> LayerWindow {
     let mut cards: Vec<Box<dyn Widget>> = Vec::new();
     let font = manifest.theme.font_family.clone();
 
-    for notif in notifs_list.iter().take(max_visible) {
+    for notif in visible_notifs.into_iter().take(max_visible) {
         cards.push(render_notification_card(notif, &manifest, &font));
     }
 
@@ -46,7 +153,7 @@ pub fn notification_popups() -> LayerWindow {
     LayerWindow::new()
         .width(360.0)
         .height(window_h)
-        .target_output(OutputTarget::Active)
+        .target_output(target_out)
         .anchor_vertical(Vertical::Top)
         .anchor_horizontal(Horizontal::Right)
         .margin(Margin {
@@ -190,6 +297,11 @@ pub fn start_expiry_worker() {
                 continue;
             }
 
+            // In presentation mode, pause notification expiry so buffered items are retained
+            if PresentationService::global().is_active() {
+                continue;
+            }
+
             let timeout = std::time::Duration::from_millis(manifest.notifications.timeout_ms);
             let now = std::time::SystemTime::now();
 
@@ -230,5 +342,34 @@ mod tests {
         assert!(manifest.notifications.enabled);
         assert_eq!(manifest.notifications.timeout_ms, 5000);
         assert_eq!(manifest.notifications.max_visible, 5);
+    }
+
+    #[test]
+    fn test_presentation_fifo_buffer_capping_and_drain() {
+        // Ensure clean initial state
+        let _ = drain_presentation_buffer();
+        assert_eq!(presentation_buffer_len(), 0);
+
+        // Fill buffer past max capacity (50)
+        for i in 1..=55 {
+            buffer_notification(BufferedNotification {
+                id: i,
+                app_name: format!("app-{i}"),
+                summary: format!("Summary {i}"),
+                body: "Body".to_string(),
+                urgency: Urgency::Normal,
+                received: SystemTime::now(),
+            });
+        }
+
+        // Must be capped strictly at 50
+        assert_eq!(presentation_buffer_len(), PRESENTATION_BUFFER_MAX_CAPACITY);
+
+        // Drain should return 50 items, with oldest (1..=5) evicted
+        let drained = drain_presentation_buffer();
+        assert_eq!(drained.len(), PRESENTATION_BUFFER_MAX_CAPACITY);
+        assert_eq!(drained[0].id, 6);
+        assert_eq!(drained.last().unwrap().id, 55);
+        assert_eq!(presentation_buffer_len(), 0);
     }
 }

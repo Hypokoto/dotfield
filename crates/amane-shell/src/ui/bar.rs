@@ -1,13 +1,13 @@
-use chrono::Local;
-
 use amane::{
-    Align, Audio, Battery, Bluetooth, Center, Color, Cpu, Full, Layer, LayerWindow, Memory,
-    Network, Notifications, Padding, Parent, Pointer, Rectangle, Row, Scroll, Service, Text,
-    Vertical, Widget, Workspaces, Zone,
+    Align, Audio, Bluetooth, Center, Color, Full, Layer, LayerWindow, Network, Notifications,
+    Padding, Parent, Pointer, Rectangle, Row, Scroll, Service, Text, Vertical, Widget, Workspaces,
+    Zone,
 };
 
 use crate::config::{ConfigService, ShellManifest};
 use crate::services::niri::NiriWindowService;
+use crate::services::presentation::PresentationService;
+use crate::services::telemetry::TelemetryService;
 use crate::ui::tokens::{ThemeTokens, radius, spacing, typography};
 
 pub fn top_bar_monitor(monitor: &amane::Monitor) -> LayerWindow {
@@ -28,6 +28,33 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
     let tokens = ThemeTokens::from_manifest(&manifest);
 
     let height = bar_cfg.height as f32;
+
+    let telem = TelemetryService::read();
+    let focused_win = crate::services::niri::NiriService::focused_window();
+    let is_full_width = focused_win.is_full_width;
+
+    // Contextual Focus Shield:
+    // When focused on a 1.0 full-width column:
+    // - If normal (no anomaly): auto-hide top bar completely and reserve 0 zone (true distraction-free full width).
+    // - If anomaly tripped: surface floating anomaly HUD capsule with Zone::Respect (exclusive_zone = 0)
+    //   so no layout thrashing or window resizing occurs.
+    if is_full_width && !telem.is_anomalous() {
+        return LayerWindow::new()
+            .width(Full)
+            .height(0.0)
+            .anchor_vertical(Vertical::Top)
+            .layer(Layer::Top)
+            .space(Zone::Respect)
+            .visible(false)
+            .namespace("dotfield-shell-bar")
+            .child(Rectangle::new().width(0.0).height(0.0));
+    }
+
+    let bar_zone = if is_full_width {
+        Zone::Respect
+    } else {
+        Zone::Reserve
+    };
 
     // Left section: BLACKSITE Brand & Arch Indicator & Active Window Title
     let mut left_items: Vec<Box<dyn Widget>> = Vec::new();
@@ -95,7 +122,7 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
         .height(height)
         .anchor_vertical(Vertical::Top)
         .layer(Layer::Top)
-        .space(Zone::Reserve)
+        .space(bar_zone)
         .namespace("dotfield-shell-bar")
         .child(background_container)
 }
@@ -360,65 +387,72 @@ fn render_telemetry(
     let font = &manifest.theme.font_family;
     let mut pills: Vec<Box<dyn Widget>> = Vec::new();
 
-    // CPU telemetry
-    let cpu = Cpu::read().percent();
-    let cpu_color = if cpu > 80 {
-        tokens.danger
-    } else if cpu > 50 {
-        tokens.accent
-    } else {
-        tokens.steel
-    };
-    let cpu_pill = Rectangle::new()
-        .width(58.0)
-        .height(26.0)
-        .radius(radius::SM)
-        .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
-        .padding(Padding {
-            top: 2.0,
-            bottom: 2.0,
-            left: 6.0,
-            right: 6.0,
-        })
-        .align_child(Center, Center)
-        .child(
-            Text::new(format!("󰍛 {cpu}%"))
-                .size(typography::SECONDARY)
-                .color(cpu_color)
-                .font(font),
-        );
-    pills.push(Box::new(cpu_pill));
+    // Exception HUD: Ghost Capsule (trips on CPU > 85%, RAM > 80%, PSI stalls, or Battery <= 20% discharging)
+    let telem = TelemetryService::read();
+    let mut anomaly_pill_w = 0.0;
+    if telem.is_anomalous() {
+        let (label, is_crit) = if telem.cpu_stalled {
+            ("󱐋 CPU STALL".to_string(), true)
+        } else if telem.mem_stalled {
+            ("󱐋 MEM STALL".to_string(), true)
+        } else if telem.cpu_percent >= 85 {
+            let detail = if let (Some(name), Some(pid)) = (&telem.culprit_name, telem.culprit_pid) {
+                format!("󰍛 {}% {} ({})", telem.cpu_percent, name, pid)
+            } else {
+                format!("󰍛 {}%", telem.cpu_percent)
+            };
+            (detail, telem.is_critical())
+        } else if telem.mem_percent >= 80 {
+            let detail = if let Some(name) = &telem.culprit_name {
+                format!("󰘚 {}% {}", telem.mem_percent, name)
+            } else {
+                format!("󰘚 {}%", telem.mem_percent)
+            };
+            (detail, telem.is_critical())
+        } else if telem.battery_present
+            && !telem.battery_charging
+            && telem.battery_percent.unwrap_or(100) <= 20
+        {
+            let bat_p = telem.battery_percent.unwrap_or(0);
+            (format!("󰁺 {bat_p}% LOW BAT"), bat_p <= 10)
+        } else {
+            (format!("󰍛 {}%", telem.cpu_percent), false)
+        };
 
-    // Memory telemetry
-    let mem = Memory::read().percent();
-    let mem_color = if mem > 85 {
-        tokens.danger
-    } else if mem > 70 {
-        tokens.accent
-    } else {
-        tokens.steel
-    };
-    let mem_pill = Rectangle::new()
-        .width(58.0)
-        .height(26.0)
-        .radius(radius::SM)
-        .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
-        .padding(Padding {
-            top: 2.0,
-            bottom: 2.0,
-            left: 6.0,
-            right: 6.0,
-        })
-        .align_child(Center, Center)
-        .child(
-            Text::new(format!("󰘚 {mem}%"))
-                .size(typography::SECONDARY)
-                .color(mem_color)
-                .font(font),
-        );
-    pills.push(Box::new(mem_pill));
+        let border_col = if is_crit {
+            tokens.border_danger
+        } else {
+            tokens.border_focus
+        };
+        let text_col = if is_crit {
+            tokens.danger
+        } else {
+            tokens.accent
+        };
+        let pill_w = (label.chars().count() as f32 * 7.5).max(64.0) + 16.0;
+        anomaly_pill_w = pill_w;
+
+        let anomaly_pill = Rectangle::new()
+            .width(pill_w)
+            .height(26.0)
+            .radius(radius::SM)
+            .fill(tokens.surface_elevated)
+            .border(1.0, border_col)
+            .padding(Padding {
+                top: 2.0,
+                bottom: 2.0,
+                left: 8.0,
+                right: 8.0,
+            })
+            .align_child(Center, Center)
+            .child(
+                Text::new(label)
+                    .size(typography::SECONDARY)
+                    .color(text_col)
+                    .font(font),
+            );
+        pills.push(Box::new(anomaly_pill));
+    }
 
     // Audio status (PipeWire: interactive click to open Audio widget, scroll to adjust volume)
     let audio = Audio::read();
@@ -471,44 +505,6 @@ fn render_telemetry(
                 .font(font),
         );
     pills.push(Box::new(vol_pill));
-
-    let battery = Battery::read();
-    if battery.present() {
-        let bat_icon = if battery.charging() {
-            "󰂄"
-        } else if battery.percent() > 80 {
-            "󰁹"
-        } else if battery.percent() > 40 {
-            "󰁾"
-        } else {
-            "󰁺"
-        };
-        let bat_text = format!("{} {}%", bat_icon, battery.percent());
-        let bat_pill = Rectangle::new()
-            .width(68.0)
-            .height(26.0)
-            .radius(radius::SM)
-            .fill(tokens.surface)
-            .border(1.0, tokens.border_subtle)
-            .padding(Padding {
-                top: 2.0,
-                bottom: 2.0,
-                left: 6.0,
-                right: 6.0,
-            })
-            .align_child(Center, Center)
-            .child(
-                Text::new(bat_text)
-                    .size(typography::SECONDARY)
-                    .color(if battery.percent() < 20 && !battery.charging() {
-                        tokens.danger
-                    } else {
-                        tokens.steel
-                    })
-                    .font(font),
-            );
-        pills.push(Box::new(bat_pill));
-    }
 
     // Network status (NetworkManager: interactive click to open Network widget)
     let network = Network::read();
@@ -603,31 +599,76 @@ fn render_telemetry(
         pills.push(Box::new(bt_pill));
     }
 
-    // Notifications status badge (if any active)
+    // Notifications status badge (with Contextual Focus Shield in 01 DEV and 04 SECURITY)
     let notifs = Notifications::read();
     let notifs_count = notifs.list().len();
+    let in_focus_shield = Workspaces::read().list().iter().any(|ws| {
+        (ws.focused() || ws.active())
+            && ws
+                .name()
+                .map(|n| n.contains("01 DEV") || n.contains("04 SECURITY"))
+                .unwrap_or(false)
+    });
+    let has_critical = notifs
+        .list()
+        .iter()
+        .any(|n| n.urgency() == amane::Urgency::Critical);
+
+    let mut notif_pill_w = 0.0;
     if notifs_count > 0 {
+        let (pill_fill, border_col, text_col, icon_label, width) =
+            if in_focus_shield && !has_critical {
+                (
+                    tokens.surface,
+                    tokens.border_subtle,
+                    tokens.steel,
+                    "•".to_string(),
+                    24.0,
+                )
+            } else {
+                (
+                    tokens.danger,
+                    tokens.border_danger,
+                    Color::WHITE,
+                    format!("󰂚 {notifs_count}"),
+                    52.0,
+                )
+            };
+        notif_pill_w = width;
+
         let notif_pill = Rectangle::new()
-            .width(52.0)
+            .width(width)
             .height(26.0)
             .radius(radius::SM)
-            .fill(tokens.danger)
-            .border(1.0, tokens.border_danger)
+            .fill(pill_fill)
+            .border(1.0, border_col)
             .cursor(Pointer)
             .padding(Padding {
                 top: 2.0,
                 bottom: 2.0,
-                left: 8.0,
-                right: 8.0,
+                left: if in_focus_shield && !has_critical {
+                    4.0
+                } else {
+                    8.0
+                },
+                right: if in_focus_shield && !has_critical {
+                    4.0
+                } else {
+                    8.0
+                },
             })
             .align_child(Center, Center)
             .on_click(move |_| {
                 crate::ui::control_center::toggle();
             })
             .child(
-                Text::new(format!("󰂚 {notifs_count}"))
-                    .size(typography::SECONDARY)
-                    .color(Color::WHITE)
+                Text::new(icon_label)
+                    .size(if in_focus_shield && !has_critical {
+                        14.0
+                    } else {
+                        typography::SECONDARY
+                    })
+                    .color(text_col)
                     .font(font),
             );
         pills.push(Box::new(notif_pill));
@@ -676,8 +717,47 @@ fn render_telemetry(
         pills.push(Box::new(rec_pill));
     }
 
+    // Presentation Mode HUD Capsule (Director Stopwatch, rendered exclusively on primary display)
+    let presentation = PresentationService::global();
+    let is_presenting = presentation.is_active() && is_presentation_primary_display(monitor_name);
+    let mut pres_pill_w = 0.0;
+    if is_presenting {
+        let elapsed_str = presentation
+            .elapsed_formatted()
+            .unwrap_or_else(|| "00:00".to_string());
+        let pres_label = format!("󰐩 [PRESENTING] {elapsed_str}");
+        let pill_w = 144.0;
+        pres_pill_w = pill_w;
+
+        let pres_pill = Rectangle::new()
+            .width(pill_w)
+            .height(26.0)
+            .radius(radius::SM)
+            .fill(tokens.surface_elevated)
+            .border(1.0, tokens.border_focus)
+            .cursor(Pointer)
+            .padding(Padding {
+                top: 2.0,
+                bottom: 2.0,
+                left: 8.0,
+                right: 8.0,
+            })
+            .align_child(Center, Center)
+            .on_click(|_| {
+                PresentationService::global().toggle();
+            })
+            .child(
+                Text::new(pres_label)
+                    .size(typography::SECONDARY)
+                    .color(tokens.accent)
+                    .font(font),
+            );
+        pills.push(Box::new(pres_pill));
+    }
+
     // Clock (clickable: toggles interactive monthly Calendar)
-    let now = Local::now().format("%a %b %d  %H:%M").to_string();
+    let clock_service = crate::services::clock::ClockService::read();
+    let now = clock_service.formatted();
     let clock_pill = Rectangle::new()
         .width(132.0)
         .height(26.0)
@@ -719,18 +799,21 @@ fn render_telemetry(
     pills.push(Box::new(power_pill));
 
     let pills_count = pills.len();
-    let mut telemetry_w: f32 = 58.0 + 58.0 + 76.0 + 84.0 + 132.0 + 28.0;
-    if battery.present() {
-        telemetry_w += 68.0;
+    let mut telemetry_w: f32 = 76.0 + 84.0 + 132.0 + 28.0; // Audio (76), Net (84), Clock (132), Power (28)
+    if telem.is_anomalous() {
+        telemetry_w += anomaly_pill_w;
     }
     if bluetooth.available() {
         telemetry_w += 54.0;
     }
     if notifs_count > 0 {
-        telemetry_w += 52.0;
+        telemetry_w += notif_pill_w;
     }
     if is_recording {
         telemetry_w += 108.0;
+    }
+    if is_presenting {
+        telemetry_w += pres_pill_w;
     }
     let tray_items_len = crate::services::tray::TrayService::read().items.len();
     let tray_w = if tray_items_len == 0 {
@@ -747,4 +830,38 @@ fn render_telemetry(
         .width(telemetry_w)
         .height(Parent)
         .child(Row::new(pills).gap(6.0).align(Align::Center))
+}
+
+/// Determines whether the given monitor is the primary display for presentation director HUD.
+/// Laptop eDP displays are always primary; non-eDP external displays are secondary.
+/// In single-monitor rehearsal environments, the single active display is treated as primary.
+pub fn is_presentation_primary_display(monitor_name: Option<&str>) -> bool {
+    let Some(name) = monitor_name else {
+        return true;
+    };
+    if name.starts_with("eDP") {
+        return true;
+    }
+
+    let workspaces = Workspaces::read();
+    let all_outputs: std::collections::HashSet<String> = workspaces
+        .list()
+        .iter()
+        .filter_map(|ws| ws.output().map(|s| s.to_string()))
+        .collect();
+
+    // If only one display output is active in the workspace hierarchy, allow presentation HUD
+    all_outputs.len() <= 1
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_presentation_primary_display() {
+        assert!(is_presentation_primary_display(None));
+        assert!(is_presentation_primary_display(Some("eDP-1")));
+        assert!(is_presentation_primary_display(Some("eDP-2")));
+    }
 }

@@ -18,6 +18,7 @@ nvim/lazy-lock.json
 *.backup
 *.bak
 *.tmp
+*.review.*/
 
 # Editor and IDE configurations
 .idea/

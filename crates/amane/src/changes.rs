@@ -91,3 +91,59 @@ fn ping() {
 
     wake();
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    static TEST_MUTEX: Mutex<()> = Mutex::new(());
+
+    struct ServiceA;
+    struct ServiceB;
+
+    #[test]
+    fn test_mark_and_take() {
+        let _lock = TEST_MUTEX.lock().unwrap();
+        // Clear any leftover state
+        let _ = take();
+
+        let id_a = TypeId::of::<ServiceA>();
+        let id_b = TypeId::of::<ServiceB>();
+
+        mark(id_a);
+        let changes = take().expect("expected Some(changes)");
+        assert!(changes.contains(&id_a));
+        assert!(!changes.contains(&id_b));
+
+        // After take, changes should be empty
+        let empty_changes = take().expect("expected Some after take");
+        assert!(empty_changes.is_empty());
+    }
+
+    #[test]
+    fn test_mark_all_returns_none() {
+        let _lock = TEST_MUTEX.lock().unwrap();
+        // Clear any leftover state
+        let _ = take();
+
+        mark_all();
+        let changes = take();
+        assert!(changes.is_none());
+
+        // Subsequent take without mark_all should return Some(empty)
+        let empty_changes = take().expect("expected Some after take");
+        assert!(empty_changes.is_empty());
+    }
+
+    #[test]
+    fn test_read_tracking() {
+        let _lock = TEST_MUTEX.lock().unwrap();
+        let id_a = TypeId::of::<ServiceA>();
+        note_read(id_a);
+        let read_set = take_read();
+        assert!(read_set.contains(&id_a));
+
+        let empty_set = take_read();
+        assert!(empty_set.is_empty());
+    }
+}

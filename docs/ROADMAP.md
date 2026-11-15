@@ -207,3 +207,99 @@ flowchart LR
   - Supervise daemon under systemd user manager with automatic recovery across output disconnects and DPMS sleep.
 - [x] **Quality & CI Verification**:
   - Comprehensive unit tests (`cargo test -p amane-shell`), `cargo clippy -- -D warnings`, and live validation.
+
+---
+
+## Phase 11: Layer 1: Zero-Spawn IPC Transport & Lock-Free State
+*Goal: Eliminate fork/execve overhead for shell hotkeys via fast-path 1-byte opcode IPC datagrams, dedicated `amane-msg` standalone client, and lock-free compositor window tracking via `ArcSwap`.*
+
+- [x] **Fast-Path 1-Byte IPC Engine**:
+  - Implement 1-byte datagram opcode fast path (`0x01`–`0x07`) in `amane.sock` domain socket server.
+  - Create standalone ultra-lightweight client `amane-msg` (sub-millisecond execution, ~1.7ms vs ~35ms previously).
+- [x] **Lock-Free Compositor State Synchronization**:
+  - Migrate `NiriWindowService` active window and output geometry cache to atomic `arc_swap::ArcSwapOption`.
+- [x] **Keybind Optimization**:
+  - Update `04-keybinds.kdl` to dispatch `amane-msg` directly for modals, OSDs, and workspace switching.
+
+---
+
+## Phase 12: Layer 2: Zero-Waste Vello Render Loop & GPU Power Profiles
+*Goal: Eliminate background GPU wakeups, park Wayland frame requests at 0 Hz when idle, and implement top-of-minute aligned clock updates with 150ms modal summon easing.*
+
+- [x] **Discrete Frame Dispatch & Change Tracking**:
+  - Implement `request_changed_frames()` in `amane` engine, selectively dispatching Wayland `wl_surface::frame` callbacks only to surfaces with active damage.
+  - Expose `quiet()` on service writers to eliminate spurious frame wakeups from unchanged states.
+- [x] **Top-of-Minute Aligned Clock Service**:
+  - Replace 1-second continuous tick loop with boundary-aligned sleep calculation (`((60 - second) * 1000).saturating_sub(subsec_millis) + 20ms`).
+- [x] **Modal Summon Easing with 0 Hz Rest Parking**:
+  - Implement `ModalTransition` with 150ms cubic ease-out transfer function (`1.0 - (1.0 - t).powi(3)`), automatically parking frame loops at 0 Hz the instant motion completes.
+
+---
+
+## Phase 13: Layer 3: Distraction-Free Telemetry & Focus Architecture
+*Goal: Deliver visual silence and zero-polling telemetry via Linux PSI triggers, two-point delta culprit attribution, exception-only Ghost HUD, and contextual workspace focus shields.*
+
+- [x] **Zero-Poll Linux PSI Sentinel & Stack pread() Reader**:
+  - Monitor `/proc/pressure/cpu` and `/proc/pressure/memory` via `libc::poll` (`POLLPRI`) for true zero-poll event-driven wakeups.
+  - Zero-heap stack `pread()` operations for `/proc/stat` and `/proc/meminfo`.
+  - Cached battery sysfs descriptors under `/sys/class/power_supply/BAT*`.
+- [x] **Two-Point Delta Culprit Attribution Engine**:
+  - Sample PID ticks across a non-blocking 250ms background window to attribute runaway CPU processes.
+  - Read `/proc/[pid]/statm` for top RSS resident memory consumers under memory pressure.
+  - Cache attribution results for 2.0s to avoid redundant process scanning.
+- [x] **Exception-Only Ghost HUD Capsule with Asymmetric Hysteresis**:
+  - Suppress CPU, RAM, and Battery pills during normal loads (0 px width, 0 Hz Wayland parking).
+  - Materialize amber/danger warning capsules when thresholds trip or PSI stalls fire.
+  - Enforce 3.0s display floor and require metrics to drop below 75% CPU / 72% RAM for 3s before clearing.
+  - Pointer interactivity: left-click copies culprit PID and name via `wl-copy`.
+- [x] **Contextual Focus Shield & 1.0 Full-Width Auto-Hide**:
+  - Suppress non-critical notification popups in focus workspaces (`01 DEV`, `04 SECURITY`) into a silent steel dot (`•`).
+  - Collapse top bar on 1.0 full-width columns, surfacing critical anomaly capsules as floating overlays (`exclusive_zone = 0`).
+
+---
+
+## Phase 14: Layer 4: Compositor Window Choreography & Developer Ergonomics
+*Goal: Transform terminal launching into a deterministic project topology router, warping Niri ribbons to existing project columns or spawning atomic living worktree cell pairs with automatic sidecars and instant floating scratchpads.*
+
+- [x] **Project Topology & Session Discovery Engine**:
+  - Implement `TopologyService` in `crates/amane-shell/src/services/topology.rs` with lock-free `ArcSwap` caching and async refresh.
+  - Automatically discover Git worktrees via `git worktree list --porcelain`, active Tmux sessions via `tmux list-sessions`, and repositories under `~/dev/projects/`.
+- [x] **Niri Spatial Ribbon Warping & Worktree Cell Spawning**:
+  - Add `jump_or_spawn_project` and `spawn_sidecar_for_focused` to `NiriService`.
+  - Intelligently warp ribbon focus to existing columns matching project app IDs (`dev.<slug>`), or switch to `01 DEV` and launch atomic paired columns: primary terminal (2/3 width) and background companion sidecar (1/3 width, `open-focused false`).
+- [x] **Fast-Path IPC Protocol Extensions**:
+  - Wire `"topology"` alias to fast-path opcode `0x02` (`OP_TERMINAL_MGR`) in `crates/amane/src/ipc.rs`.
+  - Add opcode `0x0D` (`OP_SIDECAR`) for instant hotkey sidecar spawning beside Neovim/terminals.
+  - Expose CLI subcommands `amane-msg topology` and `amane-msg sidecar`.
+- [x] **Interactive Project Topology Switcher UI**:
+  - Refactor `terminal_manager.rs` into a dual-mode project & terminal switcher with `Tab` key toggling.
+  - Real-time fuzzy filtering across project names, git branches, and paths.
+  - Visual badges for Git worktree branch (`󰘬`), active Tmux session (`󰓩`), and dev target status.
+- [x] **Declarative Window Rules & Hotkey Mappings**:
+  - `compositor/niri/conf.d/06-window-tiling.kdl`: Default 2/3 width for `^dev\\.` windows and 1/3 width with `open-focused false` for `^sidecar-` windows.
+  - `compositor/niri/conf.d/07-floating.kdl`: 960x600 centered rule for `floating-term` scratchpad.
+  - `compositor/niri/conf.d/08-binds.kdl`: `Mod+Shift+Return` for topology router, `Mod+Alt+Return` for sidecar, `Mod+Ctrl+Return` for scratchpad, preserving `Mod+Escape` for screen lock.
+
+---
+
+## Phase 15: Layer 5: Dynamic Multi-Monitor Topology & Zero-Disruption Presentation Shield
+*Goal: Provide seamless external display hotplug management, hardware-level privacy gating, and an atomic zero-leak Presentation Shield with primary-only director HUD and notification FIFO buffering.*
+
+- [ ] **Fast-Path Presentation IPC Protocol**:
+  - Define opcode `0x0E` (`OP_PRESENTATION`) in `crates/amane/src/ipc.rs` with `"presentation"` alias.
+  - Add `presentation` subcommand to `amane-msg` for sub-2ms toggle latency without shell spawning.
+- [ ] **Native PresentationService & State Management**:
+  - Implement `PresentationService` in `crates/amane-shell/src/services/presentation.rs` tracking `PresentationState { active: bool, start_time: Option<Instant> }` wrapped in `ArcSwap`.
+  - Provide lock-free `is_active()`, `elapsed()`, `toggle()`, and single-head/multi-head state transitions.
+- [ ] **Notification Shield & In-Memory FIFO Queue**:
+  - Suppress notification layer-shell popups when Presentation Mode is active.
+  - Buffer non-critical notifications in an in-memory FIFO ring buffer (capped at 50 items) inside `NotificationService`.
+  - Allow critical urgency notifications (e.g. Battery < 5% shutdown) to bypass suppression and render discreetly on primary display `eDP-1`.
+  - Automatically drain and display buffered notifications sequentially upon disengaging Presentation Mode.
+- [ ] **Primary-Only Director HUD Stopwatch in Amane Bar**:
+  - Render high-contrast presentation badge and elapsed stopwatch `󰐩 [PRESENTING] MM:SS` in `crates/amane-shell/src/ui/bar.rs`.
+  - Isolate the widget strictly to primary internal display `eDP-1`, ensuring external presentation displays receive a clean, distraction-free viewport.
+- [ ] **Niri Workspace Quarantine & Kanshi Hotplug Integration**:
+  - In `NiriService`, enforce workspace routing on external outputs to `05 PRESENTATION` or `03 RESEARCH`, preventing accidental exposure of `01 DEV` or `04 SECURITY`.
+  - Integrate Kanshi profiles in `kanshi/config` to invoke `amane-msg presentation` on projector profile activation.
+  - Bind `Mod+Shift+P` in `compositor/niri/conf.d/08-binds.kdl` to `spawn "amane-msg" "presentation"`.

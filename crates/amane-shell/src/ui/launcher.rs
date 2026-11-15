@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use amane::{
     Align, Apps, Color, Column, DesktopApp, Horizontal, Image, Key, Keyboard, Layer, LayerWindow,
@@ -15,6 +15,7 @@ pub const GRID_VISIBLE_ROWS: usize = 4;
 
 pub struct LauncherService {
     pub open: bool,
+    pub open_time: Option<Instant>,
     pub query: String,
     pub selected: usize,
     pub hover_index: Option<usize>,
@@ -25,6 +26,7 @@ impl Service for LauncherService {
     fn new() -> Self {
         Self {
             open: false,
+            open_time: None,
             query: String::new(),
             selected: 0,
             hover_index: None,
@@ -38,18 +40,34 @@ impl Service for LauncherService {
 }
 
 pub fn toggle() {
-    let mut launcher = LauncherService::write();
-    launcher.open = !launcher.open;
-    launcher.query.clear();
-    launcher.selected = 0;
-    launcher.scroll_row = 0;
-    launcher.hover_index = None;
-    TextInput::set_text("launcher-search", "");
+    let is_open = {
+        let mut launcher = LauncherService::write();
+        launcher.open = !launcher.open;
+        launcher.open_time = if launcher.open {
+            Some(Instant::now())
+        } else {
+            None
+        };
+        launcher.query.clear();
+        launcher.selected = 0;
+        launcher.scroll_row = 0;
+        launcher.hover_index = None;
+        TextInput::set_text("launcher-search", "");
+        launcher.open
+    };
+    if is_open {
+        crate::ui::control_center::close();
+        crate::ui::calendar::close();
+        crate::ui::display_config::close();
+        crate::ui::terminal_manager::close();
+        crate::ui::powermenu::close();
+    }
 }
 
 pub fn close() {
     let mut launcher = LauncherService::write();
     launcher.open = false;
+    launcher.open_time = None;
     launcher.query.clear();
     launcher.selected = 0;
     launcher.scroll_row = 0;
@@ -141,6 +159,7 @@ pub fn launcher_overlay() -> LayerWindow {
             .width(1.0)
             .height(1.0)
             .visible(false)
+            .layer(Layer::Overlay)
             .target_output(OutputTarget::Active)
             .namespace("dotfield-shell-launcher");
     }
@@ -249,6 +268,12 @@ pub fn launcher_overlay() -> LayerWindow {
         close,
         &tokens,
     );
+
+    let transition = crate::ui::animation::ModalTransition::compute(
+        launcher.open_time,
+        crate::ui::animation::DEFAULT_MODAL_ANIMATION_DURATION,
+    );
+    let dialog = transition.apply(dialog);
 
     LayerWindow::new()
         .width(680.0)
@@ -757,14 +782,18 @@ mod tests {
 
     #[test]
     fn test_launcher_toggle_and_close() {
+        let _lock = crate::ui::TEST_UI_MUTEX.lock().unwrap();
         close();
         assert!(!LauncherService::read().open);
+        assert!(LauncherService::read().open_time.is_none());
 
         toggle();
         assert!(LauncherService::read().open);
+        assert!(LauncherService::read().open_time.is_some());
 
         close();
         assert!(!LauncherService::read().open);
+        assert!(LauncherService::read().open_time.is_none());
     }
 
     #[test]

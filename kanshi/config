@@ -58,3 +58,15 @@ profile laptop-only-dp {
     output eDP-1 enable mode 1920x1080@144.003 position 0,0
     output "DP-1" disable
 }
+
+profile presentation-hdmi {
+    output eDP-1 enable mode 1920x1080@144.003 position 0,0
+    output "HDMI-A-1" enable mode preferred position 1920,0
+    exec amane-msg presentation
+}
+
+profile presentation-dp {
+    output eDP-1 enable mode 1920x1080@144.003 position 0,0
+    output "DP-1" enable mode preferred position 1920,0
+    exec amane-msg presentation
+}

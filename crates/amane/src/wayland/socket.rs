@@ -21,7 +21,7 @@ pub fn insert(handle: &LoopHandle<'static, WaylandState>, handlers: IpcHandlers)
                 answer(stream, &handlers);
 
                 state.relocate_plain_overlays();
-                state.request_frames();
+                state.request_changed_frames();
             }
 
             Ok(PostAction::Continue)

@@ -68,3 +68,15 @@ binds {
     Mod+Shift+8 { move-column-to-workspace 8; }
     Mod+Shift+9 { move-column-to-workspace 9; }
 }
+
+// Developer Living Cell & Sidecar Window Rules
+window-rule {
+    match app-id="^dev\\."
+    default-column-width { proportion 0.66667; }
+}
+
+window-rule {
+    match app-id="^sidecar-"
+    default-column-width { proportion 0.33333; }
+    open-focused false
+}

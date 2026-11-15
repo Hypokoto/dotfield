@@ -25,19 +25,19 @@ command_timeout = 500
 palette = "blacksite"
 
 [palettes.blacksite]
-void = "#0A0A0C"
-obsidian = "#121216"
-graphite = "#1C1C23"
-iron = "#34343D"
-ash = "#A1A1AA"
-bone = "#E8E6E3"
+void = "#08080A"
+obsidian = "#111216"
+graphite = "#181920"
+iron = "#282A36"
+ash = "#8F94A6"
+bone = "#E6E6EB"
 crimson = "#E63946"
 blood_red = "#9D0208"
 amber = "#FFB000"
 pale_amber = "#FFD166"
-steel = "#8B949E"
-green = "#7BC47F"
-blue = "#8B949E"
+steel = "#606474"
+green = "#4AF626"
+blue = "#4C78A8"
 
 [character]
 success_symbol = "[❯](bold amber)"

@@ -7,8 +7,8 @@ width=380
 height=180
 margin=16
 padding=12,16
-border-size=2
-border-radius=8
+border-size=1
+border-radius=2
 layer=overlay
 max-visible=5
 default-timeout=6000
@@ -24,24 +24,24 @@ icons=1
 max-icon-size=48
 icon-location=left
 
-# Default Normal Urgency (Industrial Amber Accent)
-background-color=#0A0A0C
-text-color=#E8E6E3
+# Default Normal Urgency (Industrial Amber Accent & Hairline Border)
+background-color=#08080A
+text-color=#E6E6EB
 border-color=#FFB000
 progress-color=source #FFB000
 
 # Low Urgency (Subdued Steel & Iron)
 [urgency=low]
-background-color=#121216
-text-color=#A1A1AA
-border-color=#34343D
-progress-color=source #8B949E
+background-color=#111216
+text-color=#8F94A6
+border-color=#282A36
+progress-color=source #606474
 default-timeout=4000
 
 # Critical Urgency (Crimson Disruption & Zero-Timeout)
 [urgency=critical]
-background-color=#121216
-text-color=#E8E6E3
+background-color=#111216
+text-color=#E6E6EB
 border-color=#E63946
 progress-color=source #E63946
 default-timeout=0

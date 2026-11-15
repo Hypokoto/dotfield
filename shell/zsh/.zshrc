@@ -102,14 +102,14 @@ local FZF_TAB_DIR="$HOME/.local/share/zsh/plugins/fzf-tab"
 if [[ -r "$FZF_TAB_DIR/fzf-tab.plugin.zsh" ]]; then
     source "$FZF_TAB_DIR/fzf-tab.plugin.zsh"
 
-    # Controlled Chaos palette — matches FZF_DEFAULT_OPTS in section 8
+    # BLACKSITE Industrial Noir palette — matches FZF_DEFAULT_OPTS in section 8
     zstyle ':fzf-tab:*' fzf-flags \
-        --color='bg+:#1C1C23,bg:#0A0A0C,hl:#E63946,hl+:#E63946' \
-        --color='fg:#E8E6E3,fg+:#E8E6E3,border:#2A2A35,separator:#2A2A35' \
+        --color='bg+:#181920,bg:#08080A,hl:#E63946,hl+:#FFB000' \
+        --color='fg:#E6E6EB,fg+:#FFFFFF,border:#282A36,separator:#282A36' \
         --color='header:#FFB000,info:#FFB000,prompt:#FFB000,pointer:#FFB000' \
-        --color='marker:#7BC47F,spinner:#FFB000,query:#E8E6E3' \
+        --color='marker:#4AF626,spinner:#FFB000,query:#E6E6EB' \
         --prompt='❯ ' --pointer='▶' --marker='✔' \
-        --border=rounded --height=~40% --layout=reverse \
+        --border=sharp --height=~40% --layout=reverse \
         --min-height=6 --bind='tab:accept'
 
     # Show group headers (command / path / flag) using the amber format
@@ -369,16 +369,17 @@ ipinfo() {
     whois "$ip" 2>/dev/null | grep -E "^(NetName|OrgName|Country|CIDR|inetnum|netname|descr|country):" | head -20
 }
 
-### 8. FZF Interactive Fuzzy Finder (Controlled Chaos Theme)
+### 8. FZF Interactive Fuzzy Finder (BLACKSITE Industrial Noir Theme)
 if command -v fzf >/dev/null 2>&1; then
     [[ -r /usr/share/fzf/key-bindings.zsh ]] && source /usr/share/fzf/key-bindings.zsh
     [[ -r /usr/share/fzf/completion.zsh ]] && source /usr/share/fzf/completion.zsh
 
     export FZF_DEFAULT_OPTS=" \
-        --color=bg+:#1C1C23,bg:#0A0A0C,spinner:#FFB000,hl:#E63946 \
-        --color=fg:#E8E6E3,header:#8B949E,info:#FFB000,pointer:#FFB000 \
-        --color=marker:#7BC47F,fg+:#E8E6E3,prompt:#FFB000,hl+:#E63946 \
-        --border=rounded --height=50% --layout=reverse --prompt='❯ ' --pointer='▶' --marker='✔'"
+        --color=bg+:#181920,bg:#08080A,spinner:#FFB000,hl:#E63946 \
+        --color=fg:#E6E6EB,header:#8F94A6,info:#FFB000,pointer:#FFB000 \
+        --color=marker:#4AF626,fg+:#FFFFFF,prompt:#FFB000,hl+:#FFB000 \
+        --color=border:#282A36,separator:#282A36 \
+        --border=sharp --height=50% --layout=reverse --prompt='❯ ' --pointer='▶' --marker='✔'"
 
     if command -v fd >/dev/null 2>&1; then
         export FZF_DEFAULT_COMMAND="fd --type f --hidden --exclude .git --exclude node_modules --exclude target"
@@ -428,7 +429,7 @@ fi
 # Fish-like autosuggestions
 if [[ -r /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
     source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-    export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#5c5c66" # Controlled Chaos Ash
+    export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#606474" # BLACKSITE Steel
     export ZSH_AUTOSUGGEST_STRATEGY=(history completion)
     export ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=50
     bindkey '^ ' autosuggest-accept
@@ -449,14 +450,14 @@ elif [[ -r /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlightin
     ZSH_HIGHLIGHT_STYLES[builtin]='fg=#FFD166,bold'           # Pale Amber
     ZSH_HIGHLIGHT_STYLES[alias]='fg=#FFD166'                  # Pale Amber
     ZSH_HIGHLIGHT_STYLES[function]='fg=#FFB000'               # Amber
-    ZSH_HIGHLIGHT_STYLES[single-hyphen-option]='fg=#82AAFF'   # Steel / Light Blue flags
-    ZSH_HIGHLIGHT_STYLES[double-hyphen-option]='fg=#82AAFF'   # Steel / Light Blue flags
-    ZSH_HIGHLIGHT_STYLES[command-substitution]='fg=#8B949E'   # Steel
-    ZSH_HIGHLIGHT_STYLES[path]='fg=#82AAFF,underline'         # Blue/Steel path
-    ZSH_HIGHLIGHT_STYLES[path_prefix]='fg=#82AAFF'            # Path prefix
+    ZSH_HIGHLIGHT_STYLES[single-hyphen-option]='fg=#4C78A8'   # Tactical Blue flags
+    ZSH_HIGHLIGHT_STYLES[double-hyphen-option]='fg=#4C78A8'   # Tactical Blue flags
+    ZSH_HIGHLIGHT_STYLES[command-substitution]='fg=#606474'   # Steel
+    ZSH_HIGHLIGHT_STYLES[path]='fg=#56B6C2,underline'         # Ice Cyan path
+    ZSH_HIGHLIGHT_STYLES[path_prefix]='fg=#56B6C2'            # Path prefix
     ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=#E63946,bold'     # Crimson error
-    ZSH_HIGHLIGHT_STYLES[single-quoted-argument]='fg=#7BC47F' # Green string
-    ZSH_HIGHLIGHT_STYLES[double-quoted-argument]='fg=#7BC47F' # Green string
+    ZSH_HIGHLIGHT_STYLES[single-quoted-argument]='fg=#4AF626' # Terminal Green string
+    ZSH_HIGHLIGHT_STYLES[double-quoted-argument]='fg=#4AF626' # Terminal Green string
 fi
 
 ### 11. Developer Toolchains & Environments

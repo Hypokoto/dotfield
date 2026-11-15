@@ -31,6 +31,7 @@ if [[ "$MODE" == "--select" || "$MODE" == "--menu" || "$MODE" == "-m" ]]; then
         "󰄛  Kitty      (GPU Accelerated):kitty"
         "󰆍  Alacritty  (OpenGL Fast Terminal):alacritty"
         "󰊠  Ghostty    (Modern GPU Terminal):ghostty"
+        "󰞌  WezTerm    (Lua GPU Terminal):wezterm"
     )
 
     MENU=""
@@ -46,7 +47,7 @@ if [[ "$MODE" == "--select" || "$MODE" == "--menu" || "$MODE" == "-m" ]]; then
     done
 
     if [[ -n "$MENU" ]]; then
-        CHOICE=$(echo "$MENU" | fuzzel --dmenu --prompt "Terminal ❯ " --lines 4 --width 40 || true)
+        CHOICE=$(echo "$MENU" | fuzzel --dmenu --prompt "Terminal ❯ " --lines 5 --width 40 || true)
         if [[ -n "$CHOICE" ]]; then
             for item in "${OPTIONS[@]}"; do
                 label="${item%%:*}"
@@ -80,7 +81,7 @@ fi
 
 # Fallback to preferred installed terminal
 if [[ -z "${TARGET_BIN}" ]]; then
-    for cand in alacritty foot kitty ghostty; do
+    for cand in alacritty foot kitty ghostty wezterm; do
         if command -v "$cand" >/dev/null 2>&1; then
             TARGET_BIN="$cand"
             break

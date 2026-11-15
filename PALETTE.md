@@ -70,7 +70,7 @@ Keep the compositor visually quiet. Use amber to identify focus and crimson to i
 
 ### Terminals
 
-Applies to Foot, Kitty, Ghostty, and Alacritty.
+Applies to Foot, Kitty, Ghostty, Alacritty, and WezTerm.
 
 | Element | Color |
 |---|---|

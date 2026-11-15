@@ -69,6 +69,27 @@ else
     pass "ghostty not installed; skipping binary validation"
 fi
 
+step "Typechecking WezTerm terminal configuration..."
+if command -v wezterm >/dev/null 2>&1; then
+    WEZ_ERR=""
+    if command -v luac >/dev/null 2>&1; then
+        if ! luac -p "${SCRIPT_DIR}/terminals/wezterm/wezterm.lua" "${SCRIPT_DIR}/terminals/wezterm/colors.lua" "${SCRIPT_DIR}/terminals/wezterm/keys.lua" "${SCRIPT_DIR}/terminals/wezterm/status.lua" >/dev/null 2>&1; then
+            WEZ_ERR="Lua syntax check failed"
+        fi
+    fi
+    if [[ -z "${WEZ_ERR}" ]]; then
+        if wezterm --config-file "${SCRIPT_DIR}/terminals/wezterm/wezterm.lua" ls-fonts --text "test" >/dev/null 2>&1; then
+            pass "wezterm.lua configuration is valid"
+        else
+            fail "wezterm config validation failed"
+        fi
+    else
+        fail "wezterm ${WEZ_ERR}"
+    fi
+else
+    pass "wezterm not installed; skipping binary validation"
+fi
+
 if [[ "${FAILED}" -ne 0 ]]; then
     echo -e "\n${RED}${BOLD}Terminal validation failed!${NC}"
     exit 1

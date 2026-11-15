@@ -73,7 +73,7 @@ Dotfield natively supports two distinct Wayland compositor workflows:
 ## Integrated Desktop Stack
 
 - **Fastfetch ([fastfetch](fastfetch))**: Aesthetic fetch layout themed with the Controlled Chaos palette and custom braille emblem art.
-- **Terminals**: Templates for [Foot](terminals/foot), [Kitty](terminals/kitty), [Alacritty](terminals/alacritty), and [Ghostty](terminals/ghostty).
+- **Terminals**: Templates for [Foot](terminals/foot), [Kitty](terminals/kitty), [Alacritty](terminals/alacritty), [Ghostty](terminals/ghostty), and [WezTerm](terminals/wezterm).
 - **Multiplexers**:
   - **[Zellij](multiplexer/zellij)**: Zero-collision modal configuration (`clear-defaults=true`), `Ctrl-a` leader prefix, and instant `Alt` navigation (`Alt-h/j/k/l`, `Alt-n`, `Alt-t`, `Alt-w`, `Alt-z`, `Alt-1..9`).
   - **[Tmux](multiplexer/tmux)**: Harmonized with Zellij keybindings, Vi copy mode with rectangle selection, floating modal popups (`display-popup`), and dynamic prefix indicator.
@@ -207,7 +207,7 @@ dotfield/
 ├── shell/                  # Shell configurations (Zsh, Starship)
 │   ├── zsh/
 │   └── starship/
-├── terminals/              # Terminal templates (Foot, Kitty, Alacritty, Ghostty)
+├── terminals/              # Terminal templates (Foot, Kitty, Alacritty, Ghostty, WezTerm)
 ├── multiplexer/            # Multiplexer configs (Zellij, Tmux)
 ├── nvim/                   # Neovim configuration (NvChad + core keymaps)
 ├── ly/                     # Ly TUI display manager configuration

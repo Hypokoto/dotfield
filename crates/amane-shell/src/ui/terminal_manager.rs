@@ -86,6 +86,17 @@ pub static TERMINAL_PRESETS: &[TerminalPreset] = &[
         mux_cmd: "ghostty -e tmux",
         scratchpad_cmd: "ghostty --class=floating-term",
     },
+    TerminalPreset {
+        id: "wezterm",
+        name: "WezTerm",
+        glyph: "󰞌",
+        description: "WebGPU Terminal",
+        tag: "WebGPU",
+        bin: "wezterm",
+        standard_cmd: "wezterm",
+        mux_cmd: "wezterm start -- tmux",
+        scratchpad_cmd: "wezterm start --class=floating-term",
+    },
 ];
 
 pub struct TerminalManagerService {
@@ -250,6 +261,18 @@ pub fn spawn_terminal_window(
             }
             if let Some(args) = command {
                 c.arg("-e").args(args);
+            }
+            c
+        }
+        "wezterm" => {
+            let mut c = Command::new("wezterm");
+            c.arg("start");
+            c.arg(format!("--class={app_id}"));
+            if let Some(dir) = working_dir {
+                c.arg("--cwd").arg(dir);
+            }
+            if let Some(args) = command {
+                c.arg("--").args(args);
             }
             c
         }
@@ -1145,11 +1168,12 @@ mod tests {
 
     #[test]
     fn test_terminal_presets_present() {
-        assert_eq!(TERMINAL_PRESETS.len(), 4);
+        assert_eq!(TERMINAL_PRESETS.len(), 5);
         assert_eq!(TERMINAL_PRESETS[0].id, "foot");
         assert_eq!(TERMINAL_PRESETS[1].id, "kitty");
         assert_eq!(TERMINAL_PRESETS[2].id, "alacritty");
         assert_eq!(TERMINAL_PRESETS[3].id, "ghostty");
+        assert_eq!(TERMINAL_PRESETS[4].id, "wezterm");
     }
 
     #[test]

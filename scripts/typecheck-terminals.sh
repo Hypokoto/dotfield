@@ -78,10 +78,14 @@ if command -v wezterm >/dev/null 2>&1; then
         fi
     fi
     if [[ -z "${WEZ_ERR}" ]]; then
-        if wezterm --config-file "${SCRIPT_DIR}/terminals/wezterm/wezterm.lua" ls-fonts --text "test" >/dev/null 2>&1; then
+        wez_out="$(wezterm --config-file "${SCRIPT_DIR}/terminals/wezterm/wezterm.lua" ls-fonts --text "test" 2>&1 | tr -d '\0')" || WEZ_ERR="exit code $?"
+        if echo "${wez_out}" | grep -q "ERROR"; then
+            WEZ_ERR="$(echo "${wez_out}" | grep "ERROR" | head -n 1)"
+        fi
+        if [[ -z "${WEZ_ERR}" ]]; then
             pass "wezterm.lua configuration is valid"
         else
-            fail "wezterm config validation failed"
+            fail "wezterm config validation failed: ${WEZ_ERR}"
         fi
     else
         fail "wezterm ${WEZ_ERR}"

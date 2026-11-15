@@ -66,7 +66,7 @@ function M.apply_to_config(config)
         -- Pane Zoom & Navigation (matches Ghostty toggle_split_zoom and pane cycling)
         { key = "z", mods = "ALT", action = act.TogglePaneZoomState },
         { key = "Enter", mods = "CTRL|SHIFT", action = act.TogglePaneZoomState },
-        { key = "o", mods = "ALT", action = act.ActivatePaneRelative(1) },
+        { key = "o", mods = "ALT", action = act.ActivatePaneDirection("Next") },
 
         -- --- Search, Copy Mode & QuickSelect ---
         { key = "s", mods = "ALT", action = act.Search({ CaseSensitiveString = "" }) },

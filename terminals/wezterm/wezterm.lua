@@ -47,6 +47,7 @@ config.window_padding = {
 }
 config.window_background_opacity = 1.0
 config.window_close_confirmation = "NeverPrompt"
+config.unzoom_on_switch_pane = false
 
 -- --- Tab Bar Presentation (BLACKSITE Tactical Interface) ---
 config.use_fancy_tab_bar = false

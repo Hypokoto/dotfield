@@ -16,11 +16,60 @@ local function is_vim(pane)
     return name == "nvim" or name == "vim" or name == "view" or name:find("nvim") ~= nil
 end
 
---- Directional navigation with Neovim edge awareness
+--- Ghostty-style pane cycling that preserves zoom state across splits
+local function cycle_pane_ghostty(win, pane)
+    local tab = pane:tab()
+    local panes = tab:panes_with_info()
+    if #panes <= 1 then
+        return
+    end
+
+    local is_zoomed = false
+    local current_idx = 1
+    for i, p in ipairs(panes) do
+        if p.is_zoomed then
+            is_zoomed = true
+        end
+        if p.is_active then
+            current_idx = i
+        end
+    end
+
+    local next_idx = (current_idx % #panes) + 1
+    local next_pane = panes[next_idx].pane
+
+    if is_zoomed then
+        win:perform_action(act.SetPaneZoomState(false), pane)
+        next_pane:activate()
+        win:perform_action(act.SetPaneZoomState(true), next_pane)
+    else
+        next_pane:activate()
+    end
+end
+
+--- Directional navigation with Neovim edge awareness and Ghostty zoom preservation
 local function conditional_navigate(direction, vim_key)
     return wezterm.action_callback(function(win, pane)
         if is_vim(pane) then
             win:perform_action(act.SendKey({ key = vim_key, mods = "ALT" }), pane)
+            return
+        end
+
+        local tab = pane:tab()
+        local is_zoomed = false
+        for _, p in ipairs(tab:panes_with_info()) do
+            if p.is_zoomed and p.is_active then
+                is_zoomed = true
+                break
+            end
+        end
+
+        if is_zoomed then
+            -- Ghostty-parity: preserve zoom state when navigating across splits
+            win:perform_action(act.SetPaneZoomState(false), pane)
+            win:perform_action(act.ActivatePaneDirection(direction), pane)
+            local active_pane = win:active_pane()
+            win:perform_action(act.SetPaneZoomState(true), active_pane)
         else
             win:perform_action(act.ActivatePaneDirection(direction), pane)
         end
@@ -63,10 +112,10 @@ function M.apply_to_config(config)
         { key = "k", mods = "ALT", action = conditional_navigate("Up", "k") },
         { key = "l", mods = "ALT", action = conditional_navigate("Right", "l") },
 
-        -- Pane Zoom & Navigation (matches Ghostty toggle_split_zoom and pane cycling)
+        -- Pane Zoom & Navigation (Ghostty-parity independent zoom in/out & cycling)
         { key = "z", mods = "ALT", action = act.TogglePaneZoomState },
         { key = "Enter", mods = "CTRL|SHIFT", action = act.TogglePaneZoomState },
-        { key = "o", mods = "ALT", action = act.ActivatePaneDirection("Next") },
+        { key = "o", mods = "ALT", action = wezterm.action_callback(cycle_pane_ghostty) },
 
         -- --- Search, Copy Mode & QuickSelect ---
         { key = "s", mods = "ALT", action = act.Search({ CaseSensitiveString = "" }) },

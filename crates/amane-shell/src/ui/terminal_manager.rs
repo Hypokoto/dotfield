@@ -193,7 +193,7 @@ pub fn is_installed(bin: &str) -> bool {
     false
 }
 
-fn detect_default_terminal() -> String {
+pub fn detect_default_terminal() -> String {
     let conf = ConfigService::read();
     if !conf.manifest.terminal.default.is_empty() {
         return conf.manifest.terminal.default.clone();
@@ -210,6 +210,63 @@ fn detect_default_terminal() -> String {
     }
 
     "foot".to_string()
+}
+
+/// Spawns a terminal window with specific app-id, optional working directory, and command arguments.
+pub fn spawn_terminal_window(
+    term_id: &str,
+    app_id: &str,
+    working_dir: Option<&std::path::Path>,
+    command: Option<&[&str]>,
+) -> anyhow::Result<()> {
+    let mut cmd = match term_id {
+        "foot" => {
+            let mut c = Command::new("foot");
+            c.arg(format!("--app-id={app_id}"));
+            if let Some(dir) = working_dir {
+                c.arg("-D").arg(dir);
+            }
+            if let Some(args) = command {
+                c.args(args);
+            }
+            c
+        }
+        "alacritty" => {
+            let mut c = Command::new("alacritty");
+            c.arg("--class").arg(app_id);
+            if let Some(dir) = working_dir {
+                c.arg("--working-directory").arg(dir);
+            }
+            if let Some(args) = command {
+                c.arg("-e").args(args);
+            }
+            c
+        }
+        "ghostty" => {
+            let mut c = Command::new("ghostty");
+            c.arg(format!("--class={app_id}"));
+            if let Some(dir) = working_dir {
+                c.arg(format!("--working-directory={}", dir.display()));
+            }
+            if let Some(args) = command {
+                c.arg("-e").args(args);
+            }
+            c
+        }
+        _ => {
+            let mut c = Command::new("kitty");
+            c.arg(format!("--class={app_id}"));
+            if let Some(dir) = working_dir {
+                c.arg("-d").arg(dir);
+            }
+            if let Some(args) = command {
+                c.arg("-e").args(args);
+            }
+            c
+        }
+    };
+    cmd.spawn()?;
+    Ok(())
 }
 
 pub fn set_default_terminal(index: usize) {

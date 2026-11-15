@@ -147,30 +147,26 @@ impl NiriService {
         // Small delay to allow workspace focus before window placement
         thread::sleep(Duration::from_millis(50));
 
-        let path_str = target.path.to_string_lossy().to_string();
+        let term = crate::ui::terminal_manager::detect_default_terminal();
 
         // Spawn primary terminal (2/3 width via window rule) with dev.<slug> app-id
         // attaching to or creating a tmux session with the slug name
-        let _ = std::process::Command::new("kitty")
-            .args([
-                "--app-id",
-                &expected_app_id,
-                "-d",
-                &path_str,
-                "-e",
-                "tmux",
-                "new-session",
-                "-A",
-                "-s",
-                &target.slug,
-            ])
-            .spawn();
+        let tmux_args = ["tmux", "new-session", "-A", "-s", &target.slug];
+        let _ = crate::ui::terminal_manager::spawn_terminal_window(
+            &term,
+            &expected_app_id,
+            Some(&target.path),
+            Some(&tmux_args),
+        );
 
         // Spawn linked companion sidecar (1/3 width via window rule with open-focused false)
         let sidecar_app_id = format!("sidecar-{}", target.slug);
-        let _ = std::process::Command::new("kitty")
-            .args(["--app-id", &sidecar_app_id, "-d", &path_str])
-            .spawn();
+        let _ = crate::ui::terminal_manager::spawn_terminal_window(
+            &term,
+            &sidecar_app_id,
+            Some(&target.path),
+            None,
+        );
 
         Ok(())
     }
@@ -200,9 +196,8 @@ impl NiriService {
         }
 
         // Spawn companion sidecar
-        std::process::Command::new("kitty")
-            .args(["--app-id", &sidecar_app_id])
-            .spawn()?;
+        let term = crate::ui::terminal_manager::detect_default_terminal();
+        crate::ui::terminal_manager::spawn_terminal_window(&term, &sidecar_app_id, None, None)?;
 
         Ok(())
     }

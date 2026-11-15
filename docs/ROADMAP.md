@@ -285,21 +285,21 @@ flowchart LR
 ## Phase 15: Layer 5: Dynamic Multi-Monitor Topology & Zero-Disruption Presentation Shield
 *Goal: Provide seamless external display hotplug management, hardware-level privacy gating, and an atomic zero-leak Presentation Shield with primary-only director HUD and notification FIFO buffering.*
 
-- [ ] **Fast-Path Presentation IPC Protocol**:
+- [x] **Fast-Path Presentation IPC Protocol**:
   - Define opcode `0x0E` (`OP_PRESENTATION`) in `crates/amane/src/ipc.rs` with `"presentation"` alias.
   - Add `presentation` subcommand to `amane-msg` for sub-2ms toggle latency without shell spawning.
-- [ ] **Native PresentationService & State Management**:
+- [x] **Native PresentationService & State Management**:
   - Implement `PresentationService` in `crates/amane-shell/src/services/presentation.rs` tracking `PresentationState { active: bool, start_time: Option<Instant> }` wrapped in `ArcSwap`.
   - Provide lock-free `is_active()`, `elapsed()`, `toggle()`, and single-head/multi-head state transitions.
-- [ ] **Notification Shield & In-Memory FIFO Queue**:
+- [x] **Notification Shield & In-Memory FIFO Queue**:
   - Suppress notification layer-shell popups when Presentation Mode is active.
   - Buffer non-critical notifications in an in-memory FIFO ring buffer (capped at 50 items) inside `NotificationService`.
   - Allow critical urgency notifications (e.g. Battery < 5% shutdown) to bypass suppression and render discreetly on primary display `eDP-1`.
   - Automatically drain and display buffered notifications sequentially upon disengaging Presentation Mode.
-- [ ] **Primary-Only Director HUD Stopwatch in Amane Bar**:
+- [x] **Primary-Only Director HUD Stopwatch in Amane Bar**:
   - Render high-contrast presentation badge and elapsed stopwatch `󰐩 [PRESENTING] MM:SS` in `crates/amane-shell/src/ui/bar.rs`.
   - Isolate the widget strictly to primary internal display `eDP-1`, ensuring external presentation displays receive a clean, distraction-free viewport.
-- [ ] **Niri Workspace Quarantine & Kanshi Hotplug Integration**:
+- [x] **Niri Workspace Quarantine & Kanshi Hotplug Integration**:
   - In `NiriService`, enforce workspace routing on external outputs to `05 PRESENTATION` or `03 RESEARCH`, preventing accidental exposure of `01 DEV` or `04 SECURITY`.
   - Integrate Kanshi profiles in `kanshi/config` to invoke `amane-msg presentation` on projector profile activation.
   - Bind `Mod+Shift+P` in `compositor/niri/conf.d/08-binds.kdl` to `spawn "amane-msg" "presentation"`.

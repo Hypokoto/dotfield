@@ -102,7 +102,7 @@ impl TopologyService {
         let mut results = Vec::new();
         let mut seen_paths = HashSet::new();
 
-        let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/home/hypokoto".into());
+        let home_dir = std::env::var("HOME").unwrap_or_else(|_| ".".into());
         let dev_projects = PathBuf::from(&home_dir).join("dev").join("projects");
 
         // 1. Query active tmux sessions
@@ -245,32 +245,34 @@ impl TopologyService {
             .and_then(|n| n.to_str())
             .unwrap_or("project");
 
+        let mut push_entry = |path: PathBuf, branch: Option<String>, is_first_entry: &mut bool| {
+            let is_wt = !*is_first_entry;
+            let display_name = if is_wt {
+                let wt_name = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("worktree");
+                format!("{base_name} ({wt_name})")
+            } else {
+                base_name.to_string()
+            };
+            let slug = ProjectTarget::slugify(&display_name);
+            worktrees.push(ProjectTarget {
+                name: display_name,
+                slug,
+                path,
+                branch,
+                is_worktree: is_wt,
+                is_tmux_active: false,
+                glyph: if is_wt { "󰘬" } else { "󰘐" },
+            });
+            *is_first_entry = false;
+        };
+
         for line in stdout.lines() {
             if line.starts_with("worktree ") {
                 if let Some(path) = current_path.take() {
-                    let is_wt = !is_first;
-                    let display_name = if is_wt {
-                        let wt_name = path
-                            .file_name()
-                            .and_then(|n| n.to_str())
-                            .unwrap_or("worktree");
-                        format!("{base_name} ({wt_name})")
-                    } else {
-                        base_name.to_string()
-                    };
-
-                    let slug = ProjectTarget::slugify(&display_name);
-
-                    worktrees.push(ProjectTarget {
-                        name: display_name,
-                        slug,
-                        path,
-                        branch: current_branch.take(),
-                        is_worktree: is_wt,
-                        is_tmux_active: false,
-                        glyph: if is_wt { "󰘬" } else { "󰘐" },
-                    });
-                    is_first = false;
+                    push_entry(path, current_branch.take(), &mut is_first);
                 }
                 current_path = Some(PathBuf::from(line.trim_start_matches("worktree ").trim()));
             } else if line.starts_with("branch ") {
@@ -282,28 +284,7 @@ impl TopologyService {
 
         // Add trailing entry
         if let Some(path) = current_path {
-            let is_wt = !is_first;
-            let display_name = if is_wt {
-                let wt_name = path
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("worktree");
-                format!("{base_name} ({wt_name})")
-            } else {
-                base_name.to_string()
-            };
-
-            let slug = ProjectTarget::slugify(&display_name);
-
-            worktrees.push(ProjectTarget {
-                name: display_name,
-                slug,
-                path,
-                branch: current_branch,
-                is_worktree: is_wt,
-                is_tmux_active: false,
-                glyph: if is_wt { "󰘬" } else { "󰘐" },
-            });
+            push_entry(path, current_branch, &mut is_first);
         }
 
         worktrees

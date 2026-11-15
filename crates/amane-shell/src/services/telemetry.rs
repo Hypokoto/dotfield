@@ -1,5 +1,7 @@
-use std::fs;
-use std::os::unix::io::RawFd;
+use std::fs::{self, File};
+use std::io::{Read, Write};
+use std::os::unix::fs::FileExt;
+use std::os::unix::io::AsRawFd;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock};
@@ -107,12 +109,12 @@ impl TelemetryService {
 
 /// Persistent cached file descriptors for zero-allocation stack pread operations.
 struct ProcfsReader {
-    stat_fd: Option<RawFd>,
-    meminfo_fd: Option<RawFd>,
-    psi_cpu_fd: Option<RawFd>,
-    psi_mem_fd: Option<RawFd>,
-    bat_cap_fd: Option<RawFd>,
-    bat_status_fd: Option<RawFd>,
+    stat_file: Option<File>,
+    meminfo_file: Option<File>,
+    psi_cpu_file: Option<File>,
+    psi_mem_file: Option<File>,
+    bat_cap_file: Option<File>,
+    bat_status_file: Option<File>,
     battery_present: bool,
     prev_busy_ticks: u64,
     prev_total_ticks: u64,
@@ -124,20 +126,22 @@ struct ProcfsReader {
 
 impl ProcfsReader {
     fn new() -> Self {
-        let stat_fd = open_readonly(c"/proc/stat");
-        let meminfo_fd = open_readonly(c"/proc/meminfo");
-        let psi_cpu_fd = init_psi_trigger(c"/proc/pressure/cpu", b"some 200000 1000000");
-        let psi_mem_fd = init_psi_trigger(c"/proc/pressure/memory", b"some 100000 1000000");
+        let stat_file = File::open("/proc/stat").ok();
+        let meminfo_file = File::open("/proc/meminfo").ok();
+        let psi_cpu_file =
+            init_psi_trigger(Path::new("/proc/pressure/cpu"), b"some 200000 1000000");
+        let psi_mem_file =
+            init_psi_trigger(Path::new("/proc/pressure/memory"), b"some 100000 1000000");
 
-        let (bat_cap_fd, bat_status_fd, battery_present) = find_battery_fds();
+        let (bat_cap_file, bat_status_file, battery_present) = find_battery_files();
 
         Self {
-            stat_fd,
-            meminfo_fd,
-            psi_cpu_fd,
-            psi_mem_fd,
-            bat_cap_fd,
-            bat_status_fd,
+            stat_file,
+            meminfo_file,
+            psi_cpu_file,
+            psi_mem_file,
+            bat_cap_file,
+            bat_status_file,
             battery_present,
             prev_busy_ticks: 0,
             prev_total_ticks: 0,
@@ -150,18 +154,19 @@ impl ProcfsReader {
 
     /// Zero-allocation parse of `/proc/stat` for aggregate CPU percentage.
     fn sample_cpu(&mut self) -> u8 {
-        let Some(fd) = self.stat_fd else {
+        let Some(file) = &self.stat_file else {
             return 0;
         };
 
         let mut buf = [0u8; 2048];
-        let bytes_read =
-            unsafe { libc::pread(fd, buf.as_mut_ptr() as *mut libc::c_void, buf.len(), 0) };
-        if bytes_read <= 0 {
+        let Ok(bytes_read) = file.read_at(&mut buf, 0) else {
+            return 0;
+        };
+        if bytes_read == 0 {
             return 0;
         }
 
-        let slice = &buf[..bytes_read as usize];
+        let slice = &buf[..bytes_read];
         let Some((busy, total)) = parse_proc_stat_cpu_line(slice) else {
             return 0;
         };
@@ -185,18 +190,19 @@ impl ProcfsReader {
 
     /// Zero-allocation parse of `/proc/meminfo` for memory percentage and MB usage.
     fn sample_memory(&self) -> (u8, u64, u64) {
-        let Some(fd) = self.meminfo_fd else {
+        let Some(file) = &self.meminfo_file else {
             return (0, 0, 0);
         };
 
         let mut buf = [0u8; 4096];
-        let bytes_read =
-            unsafe { libc::pread(fd, buf.as_mut_ptr() as *mut libc::c_void, buf.len(), 0) };
-        if bytes_read <= 0 {
+        let Ok(bytes_read) = file.read_at(&mut buf, 0) else {
+            return (0, 0, 0);
+        };
+        if bytes_read == 0 {
             return (0, 0, 0);
         }
 
-        let slice = &buf[..bytes_read as usize];
+        let slice = &buf[..bytes_read];
         let total_kb = parse_meminfo_field(slice, b"MemTotal:");
         let avail_kb = parse_meminfo_field(slice, b"MemAvailable:");
 
@@ -218,24 +224,25 @@ impl ProcfsReader {
             return (None, false);
         }
 
-        let cap = self.bat_cap_fd.and_then(|fd| {
+        let cap = self.bat_cap_file.as_ref().and_then(|file| {
             let mut buf = [0u8; 16];
-            let n = unsafe { libc::pread(fd, buf.as_mut_ptr() as *mut libc::c_void, buf.len(), 0) };
+            let n = file.read_at(&mut buf, 0).ok()?;
             if n > 0 {
-                parse_u64_from_ascii(&buf[..n as usize]).map(|v| v.clamp(0, 100) as u8)
+                parse_u64_from_ascii(&buf[..n]).map(|v| v.clamp(0, 100) as u8)
             } else {
                 None
             }
         });
 
         let charging = self
-            .bat_status_fd
-            .map(|fd| {
+            .bat_status_file
+            .as_ref()
+            .map(|file| {
                 let mut buf = [0u8; 32];
-                let n =
-                    unsafe { libc::pread(fd, buf.as_mut_ptr() as *mut libc::c_void, buf.len(), 0) };
-                if n > 0 {
-                    let status_bytes = &buf[..n as usize];
+                if let Ok(n) = file.read_at(&mut buf, 0)
+                    && n > 0
+                {
+                    let status_bytes = &buf[..n];
                     status_bytes.starts_with(b"Charging")
                 } else {
                     false
@@ -268,56 +275,14 @@ impl ProcfsReader {
     }
 }
 
-impl Drop for ProcfsReader {
-    fn drop(&mut self) {
-        if let Some(fd) = self.stat_fd {
-            unsafe { libc::close(fd) };
-        }
-        if let Some(fd) = self.meminfo_fd {
-            unsafe { libc::close(fd) };
-        }
-        if let Some(fd) = self.psi_cpu_fd {
-            unsafe { libc::close(fd) };
-        }
-        if let Some(fd) = self.psi_mem_fd {
-            unsafe { libc::close(fd) };
-        }
-        if let Some(fd) = self.bat_cap_fd {
-            unsafe { libc::close(fd) };
-        }
-        if let Some(fd) = self.bat_status_fd {
-            unsafe { libc::close(fd) };
-        }
-    }
+fn init_psi_trigger(path: &Path, trigger: &[u8]) -> Option<File> {
+    use std::fs::OpenOptions;
+    let mut file = OpenOptions::new().read(true).write(true).open(path).ok()?;
+    file.write_all(trigger).ok()?;
+    Some(file)
 }
 
-fn open_readonly(path: &core::ffi::CStr) -> Option<RawFd> {
-    let fd = unsafe { libc::open(path.as_ptr(), libc::O_RDONLY | libc::O_CLOEXEC) };
-    if fd >= 0 { Some(fd) } else { None }
-}
-
-fn init_psi_trigger(path: &core::ffi::CStr, trigger: &[u8]) -> Option<RawFd> {
-    let fd = unsafe {
-        libc::open(
-            path.as_ptr(),
-            libc::O_RDWR | libc::O_CLOEXEC | libc::O_NONBLOCK,
-        )
-    };
-    if fd < 0 {
-        return None;
-    }
-
-    let written =
-        unsafe { libc::write(fd, trigger.as_ptr() as *const libc::c_void, trigger.len()) };
-    if written < 0 {
-        unsafe { libc::close(fd) };
-        None
-    } else {
-        Some(fd)
-    }
-}
-
-fn find_battery_fds() -> (Option<RawFd>, Option<RawFd>, bool) {
+fn find_battery_files() -> (Option<File>, Option<File>, bool) {
     let base = Path::new("/sys/class/power_supply");
     if let Ok(entries) = fs::read_dir(base) {
         for entry in entries.flatten() {
@@ -327,15 +292,11 @@ fn find_battery_fds() -> (Option<RawFd>, Option<RawFd>, bool) {
                 let cap_path = entry.path().join("capacity");
                 let status_path = entry.path().join("status");
 
-                let cap_c = std::ffi::CString::new(cap_path.to_string_lossy().as_bytes()).ok();
-                let status_c =
-                    std::ffi::CString::new(status_path.to_string_lossy().as_bytes()).ok();
+                let cap_file = File::open(&cap_path).ok();
+                let status_file = File::open(&status_path).ok();
 
-                let cap_fd = cap_c.and_then(|c| open_readonly(&c));
-                let status_fd = status_c.and_then(|c| open_readonly(&c));
-
-                if cap_fd.is_some() || status_fd.is_some() {
-                    return (cap_fd, status_fd, true);
+                if cap_file.is_some() || status_file.is_some() {
+                    return (cap_file, status_file, true);
                 }
             }
         }
@@ -475,25 +436,17 @@ fn take_proc_cpu_snapshot() -> Vec<(i32, String, u64)> {
 
             let stat_path = entry.path().join("stat");
             let mut buf = [0u8; 512];
-            let c_path = match std::ffi::CString::new(stat_path.to_string_lossy().as_bytes()) {
-                Ok(c) => c,
-                Err(_) => continue,
+            let Ok(mut file) = fs::File::open(&stat_path) else {
+                continue;
             };
-
-            let fd = unsafe { libc::open(c_path.as_ptr(), libc::O_RDONLY | libc::O_CLOEXEC) };
-            if fd < 0 {
+            let Ok(bytes_read) = file.read(&mut buf) else {
+                continue;
+            };
+            if bytes_read == 0 {
                 continue;
             }
 
-            let bytes_read =
-                unsafe { libc::pread(fd, buf.as_mut_ptr() as *mut libc::c_void, buf.len(), 0) };
-            unsafe { libc::close(fd) };
-
-            if bytes_read <= 0 {
-                continue;
-            }
-
-            if let Some((comm, ticks)) = parse_proc_stat_pid(&buf[..bytes_read as usize]) {
+            if let Some((comm, ticks)) = parse_proc_stat_pid(&buf[..bytes_read]) {
                 results.push((pid, comm, ticks));
             }
         }
@@ -564,26 +517,18 @@ fn find_top_memory_culprit() -> (Option<i32>, Option<String>, f32) {
 
             let statm_path = entry.path().join("statm");
             let mut buf = [0u8; 128];
-            let c_path = match std::ffi::CString::new(statm_path.to_string_lossy().as_bytes()) {
-                Ok(c) => c,
-                Err(_) => continue,
-            };
-
-            let fd = unsafe { libc::open(c_path.as_ptr(), libc::O_RDONLY | libc::O_CLOEXEC) };
-            if fd < 0 {
+            let Ok(mut file) = fs::File::open(&statm_path) else {
                 continue;
-            }
-
-            let bytes_read =
-                unsafe { libc::pread(fd, buf.as_mut_ptr() as *mut libc::c_void, buf.len(), 0) };
-            unsafe { libc::close(fd) };
-
-            if bytes_read <= 0 {
+            };
+            let Ok(bytes_read) = file.read(&mut buf) else {
+                continue;
+            };
+            if bytes_read == 0 {
                 continue;
             }
 
             // statm: "size resident shared text lib data dt"
-            let mut fields = buf[..bytes_read as usize]
+            let mut fields = buf[..bytes_read]
                 .split(|&b| b == b' ')
                 .filter(|s| !s.is_empty());
             let _ = fields.next(); // size
@@ -617,18 +562,26 @@ fn telemetry_worker_loop() {
         // Construct poll fds for PSI events
         let mut poll_fds = [
             libc::pollfd {
-                fd: reader.psi_cpu_fd.unwrap_or(-1),
+                fd: reader
+                    .psi_cpu_file
+                    .as_ref()
+                    .map(|f| f.as_raw_fd())
+                    .unwrap_or(-1),
                 events: libc::POLLPRI,
                 revents: 0,
             },
             libc::pollfd {
-                fd: reader.psi_mem_fd.unwrap_or(-1),
+                fd: reader
+                    .psi_mem_file
+                    .as_ref()
+                    .map(|f| f.as_raw_fd())
+                    .unwrap_or(-1),
                 events: libc::POLLPRI,
                 revents: 0,
             },
         ];
 
-        let poll_count = if reader.psi_cpu_fd.is_some() || reader.psi_mem_fd.is_some() {
+        let poll_count = if reader.psi_cpu_file.is_some() || reader.psi_mem_file.is_some() {
             // Wait up to 5000ms for PSI stall triggers
             unsafe { libc::poll(poll_fds.as_mut_ptr(), 2, 5000) }
         } else {

@@ -22,6 +22,8 @@ pub struct PresentationService {
 }
 
 static INSTANCE: LazyLock<PresentationService> = LazyLock::new(PresentationService::new);
+static TICKER_PAIR: LazyLock<(std::sync::Mutex<bool>, std::sync::Condvar)> =
+    LazyLock::new(|| (std::sync::Mutex::new(false), std::sync::Condvar::new()));
 static TICKER_SPAWNED: AtomicBool = AtomicBool::new(false);
 
 fn ensure_ticker() {
@@ -31,9 +33,17 @@ fn ensure_ticker() {
     std::thread::Builder::new()
         .name("amane-presentation-ticker".into())
         .spawn(|| {
+            let (lock, cvar) = &*TICKER_PAIR;
+            let mut active_guard = lock.lock().unwrap();
             loop {
-                std::thread::sleep(Duration::from_secs(1));
-                if PresentationService::global().is_active() {
+                while !*active_guard {
+                    active_guard = cvar.wait(active_guard).unwrap();
+                }
+                let (guard, _timeout_res) = cvar
+                    .wait_timeout(active_guard, Duration::from_secs(1))
+                    .unwrap();
+                active_guard = guard;
+                if *active_guard {
                     amane::request_frame();
                 }
             }
@@ -88,8 +98,12 @@ impl PresentationService {
             start_time: if active { Some(Instant::now()) } else { None },
         };
         self.state.store(Arc::new(new_state));
-        if active {
-            ensure_ticker();
+        ensure_ticker();
+        {
+            let (lock, cvar) = &*TICKER_PAIR;
+            let mut guard = lock.lock().unwrap();
+            *guard = active;
+            cvar.notify_one();
         }
         amane::request_frame();
     }

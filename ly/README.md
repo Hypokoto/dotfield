@@ -1,31 +1,31 @@
-# Ly Display Manager — Controlled Chaos Theme
+# Ly Display Manager: BLACKSITE Industrial Noir Theme
 
-Dotfield provides unified configuration for **Ly**, a lightweight TUI display manager for Linux.
+Dotfield provides unified configuration for **Ly**, a lightweight TUI display manager for modern Wayland/Linux desktop environments.
 
 ## Color Palette Mapping
 
-The configuration binds strictly to the **Controlled Chaos** specification (`PALETTE.md`):
+The configuration binds strictly to the **BLACKSITE Industrial Noir** 65-20-8-5-2 token hierarchy:
 
-| Token | Hex | ANSI / RGB | Ly Role |
+| Token | Hex Code | TrueColor (0xSSRRGGBB) | Ly Role |
 | :--- | :--- | :--- | :--- |
-| **Void Black** | `#0A0A0C` | `0` / `0x0A0A0C` | Background canvas (`bg`), border background (`border_bg`) |
-| **Bone** | `#E8E6E3` | `7` / `0xE8E6E3` | Primary text (`fg`, `text_fg`) |
-| **Industrial Amber** | `#FFB000` | `3` / `0xFFB000` | Focused border (`border_fg`), visual focus highlight |
-| **Crimson** | `#E63946` | `1` / `0xE63946` | Error alerts (`error_fg`), failed authentication attempts |
-| **Iron** | `#34343D` | — | Subtle box dividers |
+| **Void Black** | `#08080A` | `0x0008080A` | Background canvas (`bg`), error background (`error_bg`) |
+| **Bone** | `#E6E6EB` | `0x00E6E6EB` | Primary text (`fg`, `text_fg`) |
+| **Tactical Amber** | `#FFB000` | `0x01FFB000` | Focused border (`border_fg`), matrix highlight (`cmatrix_fg`) |
+| **Crimson** | `#E63946` | `0x01E63946` | Error alerts (`error_fg`), failed authentication attempts |
+| **Iron** | `#282A36` | `0x00282A36` | Outer frame boundary and subtle dividers |
 
 ## Deployment
 
 Depending on the Ly version installed on your system:
 
-### 1. Classic Ly (`config.ini`)
-For C-based Ly (default in most distribution packages like Arch Linux / AUR `ly`):
+### 1. Standard Ly (`config.ini`)
+For standard Ly (Arch Linux / pacman `ly` 1.4+):
 ```bash
 sudo cp ly/config.ini /etc/ly/config.ini
 ```
 
-### 2. Modern Ly (`config.lua`)
-For modern Zig-based Ly:
+### 2. Modern Lua Ly (`config.lua`)
+For Zig-based Ly or installations supporting Lua configuration:
 ```bash
 sudo cp ly/config.lua /etc/ly/config.lua
 ```
@@ -37,7 +37,7 @@ sudo systemctl enable ly.service
 
 ## Features
 
-- **Zero Latency**: Disables superfluous falling terminal matrix animations for instant cold startup.
-- **Session Remembering**: Automatically remembers the last selected desktop session (Niri / Sway) and username.
-- **Controlled Chaos Border**: Rounded borders with Industrial Amber highlight (`#FFB000`) and Crimson error flash (`#E63946`).
-- **Clock Display**: Integrated localized weekday and date timestamp.
+- **Zero Latency**: Disables matrix animations by default for instant cold startup into Niri or Sway.
+- **TrueColor Precision**: Uses 24-bit 0xSSRRGGBB TrueColor rendering for exact BLACKSITE color reproduction on Linux KMS TTYs.
+- **Session Persistence**: Automatically remembers and persists the last selected compositor session (Niri / Sway) and username across reboots.
+- **Tactical Amber Frame**: Highlighted main terminal box with integrated localized weekday and date timestamp.

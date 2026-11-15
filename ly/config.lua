@@ -1,21 +1,20 @@
 -- Ly Display Manager Configuration managed by Dotfield
--- Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
+-- BLACKSITE Industrial Noir — Tactical Interface (65-20-8-5-2 palette)
 -- Target installation: /etc/ly/config.lua
 
 return {
-    -- Terminal & Colors (Hex mapping)
-    -- Void #0A0A0C · Amber #FFB000 · Crimson #E63946 · Bone #E8E6E3 · Iron #34343D
-    bg = 0x0A0A0C,
-    fg = 0xE8E6E3,
+    -- Terminal & Colors (Hex mapping: Void #08080A, Amber #FFB000, Crimson #E63946, Bone #E6E6EB, Iron #282A36)
+    bg = 0x08080A,
+    fg = 0xE6E6EB,
     border_fg = 0xFFB000,
-    border_bg = 0x0A0A0C,
-    text_fg = 0xE8E6E3,
+    border_bg = 0x08080A,
+    text_fg = 0xE6E6EB,
     error_fg = 0xE63946,
-    error_bg = 0x0A0A0C,
+    error_bg = 0x08080A,
 
     -- Visual Styling & Frame
+    box_title = "BLACKSITE // DOTFIELD",
     hide_borders = false,
-    border_radius = true,
     hide_fkeys = false,
     blank_password = false,
     asterisk = "*",

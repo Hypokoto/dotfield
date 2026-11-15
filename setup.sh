@@ -831,6 +831,13 @@ if [[ ! -e "${HOME}/.tmux.conf" || -L "${HOME}/.tmux.conf" ]]; then
     fi
 fi
 
+# Detect Ly display manager and advise on system configuration sync
+if [[ -d "/etc/ly" && -f "${SCRIPT_DIR}/ly/config.ini" ]]; then
+    if ! cmp -s "${SCRIPT_DIR}/ly/config.ini" "/etc/ly/config.ini" 2>/dev/null; then
+        info "Ly display manager detected at /etc/ly. To sync BLACKSITE theme, run: sudo cp ${SCRIPT_DIR}/ly/config.ini /etc/ly/config.ini"
+    fi
+fi
+
 # Install fzf-tab (Tab completion via fzf: no prompt-jumping, themed popup)
 FZF_TAB_DIR="${HOME}/.local/share/zsh/plugins/fzf-tab"
 FZF_TAB_REV="d7e0234614dbe5369fdd760907d12c0e05a4dccc" # v1.3.0 pinned

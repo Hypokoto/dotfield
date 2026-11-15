@@ -28,11 +28,6 @@ M.base46 = {
 }
 
 M.ui = {
-  theme = "dotfield",
-  theme_toggle = { "dotfield", "minimal" },
-  nvdash = {
-    load_on_startup = true,
-  },
   statusline = {
     theme = "default",
     style = "default",
@@ -41,6 +36,10 @@ M.ui = {
     enabled = true,
     order = { "buffers", "tabs", "btns", "treeOffset" },
   },
+}
+
+M.nvdash = {
+  load_on_startup = false,
 }
 
 return M

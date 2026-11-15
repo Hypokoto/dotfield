@@ -25,7 +25,14 @@ require("lazy").setup({
   { import = "plugins" },
 }, lazy_config)
 
--- load theme safely (guards against missing cache on fresh clone)
+-- auto-compile base46 cache if missing (guards against fresh clone or wiped cache)
+if not vim.uv.fs_stat(vim.g.base46_cache .. "defaults") then
+  pcall(function()
+    require("base46").load_all_highlights()
+  end)
+end
+
+-- load theme safely
 pcall(dofile, vim.g.base46_cache .. "defaults")
 pcall(dofile, vim.g.base46_cache .. "statusline")
 

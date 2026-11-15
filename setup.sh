@@ -279,9 +279,16 @@ run_sudo() {
         return 0
     fi
     if command -v sudo >/dev/null 2>&1; then
-        if sudo -v 2>/dev/null || sudo -p "[dotfield:sudo] Enter password for system hardening (%u): " true 2>/dev/null; then
+        # Check if already authenticated non-interactively
+        if sudo -n true 2>/dev/null; then
             sudo "${cmd[@]}"
             return $?
+        fi
+        # If interactive TTY, prompt user with explicit prompt without hiding stderr
+        if [[ -t 0 ]]; then
+            if sudo -p "[dotfield:sudo] Enter password for system privilege (%u): " "${cmd[@]}"; then
+                return 0
+            fi
         fi
     fi
     return 1
@@ -344,12 +351,23 @@ deploy_apparmor() {
         return 1
     fi
 
-    # Verification: check kernel security profiles directly
-    if run_sudo grep -q "dotfield-daemon" /sys/kernel/security/apparmor/profiles 2>/dev/null || \
+    # Verification: check kernel security profiles directly via securityfs or sudo
+    local active_mode=""
+    for pdir in /sys/kernel/security/apparmor/policy/profiles/dotfield-daemon.*; do
+        if [[ -d "${pdir}" && -f "${pdir}/name" ]]; then
+            if [[ "$(< "${pdir}/name")" == "dotfield-daemon" ]]; then
+                active_mode="$(< "${pdir}/mode")"
+                break
+            fi
+        fi
+    done
+
+    if [[ -n "${active_mode}" ]] || \
+       run_sudo grep -q "dotfield-daemon" /sys/kernel/security/apparmor/profiles 2>/dev/null || \
        (command -v aa-status >/dev/null 2>&1 && run_sudo aa-status 2>/dev/null | grep -q "dotfield-daemon"); then
-        success "AppArmor profile loaded and kernel confinement verified (dotfield-daemon)"
+        success "AppArmor profile loaded and kernel confinement verified (dotfield-daemon in ${active_mode:-complain} mode)"
         LAYER_STATUS["apparmor"]="PASS"
-        LAYER_DETAILS["apparmor"]="Active kernel profile (dotfield-daemon) in complain mode"
+        LAYER_DETAILS["apparmor"]="Active kernel profile (dotfield-daemon) in ${active_mode:-complain} mode"
         return 0
     else
         LAYER_STATUS["apparmor"]="FAIL"
@@ -800,6 +818,12 @@ ensure_config_link_or_dir "${SCRIPT_DIR}/wlogout" "${HOME}/.config/wlogout"
 ensure_config_link_or_dir "${SCRIPT_DIR}/fastfetch" "${HOME}/.config/fastfetch"
 ensure_config_link_or_dir "${SCRIPT_DIR}/shell/starship/starship.toml" "${HOME}/.config/starship.toml"
 ensure_config_link_or_dir "${SCRIPT_DIR}/shell/zsh/.zshrc" "${HOME}/.zshrc"
+
+# Compile/prime Neovim NvChad base46 highlights if nvim is available
+if [[ "${DRY_RUN}" != true ]] && command -v nvim >/dev/null 2>&1; then
+    info "Pre-compiling Neovim NvChad base46 highlights..."
+    nvim --headless -c "lua pcall(function() require('base46').load_all_highlights() end)" -c "qa" >/dev/null 2>&1 || true
+fi
 
 # Synchronize GTK interface & dark mode preferences
 if [[ "${DRY_RUN}" != true && -f "${SCRIPT_DIR}/scripts/gtk-sync.sh" ]]; then

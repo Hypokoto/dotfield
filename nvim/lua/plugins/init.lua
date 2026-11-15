@@ -28,6 +28,7 @@ return {
     opts = {
       animate = { enabled = false },
       dashboard = {
+        enabled = true,
         preset = {
           header = table.concat(ascii_header, "\n"),
         },

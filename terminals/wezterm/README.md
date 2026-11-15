@@ -32,8 +32,8 @@ terminals/wezterm/
 | `Alt + h` | Navigate to left pane / Neovim split |
 | `Alt + j` | Navigate to bottom pane / Neovim split |
 | `Alt + k` | Navigate to top pane / Neovim split |
-| `Alt + l` | Navigate to right pane / Neovim split |
-| `Alt + z` | Toggle pane zoom state |
+| `Alt + z` or `Ctrl + Shift + Enter` | Toggle independent pane zoom in/out (matches Ghostty `toggle_split_zoom`) |
+| `Alt + o` | Cycle to next pane (preserves zoom state across panes) |
 | `Alt + w` | Close active pane |
 
 ### Native Tabs

@@ -18,13 +18,13 @@ pub fn close_button(on_click_fn: impl Fn() + 'static, tokens: &ThemeTokens) -> R
         .child(
             Text::new("󰅖")
                 .size(typography::BODY)
-                .color(tokens.text_primary)
+                .color(tokens.text_secondary)
                 .font(&tokens.font_family)
                 .tight(),
         )
 }
 
-/// Standardized modal header bar across all popover windows
+/// Standardized modal header bar across all popover windows (Tactical Noir styling)
 pub fn modal_header(
     icon: &str,
     title: &str,
@@ -49,7 +49,7 @@ pub fn modal_header(
 
     if let Some(tag_text) = tag {
         title_elements.push(Box::new(
-            Text::new(format!("• {tag_text}"))
+            Text::new(format!("// {tag_text}"))
                 .size(typography::BADGE)
                 .color(tokens.text_secondary)
                 .font(&tokens.font_family),
@@ -74,7 +74,7 @@ pub fn modal_header(
         .child(header_row)
 }
 
-/// Standardized keyboard shortcut keycap badge
+/// Standardized keyboard shortcut keycap badge (Tactical Bracketed Keycap)
 pub fn keycap(key_text: &str, tokens: &ThemeTokens) -> Rectangle {
     let char_count = key_text.chars().count();
     let cap_width = (char_count as f32 * 7.5 + 14.0).max(22.0);
@@ -94,20 +94,20 @@ pub fn keycap(key_text: &str, tokens: &ThemeTokens) -> Rectangle {
         .child(
             Text::new(key_text)
                 .size(typography::CAPTION)
-                .color(tokens.text_secondary)
+                .color(tokens.text_primary)
                 .font(&tokens.font_family)
                 .tight(),
         )
 }
 
-/// Status badge pill with dot indicator
+/// Status badge with dot indicator (Tactical Telemetry Badge)
 pub fn status_badge(label: &str, dot_color: Color, tokens: &ThemeTokens) -> Rectangle {
     let char_count = label.chars().count();
     let badge_width = (char_count as f32 * 7.5 + 24.0).max(64.0);
     let content = Row::new(vec![
         Box::new(
             Text::new("●")
-                .size(7.0)
+                .size(6.5)
                 .color(dot_color)
                 .font(&tokens.font_family)
                 .tight(),
@@ -115,7 +115,7 @@ pub fn status_badge(label: &str, dot_color: Color, tokens: &ThemeTokens) -> Rect
         Box::new(
             Text::new(label)
                 .size(typography::BADGE)
-                .color(tokens.text_secondary)
+                .color(tokens.text_primary)
                 .font(&tokens.font_family)
                 .tight(),
         ),
@@ -126,7 +126,7 @@ pub fn status_badge(label: &str, dot_color: Color, tokens: &ThemeTokens) -> Rect
     Rectangle::new()
         .width(badge_width)
         .height(20.0)
-        .radius(radius::PILL)
+        .radius(radius::SM)
         .fill(tokens.surface_elevated)
         .border(border::THIN, tokens.border_subtle)
         .padding(Padding {
@@ -274,20 +274,9 @@ pub fn action_card(
     };
 
     let text_max_w = (avail_width - 30.0 - spacing::GAP_MD - badge_space).max(40.0);
-    let max_title_chars = (text_max_w / 7.5) as usize;
-    let max_sub_chars = (text_max_w / 6.5) as usize;
-
-    let safe_title = if title.chars().count() > max_title_chars && max_title_chars > 3 {
-        format!(
-            "{}…",
-            title.chars().take(max_title_chars - 1).collect::<String>()
-        )
-    } else {
-        title.to_string()
-    };
 
     let mut text_elements: Vec<Box<dyn Widget>> = vec![Box::new(
-        Text::new(safe_title)
+        Text::new(title)
             .size(typography::BODY)
             .color(title_color)
             .font(&tokens.font_family)
@@ -295,16 +284,15 @@ pub fn action_card(
     )];
 
     if let Some(sub) = subtitle {
-        let safe_sub = if sub.chars().count() > max_sub_chars && max_sub_chars > 3 {
-            format!(
-                "{}…",
-                sub.chars().take(max_sub_chars - 1).collect::<String>()
-            )
+        let home = std::env::var("HOME").unwrap_or_default();
+        let formatted_sub = if !home.is_empty() && sub.starts_with(&home) {
+            format!("~{}", &sub[home.len()..])
         } else {
             sub.to_string()
         };
+
         text_elements.push(Box::new(
-            Text::new(safe_sub)
+            Text::new(formatted_sub)
                 .size(typography::SECONDARY)
                 .color(tokens.text_secondary)
                 .font(&tokens.font_family)

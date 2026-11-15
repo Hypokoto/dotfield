@@ -46,5 +46,3 @@ end, { desc = "Open Context Menu" })
 
 -- Load Dotfield core keybindings
 pcall(require, "core.keymaps")
-
-

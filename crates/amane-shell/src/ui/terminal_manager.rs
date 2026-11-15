@@ -437,7 +437,7 @@ pub fn terminal_manager_overlay() -> LayerWindow {
 
     // Tab switcher row
     let tab_projects = Rectangle::new()
-        .width(120.0)
+        .width(190.0)
         .height(28.0)
         .radius(radius::SM)
         .fill(if active_tab == ManagerTab::Projects {
@@ -463,7 +463,7 @@ pub fn terminal_manager_overlay() -> LayerWindow {
             svc.hover_index = None;
         })
         .child(
-            Text::new("󰘬 Projects")
+            Text::new("󰘬 [ 01: PROJECTS & WORKTREES ]")
                 .size(typography::BADGE)
                 .color(if active_tab == ManagerTab::Projects {
                     tokens.accent
@@ -474,7 +474,7 @@ pub fn terminal_manager_overlay() -> LayerWindow {
         );
 
     let tab_terminals = Rectangle::new()
-        .width(140.0)
+        .width(170.0)
         .height(28.0)
         .radius(radius::SM)
         .fill(if active_tab == ManagerTab::Terminals {
@@ -499,7 +499,7 @@ pub fn terminal_manager_overlay() -> LayerWindow {
             svc.hover_index = None;
         })
         .child(
-            Text::new("󰆍 Quick Terminals")
+            Text::new("󰆍 [ 02: QUICK TERMINALS ]")
                 .size(typography::BADGE)
                 .color(if active_tab == ManagerTab::Terminals {
                     tokens.accent
@@ -942,19 +942,19 @@ pub fn terminal_manager_overlay() -> LayerWindow {
 
     let footer_hints = match active_tab {
         ManagerTab::Projects => vec![
-            ("Tab", "Switch Tab"),
-            ("↑/↓", "Navigate"),
-            ("↵", "Jump / Spawn"),
-            ("Esc", "Dismiss"),
+            ("TAB", "SWITCH VIEW"),
+            ("↑↓", "NAVIGATE"),
+            ("ENTER", "JUMP / OPEN"),
+            ("ESC", "DISMISS"),
         ],
         ManagerTab::Terminals => vec![
-            ("Tab", "Switch Tab"),
-            ("1-4", "Quick Pick"),
-            ("↵", "Launch"),
-            ("m", "Tmux"),
-            ("s", "Float"),
-            ("d", "Default"),
-            ("Esc", "Dismiss"),
+            ("TAB", "SWITCH VIEW"),
+            ("1-4", "SELECT"),
+            ("ENTER", "LAUNCH"),
+            ("M", "TMUX"),
+            ("S", "FLOAT"),
+            ("D", "DEFAULT"),
+            ("ESC", "DISMISS"),
         ],
     };
 
@@ -962,7 +962,7 @@ pub fn terminal_manager_overlay() -> LayerWindow {
         580.0,
         450.0,
         "󰞷",
-        "Topology & Terminals",
+        "[ DEV // TOPOLOGY ROUTER ]",
         Some(header_tag),
         Box::new(body_column),
         footer_hints,

@@ -18,12 +18,12 @@ pub mod spacing {
     pub const PAD_PANEL: f32 = 16.0;
 }
 
-/// Border radius scale providing consistent curvature hierarchy (BLACKSITE spec: 4-6px)
+/// Border radius scale providing mechanical tactical curvature (BLACKSITE Industrial Noir: 1-3px)
 pub mod radius {
-    pub const XS: f32 = 2.0; // Micro indicators, dot tags
-    pub const SM: f32 = 4.0; // Keycaps, tags, badges
-    pub const MD: f32 = 5.0; // Standard cards, buttons, input fields
-    pub const LG: f32 = 6.0; // Windows, modal shells, popovers
+    pub const XS: f32 = 1.0; // Micro indicators, dot tags
+    pub const SM: f32 = 2.0; // Keycaps, tags, badges, buttons
+    pub const MD: f32 = 2.0; // Standard cards, buttons, input fields
+    pub const LG: f32 = 3.0; // Windows, modal shells, popovers
     pub const PILL: f32 = 999.0; // Fully rounded pills, radar dots
 }
 
@@ -95,37 +95,37 @@ impl ThemeTokens {
         let bg = if !palette.background.is_empty() {
             Color::from(palette.background.as_str())
         } else {
-            Color::from("#0A0A0C")
+            Color::from("#08080A")
         };
         let surface = if !palette.surface.is_empty() {
             Color::from(palette.surface.as_str())
         } else {
-            Color::from("#121216")
+            Color::from("#111216")
         };
         let surface_elevated = if !palette.overlay.is_empty() {
             Color::from(palette.overlay.as_str())
         } else {
-            Color::from("#1C1C23")
+            Color::from("#181920")
         };
         let border_subtle = if !palette.border.is_empty() {
             Color::from(palette.border.as_str())
         } else {
-            Color::from("#34343D")
+            Color::from("#282A36")
         };
         let text_primary = if !palette.foreground.is_empty() {
             Color::from(palette.foreground.as_str())
         } else {
-            Color::from("#E8E6E3")
+            Color::from("#E6E6EB")
         };
         let text_secondary = if !palette.muted.is_empty() {
             Color::from(palette.muted.as_str())
         } else {
-            Color::from("#A1A1AA")
+            Color::from("#8F94A6")
         };
         let text_muted = if !palette.steel.is_empty() {
             Color::from(palette.steel.as_str())
         } else {
-            Color::from("#8B949E")
+            Color::from("#606474")
         };
         let accent = if !palette.highlight.is_empty() {
             Color::from(palette.highlight.as_str())
@@ -135,7 +135,7 @@ impl ThemeTokens {
         let accent_hover = if !palette.hover.is_empty() {
             Color::from(palette.hover.as_str())
         } else {
-            Color::from("#FFD166")
+            Color::from("#FFC020")
         };
         let danger = if !palette.accent.is_empty() {
             Color::from(palette.accent.as_str())
@@ -150,26 +150,26 @@ impl ThemeTokens {
         let success = if !palette.success.is_empty() {
             Color::from(palette.success.as_str())
         } else {
-            Color::from("#7BC47F")
+            Color::from("#4AF626")
         };
         let steel = if !palette.steel.is_empty() {
             Color::from(palette.steel.as_str())
         } else {
-            Color::from("#8B949E")
+            Color::from("#606474")
         };
 
-        // Derived surface & border states
-        let surface_hover = Color::from("#24242D");
-        let surface_active = Color::from("#2C2C37");
-        let surface_selected = Color::from("#281F0D");
-        let surface_track = Color::from("#16161C");
+        // Derived surface & border states (Industrial Noir 65-20-8-5-2)
+        let surface_hover = Color::from("#20222B");
+        let surface_active = Color::from("#282A36");
+        let surface_selected = Color::from("#241E10");
+        let surface_track = Color::from("#0E0F13");
 
-        let border_hover = Color::from("#484855");
+        let border_hover = Color::from("#44475A");
         let border_focus = accent;
         let border_danger = danger;
 
-        let accent_subtle = Color::from("#2A1F08");
-        let danger_subtle = Color::from("#2D1215");
+        let accent_subtle = Color::from("#221B0B");
+        let danger_subtle = Color::from("#251114");
 
         Self {
             bg,

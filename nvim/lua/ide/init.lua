@@ -38,7 +38,7 @@ function M.setup(opts)
 
   -- Start the RPC server connection
   rpc.start(M.config)
-  
+
   -- Initialize zero-copy native IPC for instant buffer updates
   require("ide.zero_copy").setup()
 

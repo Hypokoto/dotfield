@@ -117,7 +117,7 @@ return {
         -- Force the offset rendering to align with the right sidebar
         modules = {
           -- This overrides NvChad's default left-leaning layout
-          offset = { position = "right" } 
+          offset = { position = "right" }
         }
       }
     }
@@ -217,7 +217,7 @@ return {
       },
     },
   },
-  
+
   -- ==========================================================
   -- Right-click Menu (nvzone/menu)
   -- ==========================================================

@@ -203,7 +203,7 @@ pub fn launcher_overlay() -> LayerWindow {
         status_badge(&count_text, tokens.accent, &tokens)
     };
 
-    let search_icon = Text::new("󰍉")
+    let search_icon = Text::new("❯")
         .size(typography::TITLE_SM)
         .color(tokens.accent)
         .font(&tokens.font_family)
@@ -212,7 +212,7 @@ pub fn launcher_overlay() -> LayerWindow {
     let search_input = TextInput::new("launcher-search")
         .size(typography::BODY)
         .color(tokens.text_primary)
-        .placeholder("Search apps, ': <cmd>' to run, '> <action>' for shell")
+        .placeholder("Search apps, ': <cmd>' for exec, '> <action>' for HUD")
         .focused()
         .on_change(|text| {
             let mut launcher = LauncherService::write();
@@ -255,15 +255,15 @@ pub fn launcher_overlay() -> LayerWindow {
         680.0,
         480.0,
         "󰵆",
-        "Application Launcher",
-        Some("Niri"),
+        "[ APPS // REGISTRY ]",
+        Some("NIRI COMPOSITOR"),
         Box::new(body_column),
         vec![
-            ("Arrows", "Navigate"),
-            ("↵ Enter", "Launch"),
-            ("Esc", "Dismiss"),
-            (":", "Terminal Exec"),
-            (">", "Actions"),
+            ("↑↓", "NAVIGATE"),
+            ("ENTER", "LAUNCH"),
+            ("ESC", "DISMISS"),
+            (":", "EXEC"),
+            (">", "ACTIONS"),
         ],
         close,
         &tokens,

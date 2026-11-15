@@ -13,6 +13,7 @@ pub struct PowerAction {
     pub id: &'static str,
     pub icon: &'static str,
     pub title: &'static str,
+    pub op_code: &'static str,
     pub key_hint: &'static str,
     pub command: &'static str,
     pub is_critical: bool,
@@ -22,7 +23,8 @@ pub static ACTIONS: &[PowerAction] = &[
     PowerAction {
         id: "lock",
         icon: "󰌾",
-        title: "Lock",
+        title: "LOCK",
+        op_code: "SYS:01",
         key_hint: "L",
         command: "command -v gtklock >/dev/null 2>&1 && gtklock || swaylock || true",
         is_critical: false,
@@ -30,7 +32,8 @@ pub static ACTIONS: &[PowerAction] = &[
     PowerAction {
         id: "suspend",
         icon: "󰒲",
-        title: "Sleep",
+        title: "SUSPEND",
+        op_code: "SYS:02",
         key_hint: "S",
         command: "systemctl suspend",
         is_critical: false,
@@ -38,7 +41,8 @@ pub static ACTIONS: &[PowerAction] = &[
     PowerAction {
         id: "reboot",
         icon: "󰑐",
-        title: "Reboot",
+        title: "REBOOT",
+        op_code: "SYS:03",
         key_hint: "R",
         command: "systemctl reboot",
         is_critical: true,
@@ -46,7 +50,8 @@ pub static ACTIONS: &[PowerAction] = &[
     PowerAction {
         id: "poweroff",
         icon: "󰐥",
-        title: "Shutdown",
+        title: "HALT",
+        op_code: "SYS:04",
         key_hint: "P",
         command: "systemctl poweroff",
         is_critical: true,
@@ -54,7 +59,8 @@ pub static ACTIONS: &[PowerAction] = &[
     PowerAction {
         id: "exit",
         icon: "󰈆",
-        title: "Exit Niri",
+        title: "EXIT",
+        op_code: "SYS:05",
         key_hint: "E",
         command: "niri msg action quit",
         is_critical: false,
@@ -186,36 +192,13 @@ pub fn powermenu_overlay() -> LayerWindow {
         .trim()
         .to_string();
 
-    let header_card = Row::new(vec![
-        Box::new(
-            Row::new(vec![
-                Box::new(
-                    Text::new("󰐥")
-                        .size(crate::ui::tokens::typography::TITLE_SM)
-                        .color(tokens.danger)
-                        .font(&tokens.font_family),
-                ),
-                Box::new(
-                    Text::new("SESSION & POWER")
-                        .size(crate::ui::tokens::typography::SECONDARY)
-                        .color(tokens.text_primary)
-                        .font(&tokens.font_family),
-                ),
-                Box::new(
-                    Text::new(format!("• {user_name}@{host_name}"))
-                        .size(crate::ui::tokens::typography::BADGE)
-                        .color(tokens.text_secondary)
-                        .font(&tokens.font_family),
-                ),
-            ])
-            .gap(crate::ui::tokens::spacing::GAP_SM)
-            .align(Align::Center),
-        ),
-        Box::new(crate::ui::components::close_button(close, &tokens)),
-    ])
-    .width(Parent)
-    .justify(Justify::SpaceBetween)
-    .align(Align::Center);
+    let header_card = crate::ui::components::modal_header(
+        "󰐥",
+        "BLACKSITE // SESSION & POWER",
+        Some(&format!("{user_name}@{host_name}")),
+        &tokens,
+        close,
+    );
 
     // Action buttons: 5 cards in a horizontal row
     let mut action_cards: Vec<Box<dyn Widget>> = Vec::new();
@@ -223,13 +206,14 @@ pub fn powermenu_overlay() -> LayerWindow {
     for (idx, action) in ACTIONS.iter().enumerate() {
         let is_selected = idx == menu.selected;
 
-        let (card_fill, card_border, icon_color, title_color) = if is_selected {
+        let (card_fill, card_border, icon_color, title_color, op_color) = if is_selected {
             if action.is_critical {
                 (
                     tokens.danger_subtle,
                     tokens.border_danger,
                     tokens.danger,
                     tokens.text_primary,
+                    tokens.danger,
                 )
             } else {
                 (
@@ -237,6 +221,7 @@ pub fn powermenu_overlay() -> LayerWindow {
                     tokens.border_focus,
                     tokens.accent,
                     tokens.text_primary,
+                    tokens.accent,
                 )
             }
         } else if action.is_critical {
@@ -245,6 +230,7 @@ pub fn powermenu_overlay() -> LayerWindow {
                 tokens.border_subtle,
                 tokens.danger,
                 tokens.text_secondary,
+                tokens.danger,
             )
         } else {
             (
@@ -252,23 +238,24 @@ pub fn powermenu_overlay() -> LayerWindow {
                 tokens.border_subtle,
                 tokens.text_secondary,
                 tokens.text_secondary,
+                tokens.text_muted,
             )
         };
 
         let key_chip = crate::ui::components::keycap(action.key_hint, &tokens);
 
         let card = Rectangle::new()
-            .width(100.0)
-            .height(112.0)
-            .radius(crate::ui::tokens::radius::MD)
+            .width(102.0)
+            .height(116.0)
+            .radius(crate::ui::tokens::radius::SM)
             .fill(card_fill)
             .border(if is_selected { 1.5 } else { 1.0 }, card_border)
             .cursor(Pointer)
             .padding(Padding {
-                top: 14.0,
-                bottom: 10.0,
-                left: 8.0,
-                right: 8.0,
+                top: 8.0,
+                bottom: 8.0,
+                left: 6.0,
+                right: 6.0,
             })
             .align_child(Center, Center)
             .on_hover(move |hovering| {
@@ -283,8 +270,14 @@ pub fn powermenu_overlay() -> LayerWindow {
             .child(
                 Column::new(vec![
                     Box::new(
+                        Text::new(format!("[{}]", action.op_code))
+                            .size(crate::ui::tokens::typography::CAPTION)
+                            .color(op_color)
+                            .font(&tokens.font_family),
+                    ),
+                    Box::new(
                         Text::new(action.icon)
-                            .size(28.0)
+                            .size(26.0)
                             .color(icon_color)
                             .font(&tokens.font_family),
                     ),
@@ -296,7 +289,7 @@ pub fn powermenu_overlay() -> LayerWindow {
                     ),
                     Box::new(key_chip),
                 ])
-                .gap(crate::ui::tokens::spacing::GAP_SM)
+                .gap(3.0)
                 .align(Align::Center),
             );
 
@@ -312,7 +305,7 @@ pub fn powermenu_overlay() -> LayerWindow {
     let footer_row = Row::new(vec![
         Box::new(crate::ui::components::keycap("←/→", &tokens)),
         Box::new(
-            Text::new("Navigate")
+            Text::new("NAVIGATE")
                 .size(crate::ui::tokens::typography::BADGE)
                 .color(tokens.text_secondary)
                 .font(&tokens.font_family),
@@ -323,9 +316,9 @@ pub fn powermenu_overlay() -> LayerWindow {
                 .color(tokens.text_muted)
                 .font(&tokens.font_family),
         ),
-        Box::new(crate::ui::components::keycap("↵ Enter", &tokens)),
+        Box::new(crate::ui::components::keycap("ENTER", &tokens)),
         Box::new(
-            Text::new("Execute")
+            Text::new("EXECUTE")
                 .size(crate::ui::tokens::typography::BADGE)
                 .color(tokens.text_secondary)
                 .font(&tokens.font_family),
@@ -336,9 +329,9 @@ pub fn powermenu_overlay() -> LayerWindow {
                 .color(tokens.text_muted)
                 .font(&tokens.font_family),
         ),
-        Box::new(crate::ui::components::keycap("Esc", &tokens)),
+        Box::new(crate::ui::components::keycap("ESC", &tokens)),
         Box::new(
-            Text::new("Cancel")
+            Text::new("CANCEL")
                 .size(crate::ui::tokens::typography::BADGE)
                 .color(tokens.text_secondary)
                 .font(&tokens.font_family),
@@ -350,7 +343,7 @@ pub fn powermenu_overlay() -> LayerWindow {
     // Modal Dialog Box
     let dialog = Rectangle::new()
         .width(580.0)
-        .height(206.0)
+        .height(218.0)
         .radius(crate::ui::tokens::radius::LG)
         .fill(tokens.surface)
         .border(1.0, tokens.border_subtle)
@@ -372,7 +365,7 @@ pub fn powermenu_overlay() -> LayerWindow {
 
     LayerWindow::new()
         .width(580.0)
-        .height(210.0)
+        .height(218.0)
         .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Middle)
         .anchor_horizontal(Horizontal::Middle)

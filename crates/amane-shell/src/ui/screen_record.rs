@@ -200,9 +200,13 @@ pub fn screen_record_overlay() -> LayerWindow {
         let header = Row::new(vec![
             Box::new(
                 Row::new(vec![
-                    Box::new(components::status_badge("REC", tokens.danger, &tokens)),
+                    Box::new(components::status_badge(
+                        "REC: LIVE",
+                        tokens.danger,
+                        &tokens,
+                    )),
                     Box::new(
-                        Text::new("Recording Active")
+                        Text::new("STREAM RECORDING ACTIVE")
                             .size(typography::BODY)
                             .color(tokens.text_primary)
                             .font(&font),
@@ -222,15 +226,45 @@ pub fn screen_record_overlay() -> LayerWindow {
         .justify(Justify::SpaceBetween)
         .align(Align::Center);
 
-        let info_line = Text::new("Saving MP4 stream to ~/Videos/Recordings/")
-            .size(typography::SECONDARY)
-            .color(tokens.text_muted)
-            .font(&font);
+        let telemetry_line = Row::new(vec![
+            Box::new(
+                Text::new("TARGET: 1920x1080 @ 144Hz")
+                    .size(typography::CAPTION)
+                    .color(tokens.text_secondary)
+                    .font(&font),
+            ),
+            Box::new(
+                Text::new("•")
+                    .size(typography::CAPTION)
+                    .color(tokens.text_muted)
+                    .font(&font),
+            ),
+            Box::new(
+                Text::new("CODEC: H.264 VAAPI")
+                    .size(typography::CAPTION)
+                    .color(tokens.text_secondary)
+                    .font(&font),
+            ),
+            Box::new(
+                Text::new("•")
+                    .size(typography::CAPTION)
+                    .color(tokens.text_muted)
+                    .font(&font),
+            ),
+            Box::new(
+                Text::new("OUTPUT: ~/Videos/Recordings/")
+                    .size(typography::CAPTION)
+                    .color(tokens.text_muted)
+                    .font(&font),
+            ),
+        ])
+        .gap(6.0)
+        .align(Align::Center);
 
         let stop_btn = Rectangle::new()
             .width(Parent)
             .height(44.0)
-            .radius(radius::MD)
+            .radius(radius::SM)
             .fill(tokens.danger)
             .border(1.0, tokens.border_danger)
             .cursor(Pointer)
@@ -242,11 +276,12 @@ pub fn screen_record_overlay() -> LayerWindow {
                 Row::new(vec![
                     Box::new(Text::new("󰙦").size(16.0).color(Color::WHITE).font(&font)),
                     Box::new(
-                        Text::new("STOP & SAVE RECORDING")
+                        Text::new("[ TERMINATE & COMMIT STREAM ]")
                             .size(typography::BODY)
                             .color(Color::WHITE)
                             .font(&font),
                     ),
+                    Box::new(components::keycap("SPACE", &tokens)),
                 ])
                 .gap(spacing::GAP_SM)
                 .align(Align::Center),
@@ -254,21 +289,26 @@ pub fn screen_record_overlay() -> LayerWindow {
 
         Column::new(vec![
             Box::new(header),
-            Box::new(info_line),
+            Box::new(telemetry_line),
             Box::new(stop_btn),
         ])
         .width(Parent)
         .gap(spacing::GAP_MD)
     } else {
         // Idle view: Select Region vs Fullscreen with audio toggle
-        let header =
-            components::modal_header("󰑋", "Screen Recorder", Some("wf-recorder"), &tokens, close);
+        let header = components::modal_header(
+            "⏺",
+            "RECORDER // TELEMETRY HUD",
+            Some("WF-RECORDER"),
+            &tokens,
+            close,
+        );
 
         // Action Cards: Region vs Fullscreen
         let region_card = Rectangle::new()
-            .width(196.0)
-            .height(76.0)
-            .radius(radius::MD)
+            .width(236.0)
+            .height(84.0)
+            .radius(radius::SM)
             .fill(tokens.surface_elevated)
             .border(1.0, tokens.border_subtle)
             .cursor(Pointer)
@@ -278,12 +318,19 @@ pub fn screen_record_overlay() -> LayerWindow {
             })
             .child(
                 Column::new(vec![
-                    Box::new(Text::new("󰒉").size(22.0).color(tokens.accent).font(&font)),
                     Box::new(
-                        Text::new("Record Region")
-                            .size(typography::BODY)
-                            .color(tokens.text_primary)
-                            .font(&font),
+                        Row::new(vec![
+                            Box::new(Text::new("⛶").size(20.0).color(tokens.accent).font(&font)),
+                            Box::new(
+                                Text::new("REGION")
+                                    .size(typography::BODY)
+                                    .color(tokens.text_primary)
+                                    .font(&font),
+                            ),
+                            Box::new(components::keycap("R", &tokens)),
+                        ])
+                        .gap(spacing::GAP_SM)
+                        .align(Align::Center),
                     ),
                     Box::new(
                         Text::new("Select area with slurp")
@@ -292,14 +339,14 @@ pub fn screen_record_overlay() -> LayerWindow {
                             .font(&font),
                     ),
                 ])
-                .gap(2.0)
+                .gap(4.0)
                 .align(Align::Center),
             );
 
         let full_card = Rectangle::new()
-            .width(196.0)
-            .height(76.0)
-            .radius(radius::MD)
+            .width(236.0)
+            .height(84.0)
+            .radius(radius::SM)
             .fill(tokens.surface_elevated)
             .border(1.0, tokens.border_subtle)
             .cursor(Pointer)
@@ -309,21 +356,28 @@ pub fn screen_record_overlay() -> LayerWindow {
             })
             .child(
                 Column::new(vec![
-                    Box::new(Text::new("󰍹").size(22.0).color(tokens.accent).font(&font)),
                     Box::new(
-                        Text::new("Fullscreen")
-                            .size(typography::BODY)
-                            .color(tokens.text_primary)
-                            .font(&font),
+                        Row::new(vec![
+                            Box::new(Text::new("󰍹").size(20.0).color(tokens.accent).font(&font)),
+                            Box::new(
+                                Text::new("FULLSCREEN")
+                                    .size(typography::BODY)
+                                    .color(tokens.text_primary)
+                                    .font(&font),
+                            ),
+                            Box::new(components::keycap("F", &tokens)),
+                        ])
+                        .gap(spacing::GAP_SM)
+                        .align(Align::Center),
                     ),
                     Box::new(
-                        Text::new("Record entire monitor")
+                        Text::new("Record entire display")
                             .size(typography::CAPTION)
                             .color(tokens.text_muted)
                             .font(&font),
                     ),
                 ])
-                .gap(2.0)
+                .gap(4.0)
                 .align(Align::Center),
             );
 
@@ -334,7 +388,7 @@ pub fn screen_record_overlay() -> LayerWindow {
 
         // Audio toggle & hints
         let (audio_bg, audio_border, audio_fg) = if rec.with_audio {
-            (tokens.surface_selected, tokens.border_focus, tokens.accent)
+            (tokens.surface_selected, tokens.border_focus, tokens.success)
         } else {
             (
                 tokens.surface_elevated,
@@ -344,8 +398,8 @@ pub fn screen_record_overlay() -> LayerWindow {
         };
 
         let audio_btn = Rectangle::new()
-            .width(136.0)
-            .height(28.0)
+            .width(180.0)
+            .height(30.0)
             .radius(radius::SM)
             .fill(audio_bg)
             .border(1.0, audio_border)
@@ -355,22 +409,47 @@ pub fn screen_record_overlay() -> LayerWindow {
                 toggle_audio();
             })
             .child(
-                Text::new(if rec.with_audio {
-                    "󰍬 Mic Audio: ON"
-                } else {
-                    "󰍭 Mic Audio: OFF"
-                })
-                .size(typography::SECONDARY)
-                .color(audio_fg)
-                .font(&font),
+                Row::new(vec![
+                    Box::new(
+                        Text::new(if rec.with_audio {
+                            "󰍬 MIC AUDIO: ON"
+                        } else {
+                            "󰍭 MIC AUDIO: OFF"
+                        })
+                        .size(typography::SECONDARY)
+                        .color(audio_fg)
+                        .font(&font),
+                    ),
+                    Box::new(components::keycap("A", &tokens)),
+                ])
+                .gap(6.0)
+                .align(Align::Center),
             );
 
-        let path_hint = Text::new("Saves to ~/Videos/Recordings")
-            .size(typography::CAPTION)
-            .color(tokens.text_muted)
-            .font(&font);
+        let telemetry_info = Row::new(vec![
+            Box::new(
+                Text::new("TARGET: 1080p @ 144Hz")
+                    .size(typography::CAPTION)
+                    .color(tokens.text_secondary)
+                    .font(&font),
+            ),
+            Box::new(
+                Text::new("•")
+                    .size(typography::CAPTION)
+                    .color(tokens.text_muted)
+                    .font(&font),
+            ),
+            Box::new(
+                Text::new("H.264 VAAPI")
+                    .size(typography::CAPTION)
+                    .color(tokens.text_muted)
+                    .font(&font),
+            ),
+        ])
+        .gap(6.0)
+        .align(Align::Center);
 
-        let controls_row = Row::new(vec![Box::new(audio_btn), Box::new(path_hint)])
+        let controls_row = Row::new(vec![Box::new(audio_btn), Box::new(telemetry_info)])
             .width(Parent)
             .justify(Justify::SpaceBetween)
             .align(Align::Center);
@@ -385,8 +464,8 @@ pub fn screen_record_overlay() -> LayerWindow {
     };
 
     let panel = Rectangle::new()
-        .width(440.0)
-        .height(184.0)
+        .width(520.0)
+        .height(218.0)
         .radius(radius::LG)
         .fill(tokens.surface)
         .border(1.0, tokens.border_subtle)
@@ -399,8 +478,8 @@ pub fn screen_record_overlay() -> LayerWindow {
         .child(content_box);
 
     LayerWindow::new()
-        .width(440.0)
-        .height(184.0)
+        .width(520.0)
+        .height(218.0)
         .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Middle)
         .anchor_horizontal(Horizontal::Middle)

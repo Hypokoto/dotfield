@@ -47,17 +47,6 @@ else
     pass "kitty not installed; skipping binary validation"
 fi
 
-step "Typechecking Alacritty terminal configuration..."
-if command -v alacritty >/dev/null 2>&1; then
-    if alacritty --config-file "${SCRIPT_DIR}/terminals/alacritty/alacritty.toml" migrate --dry-run >/dev/null 2>&1; then
-        pass "alacritty.toml syntax is valid"
-    else
-        fail "alacritty.toml validation failed"
-    fi
-else
-    pass "alacritty not installed; skipping binary validation"
-fi
-
 step "Typechecking Ghostty terminal configuration..."
 if command -v ghostty >/dev/null 2>&1; then
     if ghostty +validate-config --config-file="${SCRIPT_DIR}/terminals/ghostty/config" >/dev/null 2>&1; then
@@ -67,31 +56,6 @@ if command -v ghostty >/dev/null 2>&1; then
     fi
 else
     pass "ghostty not installed; skipping binary validation"
-fi
-
-step "Typechecking WezTerm terminal configuration..."
-if command -v wezterm >/dev/null 2>&1; then
-    WEZ_ERR=""
-    if command -v luac >/dev/null 2>&1; then
-        if ! luac -p "${SCRIPT_DIR}/terminals/wezterm/wezterm.lua" "${SCRIPT_DIR}/terminals/wezterm/colors.lua" "${SCRIPT_DIR}/terminals/wezterm/keys.lua" "${SCRIPT_DIR}/terminals/wezterm/status.lua" >/dev/null 2>&1; then
-            WEZ_ERR="Lua syntax check failed"
-        fi
-    fi
-    if [[ -z "${WEZ_ERR}" ]]; then
-        wez_out="$(wezterm --config-file "${SCRIPT_DIR}/terminals/wezterm/wezterm.lua" ls-fonts --text "test" 2>&1 | tr -d '\0')" || WEZ_ERR="exit code $?"
-        if echo "${wez_out}" | grep -q "ERROR"; then
-            WEZ_ERR="$(echo "${wez_out}" | grep "ERROR" | head -n 1)"
-        fi
-        if [[ -z "${WEZ_ERR}" ]]; then
-            pass "wezterm.lua configuration is valid"
-        else
-            fail "wezterm config validation failed: ${WEZ_ERR}"
-        fi
-    else
-        fail "wezterm ${WEZ_ERR}"
-    fi
-else
-    pass "wezterm not installed; skipping binary validation"
 fi
 
 if [[ "${FAILED}" -ne 0 ]]; then

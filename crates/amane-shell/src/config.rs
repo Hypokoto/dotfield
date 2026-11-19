@@ -157,7 +157,7 @@ pub struct TerminalSettings {
 impl Default for TerminalSettings {
     fn default() -> Self {
         Self {
-            default: "foot".to_string(),
+            default: "ghostty".to_string(),
         }
     }
 }
@@ -229,7 +229,7 @@ mod tests {
         assert!(manifest.bar.enabled);
         assert_eq!(manifest.theme.font_size, 10.0);
         assert_eq!(manifest.palette.accent, "#E63946");
-        assert_eq!(manifest.terminal.default, "foot");
+        assert_eq!(manifest.terminal.default, "ghostty");
     }
 
     #[test]
@@ -255,7 +255,7 @@ mod tests {
     fn test_empty_toml_deserialization() {
         let manifest: ShellManifest = toml::from_str("").expect("failed to parse empty toml");
         assert_eq!(manifest.bar.height, 34.0);
-        assert_eq!(manifest.terminal.default, "foot");
+        assert_eq!(manifest.terminal.default, "ghostty");
     }
 
     #[test]

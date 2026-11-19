@@ -12,6 +12,12 @@ crates/amane/target/
 .hermes/
 skills-lock.json
 .gstack/
+design/
+designs/
+review/
+reviews/
+docs/designs/
+docs/reviews/
 gtk/gtk-3.0/bookmarks
 gtk/gtk-4.0/bookmarks
 nvim/lazy-lock.json

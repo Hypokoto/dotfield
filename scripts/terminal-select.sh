@@ -27,11 +27,9 @@ if [[ "$MODE" == "--select" || "$MODE" == "--menu" || "$MODE" == "-m" ]]; then
 
     # Fallback to Fuzzel if shell daemon is offline
     OPTIONS=(
+        "󰊠  Ghostty    (Modern GPU Terminal):ghostty"
         "󰞷  Foot       (Fast Wayland Client):foot"
         "󰄛  Kitty      (GPU Accelerated):kitty"
-        "󰆍  Alacritty  (OpenGL Fast Terminal):alacritty"
-        "󰊠  Ghostty    (Modern GPU Terminal):ghostty"
-        "󰞌  WezTerm    (Lua GPU Terminal):wezterm"
     )
 
     MENU=""
@@ -65,12 +63,31 @@ fi
 # Launch default terminal directly
 TARGET_BIN=""
 
-# Check dotfield shell manifest
-SHELL_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/dotfield/shell.toml"
-if [[ -f "${SHELL_CONFIG}" ]]; then
-    CONF_DEFAULT=$(awk -F'=' '/\[terminal\]/{flag=1; next} /^\[/{flag=0} flag && /default/ {gsub(/[ "]/, "", $2); print $2}' "${SHELL_CONFIG}" 2>/dev/null || true)
-    if [[ -n "${CONF_DEFAULT}" ]] && command -v "${CONF_DEFAULT}" >/dev/null 2>&1; then
-        TARGET_BIN="${CONF_DEFAULT}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${SCRIPT_DIR}/lib/env.sh" ]]; then
+    # shellcheck source=/dev/null
+    source "${SCRIPT_DIR}/lib/env.sh"
+elif [[ -f "${HOME}/.config/dotfield/scripts/lib/env.sh" ]]; then
+    # shellcheck source=/dev/null
+    source "${HOME}/.config/dotfield/scripts/lib/env.sh"
+fi
+
+# In Sway, default to Foot; in Niri, default to Ghostty
+if is_sway; then
+    if command -v foot >/dev/null 2>&1; then
+        TARGET_BIN="foot"
+    fi
+elif is_niri; then
+    # Check dotfield shell manifest first if present
+    SHELL_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/dotfield/shell.toml"
+    if [[ -f "${SHELL_CONFIG}" ]]; then
+        CONF_DEFAULT=$(awk -F'=' '/\[terminal\]/{flag=1; next} /^\[/{flag=0} flag && /default/ {gsub(/[ "]/, "", $2); print $2}' "${SHELL_CONFIG}" 2>/dev/null || true)
+        if [[ -n "${CONF_DEFAULT}" ]] && command -v "${CONF_DEFAULT}" >/dev/null 2>&1; then
+            TARGET_BIN="${CONF_DEFAULT}"
+        fi
+    fi
+    if [[ -z "${TARGET_BIN}" ]] && command -v ghostty >/dev/null 2>&1; then
+        TARGET_BIN="ghostty"
     fi
 fi
 
@@ -81,7 +98,7 @@ fi
 
 # Fallback to preferred installed terminal
 if [[ -z "${TARGET_BIN}" ]]; then
-    for cand in alacritty foot kitty ghostty wezterm; do
+    for cand in ghostty foot kitty; do
         if command -v "$cand" >/dev/null 2>&1; then
             TARGET_BIN="$cand"
             break

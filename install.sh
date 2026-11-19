@@ -229,7 +229,7 @@ case "${PKG_MANAGER}" in
     pacman)
         # Arch Linux / Manjaro / EndeavourOS
         COMMON_PKGS=(
-            foot kitty alacritty wezterm fuzzel kanshi tmux zellij neovim zsh starship fastfetch
+            ghostty foot kitty fuzzel kanshi tmux zellij neovim zsh starship fastfetch
             mako swaylock swayidle grim slurp wl-clipboard wlr-randr wlogout
             wf-recorder eza bat ripgrep fd dust duf btop doggo xh trash-cli
             zoxide direnv ttf-jetbrains-mono-nerd papirus-icon-theme playerctl bubblewrap
@@ -240,7 +240,7 @@ case "${PKG_MANAGER}" in
     apt)
         # Debian / Ubuntu
         COMMON_PKGS=(
-            foot kitty alacritty tmux neovim zsh kanshi playerctl fastfetch
+            foot kitty tmux neovim zsh kanshi playerctl fastfetch
             swaylock swayidle grim slurp wl-clipboard wlogout ripgrep
             fd-find bat btop direnv bubblewrap
         )
@@ -250,7 +250,7 @@ case "${PKG_MANAGER}" in
     dnf)
         # Fedora
         COMMON_PKGS=(
-            foot kitty alacritty fuzzel kanshi tmux zellij neovim zsh starship fastfetch
+            foot kitty fuzzel kanshi tmux zellij neovim zsh starship fastfetch
             mako playerctl swaylock swayidle grim slurp wl-clipboard wlr-randr
             wlogout ripgrep fd-find bat eza btop zoxide direnv bubblewrap
         )
@@ -260,7 +260,7 @@ case "${PKG_MANAGER}" in
     zypper)
         # openSUSE
         COMMON_PKGS=(
-            kitty alacritty tmux zellij neovim zsh starship mako playerctl fastfetch
+            kitty tmux zellij neovim zsh starship mako playerctl fastfetch
             swaylock swayidle grim slurp wl-clipboard wlogout ripgrep bat bubblewrap
         )
         SWAY_PKGS=(sway swaybg)

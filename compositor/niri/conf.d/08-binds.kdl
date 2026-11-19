@@ -7,7 +7,7 @@ binds {
     Mod+Return { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
     Mod+Shift+Return { spawn "amane-msg" "topology"; }
     Mod+Alt+Return { spawn "amane-msg" "sidecar"; }
-    Mod+Ctrl+Return { spawn "kitty" "--app-id=floating-term"; }
+    Mod+Ctrl+Return { spawn "ghostty" "--class=floating-term"; }
     Mod+Space { spawn "amane-msg" "launcher"; }
     Mod+Shift+Space { spawn "amane-msg" "control-center"; }
     Mod+Q { close-window; }

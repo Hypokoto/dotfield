@@ -43,6 +43,17 @@ pub struct TerminalPreset {
 
 pub static TERMINAL_PRESETS: &[TerminalPreset] = &[
     TerminalPreset {
+        id: "ghostty",
+        name: "Ghostty",
+        glyph: "󰊠",
+        description: "Modern GPU",
+        tag: "Modern",
+        bin: "ghostty",
+        standard_cmd: "ghostty",
+        mux_cmd: "ghostty -e tmux",
+        scratchpad_cmd: "ghostty --class=floating-term",
+    },
+    TerminalPreset {
         id: "foot",
         name: "Foot",
         glyph: "󰞷",
@@ -63,39 +74,6 @@ pub static TERMINAL_PRESETS: &[TerminalPreset] = &[
         standard_cmd: "kitty",
         mux_cmd: "kitty -e tmux",
         scratchpad_cmd: "kitty --class=floating-term",
-    },
-    TerminalPreset {
-        id: "alacritty",
-        name: "Alacritty",
-        glyph: "󰆍",
-        description: "High-throughput GPU",
-        tag: "Vulkan",
-        bin: "alacritty",
-        standard_cmd: "alacritty",
-        mux_cmd: "alacritty -e tmux",
-        scratchpad_cmd: "alacritty --class floating-term",
-    },
-    TerminalPreset {
-        id: "ghostty",
-        name: "Ghostty",
-        glyph: "󰊠",
-        description: "Modern GPU",
-        tag: "Modern",
-        bin: "ghostty",
-        standard_cmd: "ghostty",
-        mux_cmd: "ghostty -e tmux",
-        scratchpad_cmd: "ghostty --class=floating-term",
-    },
-    TerminalPreset {
-        id: "wezterm",
-        name: "WezTerm",
-        glyph: "󰞌",
-        description: "WebGPU Terminal",
-        tag: "WebGPU",
-        bin: "wezterm",
-        standard_cmd: "wezterm",
-        mux_cmd: "wezterm start -- tmux",
-        scratchpad_cmd: "wezterm start --class=floating-term",
     },
 ];
 
@@ -216,7 +194,7 @@ pub fn detect_default_terminal() -> String {
         return manifest.terminal.default;
     }
 
-    "foot".to_string()
+    "ghostty".to_string()
 }
 
 /// Spawns a terminal window with specific app-id, optional working directory, and command arguments.
@@ -238,45 +216,22 @@ pub fn spawn_terminal_window(
             }
             c
         }
-        "alacritty" => {
-            let mut c = Command::new("alacritty");
-            c.arg("--class").arg(app_id);
-            if let Some(dir) = working_dir {
-                c.arg("--working-directory").arg(dir);
-            }
-            if let Some(args) = command {
-                c.arg("-e").args(args);
-            }
-            c
-        }
-        "ghostty" => {
-            let mut c = Command::new("ghostty");
-            c.arg(format!("--class={app_id}"));
-            if let Some(dir) = working_dir {
-                c.arg(format!("--working-directory={}", dir.display()));
-            }
-            if let Some(args) = command {
-                c.arg("-e").args(args);
-            }
-            c
-        }
-        "wezterm" => {
-            let mut c = Command::new("wezterm");
-            c.arg("start");
-            c.arg(format!("--class={app_id}"));
-            if let Some(dir) = working_dir {
-                c.arg("--cwd").arg(dir);
-            }
-            if let Some(args) = command {
-                c.arg("--").args(args);
-            }
-            c
-        }
-        _ => {
+        "kitty" => {
             let mut c = Command::new("kitty");
             c.arg(format!("--class={app_id}"));
             if let Some(dir) = working_dir {
                 c.arg("-d").arg(dir);
+            }
+            if let Some(args) = command {
+                c.arg("-e").args(args);
+            }
+            c
+        }
+        _ => {
+            let mut c = Command::new("ghostty");
+            c.arg(format!("--class={app_id}"));
+            if let Some(dir) = working_dir {
+                c.arg(format!("--working-directory={}", dir.display()));
             }
             if let Some(args) = command {
                 c.arg("-e").args(args);
@@ -1182,12 +1137,10 @@ mod tests {
 
     #[test]
     fn test_terminal_presets_present() {
-        assert_eq!(TERMINAL_PRESETS.len(), 5);
-        assert_eq!(TERMINAL_PRESETS[0].id, "foot");
-        assert_eq!(TERMINAL_PRESETS[1].id, "kitty");
-        assert_eq!(TERMINAL_PRESETS[2].id, "alacritty");
-        assert_eq!(TERMINAL_PRESETS[3].id, "ghostty");
-        assert_eq!(TERMINAL_PRESETS[4].id, "wezterm");
+        assert_eq!(TERMINAL_PRESETS.len(), 3);
+        assert_eq!(TERMINAL_PRESETS[0].id, "ghostty");
+        assert_eq!(TERMINAL_PRESETS[1].id, "foot");
+        assert_eq!(TERMINAL_PRESETS[2].id, "kitty");
     }
 
     #[test]

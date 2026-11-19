@@ -214,6 +214,18 @@ impl LayerWindow {
 
         self
     }
+
+    pub fn is_visible(&self) -> bool {
+        self.visible
+    }
+
+    pub fn get_zone(&self) -> Zone {
+        self.zone
+    }
+
+    pub fn get_height(&self) -> WindowSize {
+        self.height
+    }
 }
 
 impl LayerWindowNeedsWidth {

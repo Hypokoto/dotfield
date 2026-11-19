@@ -24,39 +24,17 @@ const CANONICAL_WORKSPACES: [&str; 5] = [
 
 const WS_LABELS: [&str; 10] = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"];
 
+pub fn bar_layer_properties(manifest: &ShellManifest) -> (f32, Zone, bool) {
+    let height = manifest.bar.height as f32;
+    (height, Zone::Reserve, true)
+}
+
 fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
     let bar_cfg = &manifest.bar;
     let tokens = ThemeTokens::from_manifest(&manifest);
 
-    let height = bar_cfg.height as f32;
-
-    let telem = TelemetryService::read();
-    let focused_win = crate::services::niri::NiriService::focused_window();
-    let is_full_width = focused_win.is_full_width;
-
-    // Contextual Focus Shield:
-    // When focused on a 1.0 full-width column:
-    // - If normal (no anomaly): auto-hide top bar completely and reserve 0 zone (true distraction-free full width).
-    // - If anomaly tripped: surface floating anomaly HUD capsule with Zone::Respect (exclusive_zone = 0)
-    //   so no layout thrashing or window resizing occurs.
-    if is_full_width && !telem.is_anomalous() {
-        return LayerWindow::new()
-            .width(Full)
-            .height(0.0)
-            .anchor_vertical(Vertical::Top)
-            .layer(Layer::Top)
-            .space(Zone::Respect)
-            .visible(false)
-            .namespace("dotfield-shell-bar")
-            .child(Rectangle::new().width(0.0).height(0.0));
-    }
-
-    let bar_zone = if is_full_width {
-        Zone::Respect
-    } else {
-        Zone::Reserve
-    };
+    let (height, bar_zone, is_visible) = bar_layer_properties(&manifest);
 
     // Left section: BLACKSITE Brand & Arch Indicator & Active Window Title
     let mut left_items: Vec<Box<dyn Widget>> = Vec::new();
@@ -125,6 +103,7 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
         .anchor_vertical(Vertical::Top)
         .layer(Layer::Top)
         .space(bar_zone)
+        .visible(is_visible)
         .namespace("dotfield-shell-bar")
         .child(background_container)
 }
@@ -868,5 +847,14 @@ mod tests {
         assert!(is_presentation_primary_display(None));
         assert!(is_presentation_primary_display(Some("eDP-1")));
         assert!(is_presentation_primary_display(Some("eDP-2")));
+    }
+
+    #[test]
+    fn test_top_bar_permanent_visibility() {
+        let manifest = ShellManifest::default();
+        let (height, zone, visible) = bar_layer_properties(&manifest);
+        assert!(visible);
+        assert_eq!(zone, Zone::Reserve);
+        assert!(height > 0.0);
     }
 }

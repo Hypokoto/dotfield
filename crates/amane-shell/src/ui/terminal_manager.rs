@@ -735,7 +735,7 @@ pub fn terminal_manager_overlay() -> LayerWindow {
                 };
 
                 let card = action_card_interactive(
-                    266.0,
+                    176.0,
                     66.0,
                     icon_box,
                     preset.name,
@@ -759,28 +759,12 @@ pub fn terminal_manager_overlay() -> LayerWindow {
                 cards.push(Box::new(card));
             }
 
-            if cards.len() >= 4 {
-                let card3 = cards.pop().unwrap();
-                let card2 = cards.pop().unwrap();
-                let card1 = cards.pop().unwrap();
-                let card0 = cards.pop().unwrap();
+            let cards_row = Row::new(cards)
+                .width(Parent)
+                .justify(Justify::SpaceBetween)
+                .align(Align::Center);
 
-                let grid_row_0 = Row::new(vec![card0, card1])
-                    .width(Parent)
-                    .justify(Justify::SpaceBetween)
-                    .align(Align::Center);
-
-                let grid_row_1 = Row::new(vec![card2, card3])
-                    .width(Parent)
-                    .justify(Justify::SpaceBetween)
-                    .align(Align::Center);
-
-                let grid_container = Column::new(vec![Box::new(grid_row_0), Box::new(grid_row_1)])
-                    .width(Parent)
-                    .gap(spacing::GAP_SM);
-
-                body_rows.push(Box::new(grid_container));
-            }
+            body_rows.push(Box::new(cards_row));
 
             let home = std::env::var("HOME").unwrap_or_else(|_| "/home".to_string());
             let dotfield_dir = format!("{}/dev/projects/dotfield", home);
@@ -940,13 +924,13 @@ pub fn terminal_manager_overlay() -> LayerWindow {
             ("ESC", "DISMISS"),
         ],
         ManagerTab::Terminals => vec![
-            ("TAB", "SWITCH VIEW"),
-            ("1-4", "SELECT"),
+            ("TAB", "VIEW"),
+            ("1-3", "SELECT"),
             ("ENTER", "LAUNCH"),
             ("M", "TMUX"),
             ("S", "FLOAT"),
             ("D", "DEFAULT"),
-            ("ESC", "DISMISS"),
+            ("ESC", "CLOSE"),
         ],
     };
 
@@ -1052,28 +1036,26 @@ fn handle_key_projects(key: Key, count: usize) {
 
 fn handle_key_terminals(key: Key, count: usize) {
     match key {
-        Key::Down => {
+        Key::Right | Key::Down => {
             let mut svc = TerminalManagerService::write();
-            if svc.selected + 2 < count {
-                svc.selected += 2;
-            }
-        }
-        Key::Up => {
-            let mut svc = TerminalManagerService::write();
-            if svc.selected >= 2 {
-                svc.selected -= 2;
-            }
-        }
-        Key::Right => {
-            let mut svc = TerminalManagerService::write();
-            if svc.selected % 2 == 0 && svc.selected + 1 < count {
+            if svc.selected + 1 < count {
                 svc.selected += 1;
             }
         }
-        Key::Left => {
+        Key::Left | Key::Up => {
             let mut svc = TerminalManagerService::write();
-            if svc.selected % 2 == 1 {
+            if svc.selected > 0 {
                 svc.selected -= 1;
+            }
+        }
+        Key::Home => {
+            let mut svc = TerminalManagerService::write();
+            svc.selected = 0;
+        }
+        Key::End => {
+            let mut svc = TerminalManagerService::write();
+            if count > 0 {
+                svc.selected = count - 1;
             }
         }
         Key::Character('1') => {
@@ -1084,9 +1066,6 @@ fn handle_key_terminals(key: Key, count: usize) {
         }
         Key::Character('3') => {
             launch_preset(2, LaunchMode::Standard);
-        }
-        Key::Character('4') => {
-            launch_preset(3, LaunchMode::Standard);
         }
         Key::Character('m') | Key::Character('M') => {
             let svc = TerminalManagerService::read();

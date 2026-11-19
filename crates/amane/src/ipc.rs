@@ -166,7 +166,10 @@ mod tests {
 
         assert_eq!(opcode_to_name(OP_LAUNCHER), Some(("launcher", &[][..])));
         assert_eq!(opcode_to_name(OP_SIDECAR), Some(("sidecar", &[][..])));
-        assert_eq!(opcode_to_name(OP_PRESENTATION), Some(("presentation", &[][..])));
+        assert_eq!(
+            opcode_to_name(OP_PRESENTATION),
+            Some(("presentation", &[][..]))
+        );
         let (osd, args) = opcode_to_name(OP_OSD_VOL_UP).unwrap();
         assert_eq!(osd, "osd");
         assert_eq!(args, &["volume-up"]);

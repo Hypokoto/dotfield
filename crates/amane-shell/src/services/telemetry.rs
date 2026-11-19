@@ -158,15 +158,20 @@ impl ProcfsReader {
             return 0;
         };
 
-        let mut buf = [0u8; 2048];
-        let Ok(bytes_read) = file.read_at(&mut buf, 0) else {
-            return 0;
+        let mut buf = [0u8; 4096];
+        let bytes_read = unsafe {
+            libc::pread(
+                file.as_raw_fd(),
+                buf.as_mut_ptr() as *mut libc::c_void,
+                buf.len(),
+                0,
+            )
         };
-        if bytes_read == 0 {
+        if bytes_read <= 0 {
             return 0;
         }
 
-        let slice = &buf[..bytes_read];
+        let slice = &buf[..bytes_read as usize];
         let Some((busy, total)) = parse_proc_stat_cpu_line(slice) else {
             return 0;
         };
@@ -195,14 +200,19 @@ impl ProcfsReader {
         };
 
         let mut buf = [0u8; 4096];
-        let Ok(bytes_read) = file.read_at(&mut buf, 0) else {
-            return (0, 0, 0);
+        let bytes_read = unsafe {
+            libc::pread(
+                file.as_raw_fd(),
+                buf.as_mut_ptr() as *mut libc::c_void,
+                buf.len(),
+                0,
+            )
         };
-        if bytes_read == 0 {
+        if bytes_read <= 0 {
             return (0, 0, 0);
         }
 
-        let slice = &buf[..bytes_read];
+        let slice = &buf[..bytes_read as usize];
         let total_kb = parse_meminfo_field(slice, b"MemTotal:");
         let avail_kb = parse_meminfo_field(slice, b"MemAvailable:");
 

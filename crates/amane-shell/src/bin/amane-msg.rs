@@ -86,7 +86,7 @@ fn main() {
         let _ = stream.set_write_timeout(Some(Duration::from_millis(100)));
         let _ = stream.set_read_timeout(Some(Duration::from_millis(150)));
 
-        if stream.write_all(&[opcode]).is_err() {
+        if stream.write_all(&[opcode]).is_err() || stream.flush().is_err() {
             eprintln!("amane-msg: failed to send opcode");
             std::process::exit(3);
         }
@@ -108,7 +108,7 @@ fn main() {
         payload.push('\n');
     }
 
-    if stream.write_all(payload.as_bytes()).is_err() {
+    if stream.write_all(payload.as_bytes()).is_err() || stream.flush().is_err() {
         eprintln!("amane-msg: failed to send text command");
         std::process::exit(3);
     }

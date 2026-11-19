@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::io::{BufRead, BufReader, Write};
+use std::os::unix::net::UnixStream;
 use std::sync::{Arc, LazyLock};
 use std::thread;
 use std::time::Duration;
@@ -7,10 +9,37 @@ use amane::Service;
 use arc_swap::ArcSwap;
 use niri_ipc::socket::Socket;
 use niri_ipc::{
-    Action, Event, Output, OutputAction, Request, Response, Window, WorkspaceReferenceArg,
+    Action, Event, Output, OutputAction, Reply, Request, Response, Window, WorkspaceReferenceArg,
 };
 
 use crate::services::topology::ProjectTarget;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NiriError {
+    Unavailable,
+    IoError,
+    NiriFailure,
+    UnexpectedResponse,
+}
+
+impl std::fmt::Display for NiriError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unavailable => write!(f, "Niri compositor socket is unavailable"),
+            Self::IoError => write!(f, "I/O error communicating with Niri socket"),
+            Self::NiriFailure => write!(f, "Niri compositor reported failure"),
+            Self::UnexpectedResponse => write!(f, "Unexpected response from Niri IPC"),
+        }
+    }
+}
+
+impl std::error::Error for NiriError {}
+
+impl From<std::io::Error> for NiriError {
+    fn from(_: std::io::Error) -> Self {
+        Self::IoError
+    }
+}
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct NiriFocusedWindow {
@@ -23,12 +52,13 @@ pub struct NiriFocusedWindow {
 static FOCUSED_WINDOW: LazyLock<ArcSwap<NiriFocusedWindow>> =
     LazyLock::new(|| ArcSwap::from_pointee(NiriFocusedWindow::default()));
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct NiriWindowService {
     pub id: u64,
     pub title: String,
     pub app_id: String,
     pub display_title: String,
+    pub layout_width: f32,
     pub window_count: usize,
 }
 
@@ -77,80 +107,91 @@ impl NiriService {
     }
 
     /// Sends an Action request to Niri over IPC.
-    pub fn perform_action(action: Action) -> anyhow::Result<()> {
-        let mut socket = Socket::connect()?;
-        let reply = socket.send(Request::Action(action))?;
+    pub fn perform_action(action: Action) -> Result<(), NiriError> {
+        let mut socket = Socket::connect().map_err(|_| NiriError::IoError)?;
+        let reply = socket
+            .send(Request::Action(action))
+            .map_err(|_| NiriError::IoError)?;
         match reply {
             Ok(Response::Handled) => Ok(()),
-            Ok(other) => anyhow::bail!("Unexpected response from niri: {other:?}"),
-            Err(err) => anyhow::bail!("Niri error: {err}"),
+            Ok(_) => Err(NiriError::UnexpectedResponse),
+            Err(_) => Err(NiriError::NiriFailure),
         }
     }
 
     /// Gracefully exits Niri compositor.
-    pub fn quit(skip_confirmation: bool) -> anyhow::Result<()> {
+    pub fn quit(skip_confirmation: bool) -> Result<(), NiriError> {
         Self::perform_action(Action::Quit { skip_confirmation })
     }
 
     /// Powers off monitors via DPMS.
-    pub fn power_off_monitors() -> anyhow::Result<()> {
+    pub fn power_off_monitors() -> Result<(), NiriError> {
         Self::perform_action(Action::PowerOffMonitors {})
     }
 
     /// Powers on monitors via DPMS.
-    pub fn power_on_monitors() -> anyhow::Result<()> {
+    pub fn power_on_monitors() -> Result<(), NiriError> {
         Self::perform_action(Action::PowerOnMonitors {})
     }
 
     /// Closes the currently focused window.
-    pub fn close_focused_window() -> anyhow::Result<()> {
+    pub fn close_focused_window() -> Result<(), NiriError> {
         Self::perform_action(Action::CloseWindow { id: None })
     }
 
     /// Focus a specific window ID on Niri's spatial ribbon.
-    pub fn focus_window(id: u64) -> anyhow::Result<()> {
+    pub fn focus_window(id: u64) -> Result<(), NiriError> {
         Self::perform_action(Action::FocusWindow { id })
     }
 
     /// Focus a workspace by name (e.g. "01 DEV").
-    pub fn focus_workspace(name: &str) -> anyhow::Result<()> {
+    pub fn focus_workspace(name: &str) -> Result<(), NiriError> {
         Self::perform_action(Action::FocusWorkspace {
             reference: WorkspaceReferenceArg::Name(name.to_string()),
         })
     }
 
     /// Query the current list of open windows from Niri IPC.
-    pub fn query_windows() -> anyhow::Result<Vec<Window>> {
-        let mut socket = Socket::connect()?;
-        match socket.send(Request::Windows)? {
+    pub fn query_windows() -> Result<Vec<Window>, NiriError> {
+        let mut socket = Socket::connect().map_err(|_| NiriError::IoError)?;
+        match socket
+            .send(Request::Windows)
+            .map_err(|_| NiriError::IoError)?
+        {
             Ok(Response::Windows(wins)) => Ok(wins),
-            Ok(other) => anyhow::bail!("Unexpected response querying windows: {other:?}"),
-            Err(e) => anyhow::bail!("Niri error: {e}"),
+            Ok(_) => Err(NiriError::UnexpectedResponse),
+            Err(_) => Err(NiriError::NiriFailure),
         }
     }
 
     /// Query connected outputs from Niri IPC.
-    pub fn query_outputs() -> anyhow::Result<HashMap<String, Output>> {
-        let mut socket = Socket::connect()?;
-        match socket.send(Request::Outputs)? {
+    pub fn query_outputs() -> Result<HashMap<String, Output>, NiriError> {
+        let mut socket = Socket::connect().map_err(|_| NiriError::IoError)?;
+        match socket
+            .send(Request::Outputs)
+            .map_err(|_| NiriError::IoError)?
+        {
             Ok(Response::Outputs(outputs)) => Ok(outputs),
-            Ok(other) => anyhow::bail!("Unexpected response querying outputs: {other:?}"),
-            Err(e) => anyhow::bail!("Niri error: {e}"),
+            Ok(_) => Err(NiriError::UnexpectedResponse),
+            Err(_) => Err(NiriError::NiriFailure),
         }
     }
 
     /// Configure an output directly via Niri IPC without spawning `niri msg`.
-    pub fn configure_output(output: String, action: OutputAction) -> anyhow::Result<()> {
-        let mut socket = Socket::connect()?;
-        match socket.send(Request::Output { output, action })? {
+    pub fn configure_output(output: String, action: OutputAction) -> Result<(), NiriError> {
+        let mut socket = Socket::connect().map_err(|_| NiriError::IoError)?;
+        match socket
+            .send(Request::Output { output, action })
+            .map_err(|_| NiriError::IoError)?
+        {
             Ok(Response::Handled) | Ok(Response::OutputConfigChanged(_)) => Ok(()),
-            Ok(other) => anyhow::bail!("Unexpected response configuring output: {other:?}"),
-            Err(e) => anyhow::bail!("Niri error: {e}"),
+            Ok(_) => Err(NiriError::UnexpectedResponse),
+            Err(_) => Err(NiriError::NiriFailure),
         }
     }
 
     /// Warp to an existing project window on the ribbon or spawn an atomic worktree cell pair.
-    pub fn jump_or_spawn_project(target: &ProjectTarget) -> anyhow::Result<()> {
+    pub fn jump_or_spawn_project(target: &ProjectTarget) -> Result<(), NiriError> {
         let expected_app_id = format!("dev.{}", target.slug);
 
         // 1. Check if a window matching app_id == dev.<slug> already exists
@@ -195,7 +236,7 @@ impl NiriService {
     }
 
     /// Inspect current focused window and spawn a companion sidecar if not already present.
-    pub fn spawn_sidecar_for_focused() -> anyhow::Result<()> {
+    pub fn spawn_sidecar_for_focused() -> Result<(), NiriError> {
         let focused = Self::focused_window();
         let slug = if focused.app_id.starts_with("dev.") {
             focused.app_id.trim_start_matches("dev.").to_string()
@@ -220,7 +261,8 @@ impl NiriService {
 
         // Spawn companion sidecar
         let term = crate::ui::terminal_manager::detect_default_terminal();
-        crate::ui::terminal_manager::spawn_terminal_window(&term, &sidecar_app_id, None, None)?;
+        crate::ui::terminal_manager::spawn_terminal_window(&term, &sidecar_app_id, None, None)
+            .map_err(|_| NiriError::IoError)?;
 
         Ok(())
     }
@@ -228,16 +270,19 @@ impl NiriService {
     /// Quarantines external/secondary outputs for presentation mode.
     /// Focuses each external output and routes its active view to "05 PRESENTATION" (or "03 RESEARCH").
     /// Finally refocuses the primary internal display (eDP-1 if present).
-    pub fn quarantine_external_outputs_for_presentation() -> anyhow::Result<()> {
+    pub fn quarantine_external_outputs_for_presentation() -> Result<(), NiriError> {
         if !Self::is_available() {
             return Ok(());
         }
 
-        let mut socket = Socket::connect()?;
-        let outputs = match socket.send(Request::Outputs)? {
+        let mut socket = Socket::connect().map_err(|_| NiriError::IoError)?;
+        let outputs = match socket
+            .send(Request::Outputs)
+            .map_err(|_| NiriError::IoError)?
+        {
             Ok(Response::Outputs(outs)) => outs,
-            Ok(other) => anyhow::bail!("Unexpected response querying outputs: {other:?}"),
-            Err(e) => anyhow::bail!("Niri error: {e}"),
+            Ok(_) => return Err(NiriError::UnexpectedResponse),
+            Err(_) => return Err(NiriError::NiriFailure),
         };
 
         let external_outputs: Vec<String> = outputs
@@ -294,11 +339,14 @@ impl NiriService {
             raw.to_string()
         };
 
+        let layout_width = (display_title.chars().count() as f32 * 8.5 + 40.0).clamp(64.0, 280.0);
+
         let mut svc = NiriWindowService::write();
         svc.id = id;
         svc.title = title.to_string();
         svc.app_id = app_id.to_string();
         svc.display_title = display_title;
+        svc.layout_width = layout_width;
         svc.window_count = count;
     }
 
@@ -307,6 +355,16 @@ impl NiriService {
     }
 
     fn run_event_loop() -> std::io::Result<()> {
+        let socket_path = match std::env::var_os("NIRI_SOCKET") {
+            Some(p) => p,
+            None => {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    "NIRI_SOCKET is not set",
+                ));
+            }
+        };
+
         let mut socket = Socket::connect()?;
 
         let mut max_output_width = 1920.0f64;
@@ -345,79 +403,101 @@ impl NiriService {
             }
         }
 
+        drop(socket);
+
+        // Connect directly to NIRI_SOCKET and wrap in BufReader for zero-alloc line reading
+        let stream = UnixStream::connect(socket_path)?;
+        let mut reader = BufReader::new(stream);
+
         // Subscribe to event stream
-        let reply = socket.send(Request::EventStream)?;
+        let mut req_bytes = serde_json::to_vec(&Request::EventStream)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        req_bytes.push(b'\n');
+        reader.get_mut().write_all(&req_bytes)?;
+        reader.get_mut().flush()?;
+
+        let mut line_buf = Vec::with_capacity(2048);
+        reader.read_until(b'\n', &mut line_buf)?;
+        let reply: Reply = serde_json::from_slice(&line_buf)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
         if !matches!(reply, Ok(Response::Handled)) {
             return Err(std::io::Error::other(
                 "Failed to subscribe to niri event stream",
             ));
         }
 
-        let mut read_event = socket.read_events();
-        while let Ok(event) = read_event() {
-            match event {
-                Event::WindowsChanged {
-                    windows: new_windows,
-                } => {
-                    windows.clear();
-                    let total = new_windows.len();
-                    let mut found_focused = false;
-                    for win in new_windows {
-                        if win.is_focused {
-                            let title = win.title.clone().unwrap_or_default();
-                            let app_id = win.app_id.clone().unwrap_or_default();
-                            let full_w = Self::is_window_full_width(&win, max_output_width);
-                            Self::update_active_window(win.id, &title, &app_id, total, full_w);
-                            found_focused = true;
-                        }
-                        windows.insert(win.id, win);
-                    }
-                    if !found_focused && windows.is_empty() {
-                        Self::update_active_window(0, "", "", 0, false);
-                    }
-                }
-                Event::WindowOpenedOrChanged { window } => {
-                    let id = window.id;
-                    let is_focused = window.is_focused;
-                    let title = window.title.clone().unwrap_or_default();
-                    let app_id = window.app_id.clone().unwrap_or_default();
-                    let full_w = Self::is_window_full_width(&window, max_output_width);
-                    windows.insert(id, window);
-                    let total = windows.len();
+        let _ = reader.get_mut().shutdown(std::net::Shutdown::Write);
 
-                    if is_focused || FOCUSED_WINDOW.load().id == id {
-                        Self::update_active_window(id, &title, &app_id, total, full_w);
-                    }
-                }
-                Event::WindowClosed { id } => {
-                    windows.remove(&id);
-                    let total = windows.len();
-                    if FOCUSED_WINDOW.load().id == id {
-                        Self::update_active_window(0, "", "", total, false);
-                    } else {
-                        NiriWindowService::write().window_count = total;
-                    }
-                }
-                Event::WindowFocusChanged { id } => {
-                    let total = windows.len();
-                    match id {
-                        Some(win_id) => {
-                            if let Some(win) = windows.get(&win_id) {
+        line_buf.clear();
+        while reader.read_until(b'\n', &mut line_buf)? > 0 {
+            if let Ok(event) = serde_json::from_slice::<Event>(&line_buf) {
+                match event {
+                    Event::WindowsChanged {
+                        windows: new_windows,
+                    } => {
+                        windows.clear();
+                        let total = new_windows.len();
+                        let mut found_focused = false;
+                        for win in new_windows {
+                            if win.is_focused {
                                 let title = win.title.clone().unwrap_or_default();
                                 let app_id = win.app_id.clone().unwrap_or_default();
-                                let full_w = Self::is_window_full_width(win, max_output_width);
+                                let full_w = Self::is_window_full_width(&win, max_output_width);
                                 Self::update_active_window(win.id, &title, &app_id, total, full_w);
-                            } else {
-                                Self::update_active_window(win_id, "", "", total, false);
+                                found_focused = true;
                             }
+                            windows.insert(win.id, win);
                         }
-                        None => {
-                            Self::update_active_window(0, "", "", total, false);
+                        if !found_focused && windows.is_empty() {
+                            Self::update_active_window(0, "", "", 0, false);
                         }
                     }
+                    Event::WindowOpenedOrChanged { window } => {
+                        let id = window.id;
+                        let is_focused = window.is_focused;
+                        let title = window.title.clone().unwrap_or_default();
+                        let app_id = window.app_id.clone().unwrap_or_default();
+                        let full_w = Self::is_window_full_width(&window, max_output_width);
+                        windows.insert(id, window);
+                        let total = windows.len();
+
+                        if is_focused || FOCUSED_WINDOW.load().id == id {
+                            Self::update_active_window(id, &title, &app_id, total, full_w);
+                        }
+                    }
+                    Event::WindowClosed { id } => {
+                        windows.remove(&id);
+                        let total = windows.len();
+                        if FOCUSED_WINDOW.load().id == id {
+                            Self::update_active_window(0, "", "", total, false);
+                        } else {
+                            NiriWindowService::write().window_count = total;
+                        }
+                    }
+                    Event::WindowFocusChanged { id } => {
+                        let total = windows.len();
+                        match id {
+                            Some(win_id) => {
+                                if let Some(win) = windows.get(&win_id) {
+                                    let title = win.title.clone().unwrap_or_default();
+                                    let app_id = win.app_id.clone().unwrap_or_default();
+                                    let full_w = Self::is_window_full_width(win, max_output_width);
+                                    Self::update_active_window(
+                                        win.id, &title, &app_id, total, full_w,
+                                    );
+                                } else {
+                                    Self::update_active_window(win_id, "", "", total, false);
+                                }
+                            }
+                            None => {
+                                Self::update_active_window(0, "", "", total, false);
+                            }
+                        }
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
+            line_buf.clear();
         }
 
         Ok(())

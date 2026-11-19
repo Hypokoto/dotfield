@@ -39,9 +39,14 @@ impl ModalManager {
         if target != ModalType::ScreenRecord {
             crate::ui::screen_record::close();
         }
+
+        #[cfg(target_os = "linux")]
+        unsafe {
+            libc::malloc_trim(0);
+        }
     }
 
-    /// Closes all open modals.
+    /// Closes all open modals and reclaims heap memory back to OS.
     pub fn close_all() {
         crate::ui::launcher::close();
         crate::ui::control_center::close();
@@ -50,6 +55,11 @@ impl ModalManager {
         crate::ui::terminal_manager::close();
         crate::ui::powermenu::close();
         crate::ui::screen_record::close();
+
+        #[cfg(target_os = "linux")]
+        unsafe {
+            libc::malloc_trim(0);
+        }
     }
 }
 

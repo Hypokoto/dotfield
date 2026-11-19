@@ -105,9 +105,10 @@ impl OpenWindow {
             return;
         }
 
-        self.ask_for_frame();
-
-        self.role.commit();
+        // On epoll wakeup when parked at 0 Hz, commit immediately without waiting
+        // for an extra compositor vsync cycle. If the frame is moving (transition animation),
+        // redraw() will internally call ask_for_frame().
+        self.redraw();
     }
 
     // the compositor answers once, when the next frame is due

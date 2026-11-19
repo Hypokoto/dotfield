@@ -71,8 +71,10 @@ fn answer(mut stream: UnixStream, handlers: &IpcHandlers) {
             let _ = handlers.run_name_and_args(name, &args_vec);
             // Write 1-byte ACK
             let _ = stream.write_all(&[0x00]);
+            let _ = stream.flush();
         } else {
             let _ = stream.write_all(b"err: unknown opcode\n");
+            let _ = stream.flush();
         }
         return;
     }
@@ -86,4 +88,5 @@ fn answer(mut stream: UnixStream, handlers: &IpcHandlers) {
     let reply = handlers.run(&call);
 
     let _ = stream.write_all(reply.as_bytes());
+    let _ = stream.flush();
 }

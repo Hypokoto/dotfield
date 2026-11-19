@@ -2,6 +2,9 @@ pub mod config;
 pub mod services;
 pub mod ui;
 
+#[global_allocator]
+static GLOBAL: std::alloc::System = std::alloc::System;
+
 use amane::Service;
 use std::io::IsTerminal;
 use std::os::unix::net::UnixStream;

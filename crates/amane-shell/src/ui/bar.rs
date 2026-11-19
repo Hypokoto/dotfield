@@ -350,7 +350,11 @@ fn render_title(manifest: &ShellManifest, tokens: &ThemeTokens) -> Rectangle {
     };
 
     let font = &manifest.theme.font_family;
-    let title_w = (display_text.chars().count() as f32 * 8.5 + 40.0).clamp(64.0, 280.0);
+    let title_w = if win.layout_width > 0.0 {
+        win.layout_width
+    } else {
+        (display_text.chars().count() as f32 * 8.5 + 40.0).clamp(64.0, 280.0)
+    };
 
     Rectangle::new()
         .width(title_w)

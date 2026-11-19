@@ -39,7 +39,8 @@ shell-integration-features = cursor,sudo,title
 
 # --- Performance & Process Lifecycle ---
 auto-update = off
-gtk-single-instance = true
+gtk-single-instance = false
+
 
 # --- Keybindings: Clipboard & Font Management ---
 keybind = ctrl+shift+c=copy_to_clipboard

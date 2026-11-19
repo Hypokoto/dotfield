@@ -10,6 +10,16 @@ is_niri() {
     [[ -n "${NIRI_SOCKET:-}" ]] || [[ "${XDG_CURRENT_DESKTOP:-}" =~ [Nn]iri ]] || pgrep -x niri >/dev/null 2>&1
 }
 
+has_cmd() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+get_amane_msg_bin() {
+    command -v amane-msg 2>/dev/null || {
+        [[ -x "${HOME}/.local/bin/amane-msg" ]] && echo "${HOME}/.local/bin/amane-msg"
+    } || true
+}
+
 get_amane_bin() {
     command -v amane 2>/dev/null || {
         [[ -x "${HOME}/.local/bin/amane" ]] && echo "${HOME}/.local/bin/amane"

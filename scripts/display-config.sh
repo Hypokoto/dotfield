@@ -14,10 +14,14 @@ elif [[ -f "${HOME}/.config/dotfield/scripts/lib/env.sh" ]]; then
 fi
 
 # If running under Niri with amane active, summon the native Wayland Display Configurator
-if ! is_sway; then
+if ! is_sway && is_amane_running; then
+    AMANE_MSG_BIN=$(get_amane_msg_bin)
+    if [[ -n "${AMANE_MSG_BIN}" ]]; then
+        "${AMANE_MSG_BIN}" display-config
+        exit 0
+    fi
     SHELL_BIN=$(get_amane_bin)
-
-    if [[ -n "${SHELL_BIN}" ]] && is_amane_running; then
+    if [[ -n "${SHELL_BIN}" ]]; then
         "${SHELL_BIN}" --display-config
         exit 0
     fi

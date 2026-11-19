@@ -3,94 +3,138 @@ pub mod services;
 pub mod ui;
 
 use amane::Service;
-use clap::Parser;
 use std::io::IsTerminal;
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 
-#[derive(Parser, Debug, Default)]
-#[command(name = "amane")]
-#[command(about = "Unified Wayland desktop shell for Niri powered by Amane")]
+#[derive(Debug, Default)]
 struct Cli {
-    /// Run in the foreground without detaching to background
-    #[arg(short, long)]
     foreground: bool,
-
-    /// Explicitly run in background (default when invoked from an interactive terminal)
-    #[arg(short, long)]
     daemon: bool,
-
-    /// Path to custom shell manifest TOML
-    #[arg(short, long)]
     config: Option<PathBuf>,
-
-    /// Run desktop shell without top status bar
-    #[arg(long)]
     no_bar: bool,
+    target_action: Option<String>,
+    action_args: Vec<String>,
+}
 
-    /// Toggle application launcher overlay
-    #[arg(long)]
-    launcher: bool,
+fn print_help() {
+    println!(
+        r#"amane — Unified Wayland desktop shell for Niri powered by Amane
 
-    /// Toggle terminal manager overlay
-    #[arg(long)]
-    terminal_manager: bool,
+Usage:
+  amane [FLAGS] [COMMAND]
 
-    /// Toggle display configurator overlay
-    #[arg(long)]
-    display_config: bool,
+Flags:
+  -f, --foreground        Run in foreground without detaching
+  -d, --daemon            Run in background
+  -c, --config <PATH>     Path to custom shell manifest TOML
+      --no-bar            Run desktop shell without top status bar
+  -h, --help              Print help information
 
-    /// Toggle control center overlay
-    #[arg(long)]
-    control_center: bool,
+Commands / Fast-Path IPC Actions (Forwarded to running daemon):
+  launcher                Toggle application launcher overlay
+  terminal-manager        Toggle terminal manager overlay
+  topology                Toggle project topology & worktree switcher
+  sidecar                 Spawn or focus companion sidecar
+  display-config          Toggle display configurator overlay
+  control-center          Toggle control center overlay
+  network                 Open NetworkManager interactive widget
+  audio                   Open PipeWire audio interactive widget
+  bluetooth               Open BlueZ bluetooth interactive widget
+  tray                    Open System Tray & background applications widget
+  powermenu               Toggle session & power control menu
+  calendar                Toggle interactive calendar overlay
+  screen-recorder         Toggle screen recorder overlay
+  presentation            Toggle zero-disruption presentation mode
+  reload                  Reload shell configuration
+  osd <action> [delta]    Trigger OSD action (volume-up, volume-down, etc.)
+  ipc <action> [args...]  Send generic IPC action
+"#
+    );
+}
 
-    /// Open NetworkManager interactive widget
-    #[arg(long)]
-    network: bool,
+fn parse_cli_args() -> Result<Cli, String> {
+    let mut cli = Cli::default();
+    let mut args = std::env::args().skip(1).peekable();
 
-    /// Open PipeWire audio interactive widget
-    #[arg(long)]
-    audio: bool,
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "-h" | "--help" | "help" => {
+                print_help();
+                std::process::exit(0);
+            }
+            "-f" | "--foreground" => {
+                cli.foreground = true;
+            }
+            "-d" | "--daemon" => {
+                cli.daemon = true;
+            }
+            "--no-bar" => {
+                cli.no_bar = true;
+            }
+            "-c" | "--config" => {
+                if let Some(path) = args.next() {
+                    cli.config = Some(PathBuf::from(path));
+                } else {
+                    return Err("Missing argument for --config".to_string());
+                }
+            }
+            s if s.starts_with("--config=") => {
+                cli.config = Some(PathBuf::from(&s["--config=".len()..]));
+            }
+            "--osd" | "osd" => {
+                cli.target_action = Some("osd".to_string());
+                while let Some(next) = args.peek() {
+                    if next.starts_with('-') {
+                        break;
+                    }
+                    cli.action_args.push(args.next().unwrap());
+                }
+            }
+            "ipc" => {
+                if let Some(action) = args.next() {
+                    cli.target_action = Some(action);
+                    cli.action_args.extend(args);
+                    break;
+                } else {
+                    return Err("Missing action for ipc command".to_string());
+                }
+            }
+            "run" => {
+                // Legacy "run": fall through to starting shell
+            }
+            "--launcher" | "launcher" => cli.target_action = Some("launcher".to_string()),
+            "--terminal-manager" | "terminal-manager" | "--terminals" | "terminals" => {
+                cli.target_action = Some("terminal-manager".to_string())
+            }
+            "--topology" | "topology" => cli.target_action = Some("topology".to_string()),
+            "--sidecar" | "sidecar" => cli.target_action = Some("sidecar".to_string()),
+            "--display-config" | "display-config" => {
+                cli.target_action = Some("display-config".to_string())
+            }
+            "--control-center" | "control-center" => {
+                cli.target_action = Some("control-center".to_string())
+            }
+            "--network" | "network" => cli.target_action = Some("network".to_string()),
+            "--audio" | "audio" => cli.target_action = Some("audio".to_string()),
+            "--bluetooth" | "bluetooth" => cli.target_action = Some("bluetooth".to_string()),
+            "--tray" | "tray" => cli.target_action = Some("tray".to_string()),
+            "--powermenu" | "powermenu" => cli.target_action = Some("powermenu".to_string()),
+            "--calendar" | "calendar" => cli.target_action = Some("calendar".to_string()),
+            "--screen-recorder" | "screen-recorder" | "--screen-record" | "screen-record" => {
+                cli.target_action = Some("screen-recorder".to_string())
+            }
+            "--presentation" | "presentation" => {
+                cli.target_action = Some("presentation".to_string())
+            }
+            "--reload" | "reload" => cli.target_action = Some("reload".to_string()),
+            other => {
+                return Err(format!("Unknown option or action: {other}"));
+            }
+        }
+    }
 
-    /// Open BlueZ bluetooth interactive widget
-    #[arg(long)]
-    bluetooth: bool,
-
-    /// Open System Tray & background applications widget
-    #[arg(long)]
-    tray: bool,
-
-    /// Toggle session & power control menu
-    #[arg(long)]
-    powermenu: bool,
-
-    /// Toggle interactive calendar overlay
-    #[arg(long)]
-    calendar: bool,
-
-    /// Toggle screen recorder overlay
-    #[arg(long)]
-    screen_recorder: bool,
-
-    /// Toggle zero-disruption presentation mode
-    #[arg(long)]
-    presentation: bool,
-
-    /// Reload shell configuration
-    #[arg(long)]
-    reload: bool,
-
-    /// Trigger OSD action: volume-up, volume-down, volume-mute, brightness-up, brightness-down
-    #[arg(long, num_args = 1..=2)]
-    osd: Option<Vec<String>>,
-
-    /// Positional action or legacy subcommand (e.g. 'run', 'ipc', 'launcher', 'terminal-manager')
-    #[arg(value_name = "ACTION")]
-    action: Option<String>,
-
-    /// Additional arguments passed to action (e.g. for osd)
-    #[arg(value_name = "ARGS", trailing_var_arg = true)]
-    extra_args: Vec<String>,
+    Ok(cli)
 }
 
 fn lock_path() -> PathBuf {
@@ -150,60 +194,13 @@ fn send_amane_ipc(call: &amane::IpcCall) -> anyhow::Result<String> {
     use std::io::Read;
 
     let socket_path = amane::ipc_socket();
-    let stream_res = UnixStream::connect(&socket_path);
-    let mut stream = match stream_res {
-        Ok(s) => s,
-        Err(_) => {
-            // Check if amane.service is present and enabled under systemd --user
-            let systemd_managed = std::process::Command::new("systemctl")
-                .args(["--user", "is-enabled", "amane.service"])
-                .output()
-                .map(|o| o.status.success())
-                .unwrap_or(false);
+    let mut stream = UnixStream::connect(&socket_path).map_err(|e| {
+        anyhow::anyhow!(
+            "Failed to connect to amane daemon at {}: {e}",
+            socket_path.display()
+        )
+    })?;
 
-            if systemd_managed {
-                let _ = std::process::Command::new("systemctl")
-                    .args(["--user", "start", "amane.service"])
-                    .status();
-            } else {
-                // Manual spawn fallback: take lock first to prevent races between multiple hotkeys
-                if let Ok(Some(lock)) = DaemonLock::try_acquire() {
-                    // Daemon is not running, safe to remove stale socket if present
-                    if socket_path.exists() {
-                        let _ = std::fs::remove_file(&socket_path);
-                    }
-                    if let Ok(exe) = std::env::current_exe() {
-                        use std::os::unix::process::CommandExt;
-                        let mut cmd = std::process::Command::new(exe);
-                        cmd.arg("--foreground");
-                        cmd.process_group(0)
-                            .stdin(std::process::Stdio::null())
-                            .stdout(std::process::Stdio::null())
-                            .stderr(std::process::Stdio::null());
-                        let _ = cmd.spawn();
-                    }
-                    // Release lock so the spawned child can acquire it in run_shell
-                    lock.release();
-                }
-            }
-
-            // Poll for socket readiness
-            let mut connected = None;
-            for _ in 0..30 {
-                std::thread::sleep(std::time::Duration::from_millis(50));
-                if let Ok(s) = UnixStream::connect(&socket_path) {
-                    connected = Some(s);
-                    break;
-                }
-            }
-            connected.ok_or_else(|| {
-                anyhow::anyhow!(
-                    "Failed to connect to amane daemon at {}",
-                    socket_path.display()
-                )
-            })?
-        }
-    };
     call.write(&mut stream)?;
     stream.shutdown(std::net::Shutdown::Write)?;
 
@@ -406,6 +403,7 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         .ipc("tray", ipc_tray_handler)
         .ipc("display-config", ipc_display_config_handler)
         .ipc("terminal-manager", ipc_terminal_manager_handler)
+        .ipc("topology", ipc_terminal_manager_handler)
         .ipc("sidecar", ipc_sidecar_handler)
         .ipc("presentation", ipc_presentation_handler)
         .ipc("powermenu", ipc_powermenu_handler)
@@ -434,71 +432,16 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
 }
 
 fn main() -> anyhow::Result<()> {
-    let cli = Cli::parse();
-
-    // Determine if an action was requested via flags or positional argument
-    let mut target_action: Option<String> = None;
-    let mut action_args: Vec<String> = Vec::new();
-
-    if cli.launcher {
-        target_action = Some("launcher".to_string());
-    } else if cli.terminal_manager {
-        target_action = Some("terminal-manager".to_string());
-    } else if cli.display_config {
-        target_action = Some("display-config".to_string());
-    } else if cli.control_center {
-        target_action = Some("control-center".to_string());
-    } else if cli.network {
-        target_action = Some("network".to_string());
-    } else if cli.audio {
-        target_action = Some("audio".to_string());
-    } else if cli.bluetooth {
-        target_action = Some("bluetooth".to_string());
-    } else if cli.tray {
-        target_action = Some("tray".to_string());
-    } else if cli.powermenu {
-        target_action = Some("powermenu".to_string());
-    } else if cli.calendar {
-        target_action = Some("calendar".to_string());
-    } else if cli.screen_recorder {
-        target_action = Some("screen-recorder".to_string());
-    } else if cli.presentation {
-        target_action = Some("presentation".to_string());
-    } else if cli.reload {
-        target_action = Some("reload".to_string());
-    } else if let Some(osd_args) = cli.osd {
-        target_action = Some("osd".to_string());
-        action_args = osd_args;
-    } else if let Some(act) = cli.action.as_deref() {
-        match act {
-            "run" => {
-                // Legacy "run" argument: fall through to starting the shell
-            }
-            "ipc" => {
-                if let Some(sub) = cli.extra_args.first() {
-                    target_action = Some(sub.clone());
-                    action_args = cli.extra_args[1..].to_vec();
-                }
-            }
-            "launcher" | "terminal-manager" | "display-config" | "control-center" | "network"
-            | "audio" | "bluetooth" | "tray" | "reload" | "powermenu" | "calendar"
-            | "screen-recorder" => {
-                target_action = Some(act.to_string());
-                action_args = cli.extra_args;
-            }
-            "osd" => {
-                target_action = Some("osd".to_string());
-                action_args = cli.extra_args;
-            }
-            other => {
-                eprintln!("Unknown option or action: {other}");
-                std::process::exit(1);
-            }
+    let cli = match parse_cli_args() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("{e}");
+            std::process::exit(1);
         }
-    }
+    };
 
-    if let Some(act) = target_action {
-        let call = amane::IpcCall::new(&act, &action_args);
+    if let Some(act) = cli.target_action {
+        let call = amane::IpcCall::new(&act, &cli.action_args);
         let res = send_amane_ipc(&call)?;
         if !res.is_empty() {
             println!("{res}");

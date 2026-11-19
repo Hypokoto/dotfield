@@ -54,11 +54,9 @@ pub fn toggle() {
         cc.open
     };
     if is_open {
-        crate::ui::calendar::close();
-        crate::ui::launcher::close();
-        crate::ui::display_config::close();
-        crate::ui::terminal_manager::close();
-        crate::ui::powermenu::close();
+        crate::ui::modal_manager::ModalManager::open_exclusive(
+            crate::ui::modal_manager::ModalType::ControlCenter,
+        );
     }
 }
 
@@ -80,11 +78,9 @@ pub fn open_view(view: ActiveView) {
         }
     };
     if should_open {
-        crate::ui::calendar::close();
-        crate::ui::launcher::close();
-        crate::ui::display_config::close();
-        crate::ui::terminal_manager::close();
-        crate::ui::powermenu::close();
+        crate::ui::modal_manager::ModalManager::open_exclusive(
+            crate::ui::modal_manager::ModalType::ControlCenter,
+        );
     }
 }
 

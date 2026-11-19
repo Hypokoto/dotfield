@@ -5,8 +5,10 @@ use amane::{
     Align, Column, Horizontal, Key, Keyboard, Layer, LayerWindow, Margin, OutputTarget, Parent,
     Rectangle, Service, Text, Vertical, Widget, Zone,
 };
+use niri_ipc::{ConfiguredMode, ConfiguredPosition, ModeToSet, OutputAction, PositionToSet};
 
 use crate::config::ConfigService;
+use crate::services::niri::NiriService;
 use crate::ui::tokens::{ThemeTokens, radius, spacing};
 
 #[derive(Debug, Clone)]
@@ -105,11 +107,9 @@ pub fn toggle() {
         svc.open
     };
     if is_open {
-        crate::ui::control_center::close();
-        crate::ui::calendar::close();
-        crate::ui::launcher::close();
-        crate::ui::terminal_manager::close();
-        crate::ui::powermenu::close();
+        crate::ui::modal_manager::ModalManager::open_exclusive(
+            crate::ui::modal_manager::ModalType::DisplayConfig,
+        );
     }
 }
 
@@ -138,12 +138,9 @@ pub fn close() {
 }
 
 fn get_external_display() -> Option<String> {
-    // 1. Check native Niri IPC outputs first
-    if let Ok(output) = Command::new("niri").args(["msg", "-j", "outputs"]).output()
-        && let Ok(val) = serde_json::from_slice::<serde_json::Value>(&output.stdout)
-        && let Some(map) = val.as_object()
-    {
-        for key in map.keys() {
+    // 1. Check native Niri IPC outputs first via persistent direct socket
+    if let Ok(outputs) = NiriService::query_outputs() {
+        for key in outputs.keys() {
             if !key.starts_with("eDP") && !key.starts_with("Writeback") {
                 return Some(key.clone());
             }
@@ -227,9 +224,16 @@ pub fn apply_preset(index: usize) {
                 };
 
                 if !switch_kanshi(profile) {
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", "eDP-1", "mode", "1920x1080@144.003"])
-                        .status();
+                    let _ = NiriService::configure_output(
+                        "eDP-1".to_string(),
+                        OutputAction::Mode {
+                            mode: ModeToSet::Specific(ConfiguredMode {
+                                width: 1920,
+                                height: 1080,
+                                refresh: Some(144.003),
+                            }),
+                        },
+                    );
                 }
             }
             "60hz" => {
@@ -244,9 +248,16 @@ pub fn apply_preset(index: usize) {
                 };
 
                 if !switch_kanshi(profile) {
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", "eDP-1", "mode", "1920x1080@60.001"])
-                        .status();
+                    let _ = NiriService::configure_output(
+                        "eDP-1".to_string(),
+                        OutputAction::Mode {
+                            mode: ModeToSet::Specific(ConfiguredMode {
+                                width: 1920,
+                                height: 1080,
+                                refresh: Some(60.001),
+                            }),
+                        },
+                    );
                 }
             }
             "extend-right" => {
@@ -258,18 +269,27 @@ pub fn apply_preset(index: usize) {
                     };
 
                     if !switch_kanshi(profile) {
-                        let _ = Command::new("niri")
-                            .args(["msg", "output", "eDP-1", "on"])
-                            .status();
-                        let _ = Command::new("niri")
-                            .args(["msg", "output", "eDP-1", "position", "set", "0", "0"])
-                            .status();
-                        let _ = Command::new("niri")
-                            .args(["msg", "output", ext, "on"])
-                            .status();
-                        let _ = Command::new("niri")
-                            .args(["msg", "output", ext, "position", "set", "1920", "0"])
-                            .status();
+                        let _ =
+                            NiriService::configure_output("eDP-1".to_string(), OutputAction::On);
+                        let _ = NiriService::configure_output(
+                            "eDP-1".to_string(),
+                            OutputAction::Position {
+                                position: PositionToSet::Specific(ConfiguredPosition {
+                                    x: 0,
+                                    y: 0,
+                                }),
+                            },
+                        );
+                        let _ = NiriService::configure_output(ext.clone(), OutputAction::On);
+                        let _ = NiriService::configure_output(
+                            ext.clone(),
+                            OutputAction::Position {
+                                position: PositionToSet::Specific(ConfiguredPosition {
+                                    x: 1920,
+                                    y: 0,
+                                }),
+                            },
+                        );
                     }
                 }
             }
@@ -282,18 +302,27 @@ pub fn apply_preset(index: usize) {
                     };
 
                     if !switch_kanshi(profile) {
-                        let _ = Command::new("niri")
-                            .args(["msg", "output", "eDP-1", "on"])
-                            .status();
-                        let _ = Command::new("niri")
-                            .args(["msg", "output", "eDP-1", "position", "set", "0", "0"])
-                            .status();
-                        let _ = Command::new("niri")
-                            .args(["msg", "output", ext, "on"])
-                            .status();
-                        let _ = Command::new("niri")
-                            .args(["msg", "output", ext, "position", "set", "0", "0"])
-                            .status();
+                        let _ =
+                            NiriService::configure_output("eDP-1".to_string(), OutputAction::On);
+                        let _ = NiriService::configure_output(
+                            "eDP-1".to_string(),
+                            OutputAction::Position {
+                                position: PositionToSet::Specific(ConfiguredPosition {
+                                    x: 0,
+                                    y: 0,
+                                }),
+                            },
+                        );
+                        let _ = NiriService::configure_output(ext.clone(), OutputAction::On);
+                        let _ = NiriService::configure_output(
+                            ext.clone(),
+                            OutputAction::Position {
+                                position: PositionToSet::Specific(ConfiguredPosition {
+                                    x: 0,
+                                    y: 0,
+                                }),
+                            },
+                        );
                     }
                 }
             }
@@ -307,18 +336,13 @@ pub fn apply_preset(index: usize) {
 
                     if !switch_kanshi(profile) {
                         // Crucial: Turn internal display on BEFORE turning external display off
-                        let _ = Command::new("niri")
-                            .args(["msg", "output", "eDP-1", "on"])
-                            .status();
-                        let _ = Command::new("niri")
-                            .args(["msg", "output", ext, "off"])
-                            .status();
+                        let _ =
+                            NiriService::configure_output("eDP-1".to_string(), OutputAction::On);
+                        let _ = NiriService::configure_output(ext.clone(), OutputAction::Off);
                     }
                 } else {
                     let _ = switch_kanshi("undocked");
-                    let _ = Command::new("niri")
-                        .args(["msg", "output", "eDP-1", "on"])
-                        .status();
+                    let _ = NiriService::configure_output("eDP-1".to_string(), OutputAction::On);
                 }
             }
             "clamshell" => {
@@ -331,15 +355,18 @@ pub fn apply_preset(index: usize) {
 
                     if !switch_kanshi(profile) {
                         // Crucial: Turn external display on BEFORE turning internal display off
-                        let _ = Command::new("niri")
-                            .args(["msg", "output", ext, "on"])
-                            .status();
-                        let _ = Command::new("niri")
-                            .args(["msg", "output", ext, "position", "set", "0", "0"])
-                            .status();
-                        let _ = Command::new("niri")
-                            .args(["msg", "output", "eDP-1", "off"])
-                            .status();
+                        let _ = NiriService::configure_output(ext.clone(), OutputAction::On);
+                        let _ = NiriService::configure_output(
+                            ext.clone(),
+                            OutputAction::Position {
+                                position: PositionToSet::Specific(ConfiguredPosition {
+                                    x: 0,
+                                    y: 0,
+                                }),
+                            },
+                        );
+                        let _ =
+                            NiriService::configure_output("eDP-1".to_string(), OutputAction::Off);
                     }
                 }
             }
@@ -397,16 +424,25 @@ pub fn apply_preset(index: usize) {
                 .spawn();
         }
 
-        let _ = Command::new("notify-send")
-            .args([
-                "-a",
+        if amane::Notifications::read().running() {
+            amane::Notifications::notify(
                 "dotfield",
-                "-u",
-                "normal",
                 "Display Configurator",
-                &format!("Applied preset: {title}"),
-            ])
-            .spawn();
+                format!("Applied preset: {title}"),
+                amane::Urgency::Normal,
+            );
+        } else {
+            let _ = Command::new("notify-send")
+                .args([
+                    "-a",
+                    "dotfield",
+                    "-u",
+                    "normal",
+                    "Display Configurator",
+                    &format!("Applied preset: {title}"),
+                ])
+                .spawn();
+        }
 
         close();
     }

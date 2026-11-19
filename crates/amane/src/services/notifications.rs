@@ -57,6 +57,29 @@ impl Notifications {
         Self::write().close(id, Reason::Dismissed);
     }
 
+    /// Post an in-process notification without shelling out to notify-send or D-Bus.
+    pub fn notify(
+        app_name: impl Into<String>,
+        summary: impl Into<String>,
+        body: impl Into<String>,
+        urgency: Urgency,
+    ) -> u32 {
+        let notification = Notification {
+            id: 0,
+            app_name: app_name.into(),
+            summary: summary.into(),
+            body: body.into(),
+            icon: String::new(),
+            image: String::new(),
+            urgency,
+            actions: Vec::new(),
+            has_default: false,
+            resident: false,
+            received: std::time::SystemTime::now(),
+        };
+        Self::write().add(notification, 0)
+    }
+
     pub fn clear() {
         let mut notifications = Self::write();
 

@@ -22,6 +22,8 @@ const CANONICAL_WORKSPACES: [&str; 5] = [
     "05 SCRATCH",
 ];
 
+const WS_LABELS: [&str; 10] = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"];
+
 fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
     let bar_cfg = &manifest.bar;
@@ -256,7 +258,13 @@ fn render_workspaces(
             format!("{num}")
         };
 
-        let label = format!("{num:02}");
+        let label_owned;
+        let label: &str = if num >= 1 && num <= WS_LABELS.len() {
+            WS_LABELS[num - 1]
+        } else {
+            label_owned = format!("{num:02}");
+            &label_owned
+        };
 
         let tile = Rectangle::new()
             .width(pill_width)
@@ -331,21 +339,14 @@ fn render_workspaces(
 
 fn render_title(manifest: &ShellManifest, tokens: &ThemeTokens) -> Rectangle {
     let win = NiriWindowService::read();
-    let text = if win.title.is_empty() {
-        if win.app_id.is_empty() {
-            "Dotfield".to_string()
-        } else {
-            win.app_id.clone()
-        }
+    let display_text = if !win.display_title.is_empty() {
+        win.display_title.as_str()
+    } else if !win.title.is_empty() {
+        win.title.as_str()
+    } else if !win.app_id.is_empty() {
+        win.app_id.as_str()
     } else {
-        win.title.clone()
-    };
-
-    // Truncate long title cleanly
-    let display_text = if text.chars().count() > 28 {
-        format!("{}...", text.chars().take(25).collect::<String>())
-    } else {
-        text
+        "Dotfield"
     };
 
     let font = &manifest.theme.font_family;

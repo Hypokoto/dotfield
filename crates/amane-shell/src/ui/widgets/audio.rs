@@ -265,22 +265,31 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
                 })
                 .on_click(move |_| {
                     Audio::set_default_sink(&sink_name);
-                    let _ = std::process::Command::new("notify-send")
-                        .args([
-                            "-a",
+                    if amane::Notifications::read().running() {
+                        amane::Notifications::notify(
                             "dotfield",
-                            "-c",
-                            "audio",
-                            "-r",
-                            "9994",
-                            "-h",
-                            "string:x-canonical-private-synchronous:audio-sink",
-                            "-t",
-                            "1500",
                             "Audio Output",
-                            &sink_desc,
-                        ])
-                        .spawn();
+                            sink_desc.clone(),
+                            amane::Urgency::Low,
+                        );
+                    } else {
+                        let _ = std::process::Command::new("notify-send")
+                            .args([
+                                "-a",
+                                "dotfield",
+                                "-c",
+                                "audio",
+                                "-r",
+                                "9994",
+                                "-h",
+                                "string:x-canonical-private-synchronous:audio-sink",
+                                "-t",
+                                "1500",
+                                "Audio Output",
+                                &sink_desc,
+                            ])
+                            .spawn();
+                    }
                 })
                 .child(
                     Row::new(vec![

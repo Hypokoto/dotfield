@@ -45,11 +45,9 @@ pub fn toggle() {
         cal.open
     };
     if is_open {
-        crate::ui::control_center::close();
-        crate::ui::launcher::close();
-        crate::ui::display_config::close();
-        crate::ui::terminal_manager::close();
-        crate::ui::powermenu::close();
+        crate::ui::modal_manager::ModalManager::open_exclusive(
+            crate::ui::modal_manager::ModalType::Calendar,
+        );
     }
 }
 
@@ -62,11 +60,9 @@ pub fn open() {
     cal.selected_day = Some(now.day());
     drop(cal);
 
-    crate::ui::control_center::close();
-    crate::ui::launcher::close();
-    crate::ui::display_config::close();
-    crate::ui::terminal_manager::close();
-    crate::ui::powermenu::close();
+    crate::ui::modal_manager::ModalManager::open_exclusive(
+        crate::ui::modal_manager::ModalType::Calendar,
+    );
 }
 
 pub fn close() {

@@ -6,7 +6,9 @@ use std::time::Duration;
 use amane::Service;
 use arc_swap::ArcSwap;
 use niri_ipc::socket::Socket;
-use niri_ipc::{Action, Event, Request, Response, Window, WorkspaceReferenceArg};
+use niri_ipc::{
+    Action, Event, Output, OutputAction, Request, Response, Window, WorkspaceReferenceArg,
+};
 
 use crate::services::topology::ProjectTarget;
 
@@ -26,6 +28,7 @@ pub struct NiriWindowService {
     pub id: u64,
     pub title: String,
     pub app_id: String,
+    pub display_title: String,
     pub window_count: usize,
 }
 
@@ -122,6 +125,26 @@ impl NiriService {
         match socket.send(Request::Windows)? {
             Ok(Response::Windows(wins)) => Ok(wins),
             Ok(other) => anyhow::bail!("Unexpected response querying windows: {other:?}"),
+            Err(e) => anyhow::bail!("Niri error: {e}"),
+        }
+    }
+
+    /// Query connected outputs from Niri IPC.
+    pub fn query_outputs() -> anyhow::Result<HashMap<String, Output>> {
+        let mut socket = Socket::connect()?;
+        match socket.send(Request::Outputs)? {
+            Ok(Response::Outputs(outputs)) => Ok(outputs),
+            Ok(other) => anyhow::bail!("Unexpected response querying outputs: {other:?}"),
+            Err(e) => anyhow::bail!("Niri error: {e}"),
+        }
+    }
+
+    /// Configure an output directly via Niri IPC without spawning `niri msg`.
+    pub fn configure_output(output: String, action: OutputAction) -> anyhow::Result<()> {
+        let mut socket = Socket::connect()?;
+        match socket.send(Request::Output { output, action })? {
+            Ok(Response::Handled) | Ok(Response::OutputConfigChanged(_)) => Ok(()),
+            Ok(other) => anyhow::bail!("Unexpected response configuring output: {other:?}"),
             Err(e) => anyhow::bail!("Niri error: {e}"),
         }
     }
@@ -256,10 +279,26 @@ impl NiriService {
             is_full_width,
         }));
 
+        let raw = if title.is_empty() {
+            if app_id.is_empty() {
+                "Dotfield"
+            } else {
+                app_id
+            }
+        } else {
+            title
+        };
+        let display_title = if raw.chars().count() > 28 {
+            format!("{}...", raw.chars().take(25).collect::<String>())
+        } else {
+            raw.to_string()
+        };
+
         let mut svc = NiriWindowService::write();
         svc.id = id;
         svc.title = title.to_string();
         svc.app_id = app_id.to_string();
+        svc.display_title = display_title;
         svc.window_count = count;
     }
 

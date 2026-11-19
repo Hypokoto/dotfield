@@ -5,6 +5,7 @@ pub mod components;
 pub mod control_center;
 pub mod display_config;
 pub mod launcher;
+pub mod modal_manager;
 pub mod notifications;
 pub mod osd;
 pub mod powermenu;

@@ -151,11 +151,9 @@ pub fn toggle() {
         svc.open
     };
     if is_open {
-        crate::ui::control_center::close();
-        crate::ui::calendar::close();
-        crate::ui::launcher::close();
-        crate::ui::display_config::close();
-        crate::ui::powermenu::close();
+        crate::ui::modal_manager::ModalManager::open_exclusive(
+            crate::ui::modal_manager::ModalType::TerminalManager,
+        );
     }
 }
 
@@ -174,11 +172,9 @@ pub fn open() {
     TopologyService::refresh_async();
     drop(svc);
 
-    crate::ui::control_center::close();
-    crate::ui::calendar::close();
-    crate::ui::launcher::close();
-    crate::ui::display_config::close();
-    crate::ui::powermenu::close();
+    crate::ui::modal_manager::ModalManager::open_exclusive(
+        crate::ui::modal_manager::ModalType::TerminalManager,
+    );
 }
 
 pub fn close() {
@@ -314,16 +310,25 @@ pub fn set_default_terminal(index: usize) {
             }
         }
 
-        let _ = Command::new("notify-send")
-            .args([
-                "-a",
+        if amane::Notifications::read().running() {
+            amane::Notifications::notify(
                 "dotfield",
-                "-u",
-                "normal",
                 "Terminal Manager",
-                &format!("Default terminal updated to {}", preset.name),
-            ])
-            .spawn();
+                format!("Default terminal updated to {}", preset.name),
+                amane::Urgency::Normal,
+            );
+        } else {
+            let _ = Command::new("notify-send")
+                .args([
+                    "-a",
+                    "dotfield",
+                    "-u",
+                    "normal",
+                    "Terminal Manager",
+                    &format!("Default terminal updated to {}", preset.name),
+                ])
+                .spawn();
+        }
     }
 }
 
@@ -370,16 +375,25 @@ pub fn launch_preset(index: usize, mode: LaunchMode) {
             }
         }
 
-        let _ = Command::new("notify-send")
-            .args([
-                "-a",
+        if amane::Notifications::read().running() {
+            amane::Notifications::notify(
                 "dotfield",
-                "-u",
-                "low",
                 "Terminal Manager",
-                &format!("Launched {} ({mode_desc})", preset.name),
-            ])
-            .spawn();
+                format!("Launched {} ({mode_desc})", preset.name),
+                amane::Urgency::Low,
+            );
+        } else {
+            let _ = Command::new("notify-send")
+                .args([
+                    "-a",
+                    "dotfield",
+                    "-u",
+                    "low",
+                    "Terminal Manager",
+                    &format!("Launched {} ({mode_desc})", preset.name),
+                ])
+                .spawn();
+        }
 
         close();
     }

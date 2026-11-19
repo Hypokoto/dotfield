@@ -25,32 +25,58 @@ elif [[ -f "${HOME}/.config/dotfield/scripts/lib/env.sh" ]]; then
 fi
 
 # If amane (or legacy dotfield-shell) is active, forward directly to its IPC to prevent duplicate notifications
+AMANE_MSG_BIN=$(get_amane_msg_bin)
 SHELL_BIN=$(get_amane_bin)
 
 # In Sway, strictly bypass amane and use swayosd/mako
-if ! is_sway && [[ -n "${SHELL_BIN}" ]] && is_amane_running; then
-    case "${ACTION}" in
-        volume_up)
-            "${SHELL_BIN}" --osd volume-up 5
-            exit 0
-            ;;
-        volume_down)
-            "${SHELL_BIN}" --osd volume-down 5
-            exit 0
-            ;;
-        volume_mute)
-            "${SHELL_BIN}" --osd volume-mute
-            exit 0
-            ;;
-        brightness_up)
-            "${SHELL_BIN}" --osd brightness-up 5
-            exit 0
-            ;;
-        brightness_down)
-            "${SHELL_BIN}" --osd brightness-down 5
-            exit 0
-            ;;
-    esac
+if ! is_sway && is_amane_running; then
+    if [[ -n "${AMANE_MSG_BIN}" ]]; then
+        case "${ACTION}" in
+            volume_up)
+                "${AMANE_MSG_BIN}" volume-up 5
+                exit 0
+                ;;
+            volume_down)
+                "${AMANE_MSG_BIN}" volume-down 5
+                exit 0
+                ;;
+            volume_mute)
+                "${AMANE_MSG_BIN}" volume-mute
+                exit 0
+                ;;
+            brightness_up)
+                "${AMANE_MSG_BIN}" brightness-up 5
+                exit 0
+                ;;
+            brightness_down)
+                "${AMANE_MSG_BIN}" brightness-down 5
+                exit 0
+                ;;
+        esac
+    elif [[ -n "${SHELL_BIN}" ]]; then
+        case "${ACTION}" in
+            volume_up)
+                "${SHELL_BIN}" --osd volume-up 5
+                exit 0
+                ;;
+            volume_down)
+                "${SHELL_BIN}" --osd volume-down 5
+                exit 0
+                ;;
+            volume_mute)
+                "${SHELL_BIN}" --osd volume-mute
+                exit 0
+                ;;
+            brightness_up)
+                "${SHELL_BIN}" --osd brightness-up 5
+                exit 0
+                ;;
+            brightness_down)
+                "${SHELL_BIN}" --osd brightness-down 5
+                exit 0
+                ;;
+        esac
+    fi
 fi
 
 # 1. Volume Up

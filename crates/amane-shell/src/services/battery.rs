@@ -87,29 +87,41 @@ impl BatteryMonitor {
     }
 }
 
-fn send_battery_notification(percent: u8, urgency: &str, category: &str, title: &str, body: &str) {
-    let icon = if urgency == "critical" {
-        "battery-caution"
-    } else {
-        "battery-low"
+fn send_battery_notification(
+    percent: u8,
+    urgency_str: &str,
+    _category: &str,
+    title: &str,
+    body: &str,
+) {
+    let full_title = format!("{title} ({percent}%)");
+    let urgency = match urgency_str {
+        "critical" => amane::Urgency::Critical,
+        "low" => amane::Urgency::Low,
+        _ => amane::Urgency::Normal,
     };
 
-    let full_title = format!("{title} ({percent}%)");
-
-    let _ = Command::new("notify-send")
-        .args([
-            "-a",
-            "battery-alert",
-            "-u",
-            urgency,
-            "-c",
-            category,
-            "-i",
-            icon,
-            &full_title,
-            body,
-        ])
-        .spawn();
+    if amane::Notifications::read().running() {
+        amane::Notifications::notify("battery-alert", full_title, body, urgency);
+    } else {
+        let icon = if urgency_str == "critical" {
+            "battery-caution"
+        } else {
+            "battery-low"
+        };
+        let _ = Command::new("notify-send")
+            .args([
+                "-a",
+                "battery-alert",
+                "-u",
+                urgency_str,
+                "-i",
+                icon,
+                &full_title,
+                body,
+            ])
+            .spawn();
+    }
 }
 
 #[cfg(test)]

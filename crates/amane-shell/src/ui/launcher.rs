@@ -56,11 +56,9 @@ pub fn toggle() {
         launcher.open
     };
     if is_open {
-        crate::ui::control_center::close();
-        crate::ui::calendar::close();
-        crate::ui::display_config::close();
-        crate::ui::terminal_manager::close();
-        crate::ui::powermenu::close();
+        crate::ui::modal_manager::ModalManager::open_exclusive(
+            crate::ui::modal_manager::ModalType::Launcher,
+        );
     }
 }
 

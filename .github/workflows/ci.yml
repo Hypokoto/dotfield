@@ -33,12 +33,12 @@ jobs:
             libfontconfig1-dev
 
       - name: Set up Rust toolchain
-        uses: dtolnay/rust-toolchain@a54c7fe93be34c9780b6215ea577747f0fdd3830 # stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
 
       - name: Rust Cache
-        uses: Swatinem/rust-cache@82a92a6e8fbeee08c636d40a3633ed429215208c # v2.7.7
+        uses: Swatinem/rust-cache@v2
 
       - name: Check code formatting
         run: cargo fmt -- --check
@@ -68,7 +68,7 @@ jobs:
         run: shellcheck scripts/*.sh scripts/fw-open setup.sh install.sh
 
       - name: Run Gitleaks secret audit
-        uses: gitleaks/gitleaks-action@e33a88fb0b94b005fe43fe539b78ca9489fc9ff6 # v2.3.8
+        uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

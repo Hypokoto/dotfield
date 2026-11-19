@@ -50,6 +50,7 @@ HARDEN_APPARMOR=false
 HARDEN_FLATPAK=false
 HARDEN_NFT=false
 USE_SYMLINKS=true
+CLEAN_BUILD=false
 declare -A LAYER_STATUS=()
 declare -A LAYER_DETAILS=()
 
@@ -78,6 +79,7 @@ Options:
   --prefix <dir>         Directory to install binaries into (default: ~/.local/bin)
   --build                Force compilation of Rust crate (amane)
   --no-build             Skip compiling Rust crate with cargo
+  --clean, --clean-build Clean Cargo target directory after installing binaries to save disk space
   -d, --dry-run          Preview installation steps without executing changes
   -h, --help             Display this help message and exit
 
@@ -164,6 +166,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --no-build)
             DO_BUILD=false
+            shift
+            ;;
+        --clean|--clean-build)
+            CLEAN_BUILD=true
             shift
             ;;
         -d|--dry-run)
@@ -657,6 +663,17 @@ if [[ "${DO_BUILD}" == true ]]; then
             ln -sf "${PREFIX}/amane-msg" "${HOME}/.cargo/bin/amane-msg"
         fi
         success "Installed amane and amane-msg to ${PREFIX} (and ~/.cargo/bin symlinks)"
+    fi
+
+    # 4. Reclaim build cache if requested
+    if [[ "${CLEAN_BUILD}" == true ]]; then
+        step "Reclaiming build cache..."
+        if [[ "${DRY_RUN}" == true ]]; then
+            info "[dry-run] cargo clean"
+        else
+            cargo clean
+            success "Cleaned build artifacts to keep installation footprint minimal"
+        fi
     fi
 fi
 

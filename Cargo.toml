@@ -34,3 +34,12 @@ codegen-units = 1
 panic = "abort"
 strip = "symbols"
 overflow-checks = false
+
+[profile.dev]
+debug = 1
+incremental = false
+
+[profile.test]
+debug = 1
+incremental = false
+

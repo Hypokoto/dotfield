@@ -68,6 +68,7 @@ Options:
   -y, --yes, --noconfirm Automatically answer yes to package manager prompts
   --no-setup             Skip running setup.sh after dependency installation
   --no-build             Skip compiling amane desktop shell binary
+  --clean, --clean-build Forward --clean to setup.sh to reclaim build cache
   -f, --force            Force replacement of existing configs (forwarded to setup.sh)
   --prefix <dir>         Directory to install binaries into (default: ~/.local/bin)
   -d, --dry-run          Preview installation commands without executing them
@@ -76,11 +77,13 @@ Options:
 Examples:
   ./install.sh sway
   ./install.sh --niri -y
+  ./install.sh --all --clean
   ./install.sh --all --hardening
   ./install.sh --all --dry-run
 EOF
 }
 
+CLEAN_BUILD=false
 HARDENING_FLAGS=()
 
 # Parse positional subcommands and options
@@ -133,6 +136,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --build)
             DO_BUILD=true
+            shift
+            ;;
+        --clean|--clean-build)
+            CLEAN_BUILD=true
             shift
             ;;
         -f|--force)
@@ -395,6 +402,9 @@ if [[ "${RUN_SETUP}" == true ]]; then
         SETUP_ARGS+=("--build")
     else
         SETUP_ARGS+=("--no-build")
+    fi
+    if [[ "${CLEAN_BUILD}" == true ]]; then
+        SETUP_ARGS+=("--clean")
     fi
     if [[ "${DRY_RUN}" == true ]]; then
         SETUP_ARGS+=("--dry-run")

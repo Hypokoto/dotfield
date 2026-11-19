@@ -524,10 +524,11 @@ mod tests {
 
     #[test]
     fn test_app_id_slug_matching() {
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
         let target = ProjectTarget {
             name: "dotfield".to_string(),
             slug: "dotfield".to_string(),
-            path: std::path::PathBuf::from("/home/hypokoto/dev/projects/dotfield"),
+            path: std::path::PathBuf::from(format!("{home}/dev/projects/dotfield")),
             branch: Some("main".to_string()),
             is_worktree: false,
             is_tmux_active: false,

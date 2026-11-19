@@ -46,7 +46,6 @@ pub struct NiriFocusedWindow {
     pub id: u64,
     pub title: String,
     pub app_id: String,
-    pub is_full_width: bool,
 }
 
 static FOCUSED_WINDOW: LazyLock<ArcSwap<NiriFocusedWindow>> =
@@ -310,18 +309,11 @@ impl NiriService {
         Ok(())
     }
 
-    pub fn update_active_window(
-        id: u64,
-        title: &str,
-        app_id: &str,
-        count: usize,
-        is_full_width: bool,
-    ) {
+    pub fn update_active_window(id: u64, title: &str, app_id: &str, count: usize) {
         FOCUSED_WINDOW.store(Arc::new(NiriFocusedWindow {
             id,
             title: title.to_string(),
             app_id: app_id.to_string(),
-            is_full_width,
         }));
 
         let raw = if title.is_empty() {
@@ -350,10 +342,6 @@ impl NiriService {
         svc.window_count = count;
     }
 
-    fn is_window_full_width(win: &Window, max_output_width: f64) -> bool {
-        !win.is_floating && win.layout.tile_size.0 >= (0.90 * max_output_width).max(1200.0)
-    }
-
     fn run_event_loop() -> std::io::Result<()> {
         let socket_path = match std::env::var_os("NIRI_SOCKET") {
             Some(p) => p,
@@ -366,26 +354,13 @@ impl NiriService {
         };
 
         let mut socket = Socket::connect()?;
-
-        let mut max_output_width = 1920.0f64;
-        if let Ok(Ok(Response::Outputs(outputs))) = socket.send(Request::Outputs) {
-            for (_, out) in outputs {
-                if let Some(logical) = out.logical
-                    && logical.width as f64 > max_output_width
-                {
-                    max_output_width = logical.width as f64;
-                }
-            }
-        }
-
         let mut windows: HashMap<u64, Window> = HashMap::new();
 
         // Seed initial focused window
         if let Ok(Ok(Response::FocusedWindow(Some(win)))) = socket.send(Request::FocusedWindow) {
             let title = win.title.clone().unwrap_or_default();
             let app_id = win.app_id.clone().unwrap_or_default();
-            let full_w = Self::is_window_full_width(&win, max_output_width);
-            Self::update_active_window(win.id, &title, &app_id, 1, full_w);
+            Self::update_active_window(win.id, &title, &app_id, 1);
             windows.insert(win.id, win);
         }
 
@@ -396,8 +371,7 @@ impl NiriService {
                 if win.is_focused {
                     let title = win.title.clone().unwrap_or_default();
                     let app_id = win.app_id.clone().unwrap_or_default();
-                    let full_w = Self::is_window_full_width(&win, max_output_width);
-                    Self::update_active_window(win.id, &title, &app_id, total, full_w);
+                    Self::update_active_window(win.id, &title, &app_id, total);
                 }
                 windows.insert(win.id, win);
             }
@@ -442,14 +416,13 @@ impl NiriService {
                             if win.is_focused {
                                 let title = win.title.clone().unwrap_or_default();
                                 let app_id = win.app_id.clone().unwrap_or_default();
-                                let full_w = Self::is_window_full_width(&win, max_output_width);
-                                Self::update_active_window(win.id, &title, &app_id, total, full_w);
+                                Self::update_active_window(win.id, &title, &app_id, total);
                                 found_focused = true;
                             }
                             windows.insert(win.id, win);
                         }
                         if !found_focused && windows.is_empty() {
-                            Self::update_active_window(0, "", "", 0, false);
+                            Self::update_active_window(0, "", "", 0);
                         }
                     }
                     Event::WindowOpenedOrChanged { window } => {
@@ -457,19 +430,18 @@ impl NiriService {
                         let is_focused = window.is_focused;
                         let title = window.title.clone().unwrap_or_default();
                         let app_id = window.app_id.clone().unwrap_or_default();
-                        let full_w = Self::is_window_full_width(&window, max_output_width);
                         windows.insert(id, window);
                         let total = windows.len();
 
                         if is_focused || FOCUSED_WINDOW.load().id == id {
-                            Self::update_active_window(id, &title, &app_id, total, full_w);
+                            Self::update_active_window(id, &title, &app_id, total);
                         }
                     }
                     Event::WindowClosed { id } => {
                         windows.remove(&id);
                         let total = windows.len();
                         if FOCUSED_WINDOW.load().id == id {
-                            Self::update_active_window(0, "", "", total, false);
+                            Self::update_active_window(0, "", "", total);
                         } else {
                             NiriWindowService::write().window_count = total;
                         }
@@ -481,16 +453,13 @@ impl NiriService {
                                 if let Some(win) = windows.get(&win_id) {
                                     let title = win.title.clone().unwrap_or_default();
                                     let app_id = win.app_id.clone().unwrap_or_default();
-                                    let full_w = Self::is_window_full_width(win, max_output_width);
-                                    Self::update_active_window(
-                                        win.id, &title, &app_id, total, full_w,
-                                    );
+                                    Self::update_active_window(win.id, &title, &app_id, total);
                                 } else {
-                                    Self::update_active_window(win_id, "", "", total, false);
+                                    Self::update_active_window(win_id, "", "", total);
                                 }
                             }
                             None => {
-                                Self::update_active_window(0, "", "", total, false);
+                                Self::update_active_window(0, "", "", total);
                             }
                         }
                     }
@@ -537,19 +506,17 @@ mod tests {
     #[test]
     fn test_niri_update_active_window() {
         let _lock = TEST_MUTEX.lock().unwrap();
-        NiriService::update_active_window(42, "Foot Terminal", "foot", 3, true);
+        NiriService::update_active_window(42, "Foot Terminal", "foot", 3);
         let focused = NiriService::focused_window();
         assert_eq!(focused.id, 42);
         assert_eq!(focused.title, "Foot Terminal");
         assert_eq!(focused.app_id, "foot");
-        assert!(focused.is_full_width);
 
         // Clean up
-        NiriService::update_active_window(0, "", "", 0, false);
+        NiriService::update_active_window(0, "", "", 0);
         let reset = NiriService::focused_window();
         assert_eq!(reset.id, 0);
         assert!(reset.title.is_empty());
-        assert!(!reset.is_full_width);
     }
 
     #[test]
@@ -586,7 +553,7 @@ mod tests {
         // Writer thread updates active window 1000 times
         let writer = thread::spawn(|| {
             for i in 1..=1000 {
-                NiriService::update_active_window(i, "Ghostty", "ghostty", 1, false);
+                NiriService::update_active_window(i, "Ghostty", "ghostty", 1);
             }
         });
 
@@ -599,7 +566,7 @@ mod tests {
         }
 
         // Reset
-        NiriService::update_active_window(0, "", "", 0, false);
+        NiriService::update_active_window(0, "", "", 0);
     }
 
     #[test]

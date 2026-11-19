@@ -30,7 +30,8 @@ jobs:
             wayland-protocols \
             libvulkan-dev \
             libpulse-dev \
-            libfontconfig1-dev
+            libfontconfig1-dev \
+            libpam0g-dev
 
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable

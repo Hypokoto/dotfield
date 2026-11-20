@@ -41,8 +41,8 @@ button:focus, button:active, button:hover {
 }
 
 #suspend:hover, #suspend:focus {
-    border-color: #82AAFF;
-    color: #82AAFF;
+    border-color: #8B949E;
+    color: #8B949E;
 }
 
 #hibernate:hover, #hibernate:focus {

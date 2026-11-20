@@ -18,11 +18,11 @@ layout {
 
     default-column-width { proportion 0.5; }
 
-    // Window Borders & Focus Rings: Windows 11 Fluent Theme
+    // Window Borders & Focus Rings: Controlled Chaos Industrial Amber
     border {
         width 2
-        active-color "#60cdff"
-        inactive-color "#383838"
+        active-color "#FFB000"
+        inactive-color "#34343D"
         urgent-color "#E63946"
     }
 

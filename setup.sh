@@ -875,10 +875,17 @@ if [[ ! -e "${HOME}/.tmux.conf" || -L "${HOME}/.tmux.conf" ]]; then
     fi
 fi
 
-# Detect Ly display manager and advise on system configuration sync
+# Detect Ly display manager and advise or sync system configuration
 if [[ -d "/etc/ly" && -f "${SCRIPT_DIR}/ly/config.ini" ]]; then
     if ! cmp -s "${SCRIPT_DIR}/ly/config.ini" "/etc/ly/config.ini" 2>/dev/null; then
-        info "Ly display manager detected at /etc/ly. To sync BLACKSITE theme, run: sudo cp ${SCRIPT_DIR}/ly/config.ini /etc/ly/config.ini"
+        if [[ $EUID -eq 0 ]] || [ -w "/etc/ly/config.ini" ]; then
+            cp "${SCRIPT_DIR}/ly/config.ini" "/etc/ly/config.ini"
+            success "Synced Ly display manager configuration to /etc/ly/config.ini"
+        elif run_privileged cp "${SCRIPT_DIR}/ly/config.ini" "/etc/ly/config.ini" 2>/dev/null; then
+            success "Synced Ly display manager configuration to /etc/ly/config.ini"
+        else
+            info "Ly display manager detected at /etc/ly. To sync Controlled Chaos theme, run: sudo cp ${SCRIPT_DIR}/ly/config.ini /etc/ly/config.ini"
+        fi
     fi
 fi
 

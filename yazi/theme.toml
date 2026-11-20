@@ -1,8 +1,8 @@
 # Dotfield Yazi Theme Configuration
-# Controlled Chaos (Void Black, Graphite, Fluent Blue, Industrial Amber, Crimson)
+# Controlled Chaos (Void Black, Graphite, Industrial Amber, Crimson, Steel)
 
 [mgr]
-cwd = { fg = "#60cdff", bold = true }
+cwd = { fg = "#ffb000", bold = true }
 hovered = { bg = "#1c1c23", bold = true }
 preview_hovered = { underline = true }
 
@@ -12,14 +12,14 @@ find_position = { fg = "#e63946", bold = true }
 marker_copied = { fg = "#7bc47f", bg = "#7bc47f" }
 marker_cut = { fg = "#e63946", bg = "#e63946" }
 marker_marked = { fg = "#ffb000", bg = "#ffb000" }
-marker_selected = { fg = "#60cdff", bg = "#60cdff" }
+marker_selected = { fg = "#ffd166", bg = "#ffd166" }
 
 # Tabs
-tab_active = { fg = "#0a0a0c", bg = "#60cdff", bold = true }
+tab_active = { fg = "#0a0a0c", bg = "#ffb000", bold = true }
 tab_inactive = { fg = "#8b949e", bg = "#121216" }
 count_copied = { fg = "#0a0a0c", bg = "#7bc47f" }
 count_cut = { fg = "#0a0a0c", bg = "#e63946" }
-count_selected = { fg = "#0a0a0c", bg = "#60cdff" }
+count_selected = { fg = "#0a0a0c", bg = "#ffd166" }
 
 # Border
 border_symbol = "│"
@@ -30,56 +30,56 @@ separator_open = ""
 separator_close = ""
 separator_style = { fg = "#1c1c23", bg = "#1c1c23" }
 
-mode_normal = { fg = "#0a0a0c", bg = "#60cdff", bold = true }
-mode_select = { fg = "#0a0a0c", bg = "#ffb000", bold = true }
+mode_normal = { fg = "#0a0a0c", bg = "#ffb000", bold = true }
+mode_select = { fg = "#0a0a0c", bg = "#ffd166", bold = true }
 mode_unset = { fg = "#0a0a0c", bg = "#e63946", bold = true }
 
 progress_label = { bold = true }
-progress_normal = { fg = "#60cdff", bg = "#121216" }
+progress_normal = { fg = "#ffb000", bg = "#121216" }
 progress_error = { fg = "#e63946", bg = "#121216" }
 
-permissions_t = { fg = "#60cdff" }
-permissions_r = { fg = "#ffb000" }
+permissions_t = { fg = "#ffb000" }
+permissions_r = { fg = "#ffd166" }
 permissions_w = { fg = "#e63946" }
 permissions_x = { fg = "#7bc47f" }
 permissions_s = { fg = "#8b949e" }
 
 [select]
-border = { fg = "#60cdff" }
+border = { fg = "#ffb000" }
 active = { fg = "#ffd166", bold = true }
 inactive = { fg = "#e8e6e3" }
 
 [input]
-border = { fg = "#60cdff" }
+border = { fg = "#ffb000" }
 title = { fg = "#e8e6e3" }
 value = { fg = "#e8e6e3" }
 selected = { bg = "#1c1c23" }
 
 [completion]
 border = { fg = "#34343d" }
-active = { bg = "#1c1c23", fg = "#60cdff" }
+active = { bg = "#1c1c23", fg = "#ffb000" }
 inactive = { fg = "#e8e6e3" }
 
 [tasks]
 border = { fg = "#34343d" }
-title = { fg = "#60cdff" }
+title = { fg = "#ffb000" }
 hovered = { underline = true }
 
 [which]
 cols = 3
 mask = { bg = "#0a0a0c" }
-cand = { fg = "#60cdff" }
+cand = { fg = "#ffb000" }
 rest = { fg = "#8b949e" }
 desc = { fg = "#e8e6e3" }
 separator = "  "
 separator_style = { fg = "#34343d" }
 
 [help]
-on = { fg = "#60cdff" }
+on = { fg = "#ffb000" }
 exec = { fg = "#8b949e" }
 desc = { fg = "#e8e6e3" }
 hovered = { bg = "#1c1c23", bold = true }
-footer = { fg = "#0a0a0c", bg = "#60cdff" }
+footer = { fg = "#0a0a0c", bg = "#ffb000" }
 
 [filetype]
 rules = [
@@ -95,12 +95,12 @@ rules = [
     { mime = "application/x-rar", fg = "#ffb000" },
     # Code & Configs
     { url = "*.rs", fg = "#e63946" },
-    { url = "*.kdl", fg = "#60cdff" },
-    { url = "*.toml", fg = "#ffb000" },
+    { url = "*.kdl", fg = "#ffb000" },
+    { url = "*.toml", fg = "#ffd166" },
     { url = "*.json", fg = "#ffd166" },
     { url = "*.sh", fg = "#7bc47f" },
     { url = "*.zsh", fg = "#7bc47f" },
-    { url = "*.md", fg = "#82aaff" },
+    { url = "*.md", fg = "#8b949e" },
     # Directories
-    { url = "*/", fg = "#60cdff", bold = true },
+    { url = "*/", fg = "#ffb000", bold = true },
 ]

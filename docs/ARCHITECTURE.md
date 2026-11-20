@@ -74,7 +74,7 @@ flowchart TD
   - `fastfetch/logo.txt`: Custom braille arrowhead/crest emblem art.
 
 ### 2.4 Terminal & Multiplexer Harmony
-- **Terminals**: Synchronized templates for Foot, Kitty, Alacritty, and Ghostty.
+- **Terminals**: Synchronized templates for Foot, Ghostty, and Kitty.
 - **Multiplexers**: Harmonized `Ctrl-a` leader prefix and identical Alt-navigation (`Alt-h/j/k/l`, `Alt-n`, `Alt-t`, `Alt-w`, `Alt-z`, `Alt-1..9`) across both Zellij and Tmux.
 
 ---

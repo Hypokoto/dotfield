@@ -59,7 +59,7 @@ dotfield/
 ├── shell/                  # Shell configurations & prompts (Zsh, Starship)
 │   ├── zsh/
 │   └── starship/
-├── terminals/              # Terminal templates (Foot, Kitty, Alacritty, Ghostty, WezTerm)
+├── terminals/              # Terminal templates (Foot, Ghostty, Kitty)
 ├── multiplexer/            # Terminal multiplexers (Zellij, Tmux)
 ├── nvim/                   # Neovim configurations
 ├── ly/                     # Ly TUI display manager configurations (config.ini, config.lua)

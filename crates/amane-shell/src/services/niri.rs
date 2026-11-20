@@ -230,7 +230,8 @@ impl NiriService {
 
         for ext_out in external_outputs {
             let _ = Self::perform_action(Action::FocusMonitor { output: ext_out });
-            let _ = Self::focus_workspace("05 PRESENTATION")
+            let _ = Self::focus_workspace("05 SCRATCH")
+                .or_else(|_| Self::focus_workspace("05 PRESENTATION"))
                 .or_else(|_| Self::focus_workspace("03 RESEARCH"));
         }
 

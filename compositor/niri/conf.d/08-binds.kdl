@@ -4,13 +4,12 @@
 binds {
     // Core Windows 11 Workflow Keybindings
     Super_L { spawn "amane-msg" "start-menu"; }
-    Mod+D { toggle-overview; }                  // Win+D: Task View / Overview
+    Mod+D { focus-workspace "05 SCRATCH"; }       // Win+D: Show Desktop / Clean Scratch
     Mod+S { spawn "amane-msg" "launcher"; }     // Win+S: Windows Search
     Mod+Space { spawn "amane-msg" "launcher"; }
     Mod+E { spawn "ghostty" "-e" "yazi"; }      // Win+E: File Explorer
     Mod+A { spawn "amane-msg" "control-center"; } // Win+A: Quick Settings
     Mod+N { spawn "amane-msg" "action-center"; }  // Win+N: Notification Center / Calendar
-    Mod+W { spawn "amane-msg" "widgets"; }        // Win+W: Widgets Board
     Mod+I { spawn "amane-msg" "control-center"; } // Win+I: Settings
     Mod+L { spawn "sh" "-c" "~/.config/dotfield/scripts/lock.sh"; } // Win+L: Lock Screen
     Mod+Tab { toggle-overview; }                  // Win+Tab: Task View
@@ -21,16 +20,15 @@ binds {
     Ctrl+Alt+Delete { spawn "amane-msg" "powermenu"; } // Ctrl+Alt+Del: Power / Security Menu
     Mod+Shift+E { spawn "amane-msg" "powermenu"; }
 
-    // Virtual Desktop Navigation (Windows 11 Ctrl+Win+Arrow)
-    Ctrl+Mod+Left { focus-workspace-up; }
-    Ctrl+Mod+Right { focus-workspace-down; }
+    // Workspace Navigation (Niri Vertical Axis)
+    Ctrl+Mod+Up { focus-workspace-up; }
+    Ctrl+Mod+Down { focus-workspace-down; }
     Ctrl+Mod+D { focus-workspace "05 SCRATCH"; }
 
     // Terminal Launchers
     Mod+Return { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
     Ctrl+Alt+T { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
     Mod+Ctrl+Return { spawn "ghostty" "--class=floating-term"; }
-    Mod+Shift+Space { spawn "amane-msg" "control-center"; }
 
     // Dotfield Interactive Hardware & System Widgets
     Mod+Shift+N { spawn "amane-msg" "network"; }

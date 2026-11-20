@@ -164,10 +164,10 @@ Stages dotfiles into `~/.config/`, links helper scripts, sets up permissions, an
 | :--- | :--- |
 | `Super_L` | Centered Start Menu & Application Grid (`amane`) |
 | `Mod + Space` / `Mod + S` | Application Launcher / Windows Search (`amane`) |
-| `Mod + A` / `Mod + Shift + Space` | Control Center & Quick Settings (`amane`) |
+| `Mod + A` / `Mod + I` | Control Center & Quick Settings (`amane`) |
 | `Mod + N` | Notification Center & Calendar View (`amane`) |
-| `Mod + W` / `Mod + I` | Widgets & Quick Settings (`amane`) |
-| `Mod + Tab` / `Alt + Tab` / `Mod + D` | Task View (Spatial Ribbon Overview) |
+| `Mod + D` / `Ctrl + Mod + D` | Show Clean Desktop / Scratch (`05 SCRATCH`) |
+| `Mod + Tab` / `Alt + Tab` | Task View & Window Switcher (`toggle-overview`) |
 | `Mod + E` | File Explorer (`ghostty -e yazi`) |
 | `Ctrl + Shift + Escape` | Task Manager (`ghostty -e btop`) |
 | `Ctrl + Alt + Delete` / `Mod + Shift + E`| System Security & Powermenu (`amane`) |
@@ -175,8 +175,7 @@ Stages dotfiles into `~/.config/`, links helper scripts, sets up permissions, an
 | `Mod + L` / `Mod + Escape` | Lock screen (`scripts/lock.sh`) |
 | `Mod + Return` / `Ctrl + Alt + T` | Terminal Selector (`scripts/terminal-select.sh`) |
 | `Mod + Ctrl + Return` | Centered 960x600 Floating Scratchpad (`ghostty`) |
-| `Ctrl + Mod + Left` / `Right` | Move up / down virtual workspace |
-| `Ctrl + Mod + D` | Focus clean desktop workspace (`05 SCRATCH`) |
+| `Ctrl + Mod + Up` / `Down` | Switch virtual workspace up / down |
 | `Mod + Shift + P` | Zero-Disruption Presentation Shield (`amane`) |
 | `Mod + Shift + D` | Display Configurator overlay (`amane`) |
 | `Mod + Shift + C` | Interactive Monthly Calendar (`amane`) |
@@ -217,7 +216,7 @@ dotfield/
 ├── shell/                  # Shell configurations (Zsh, Starship)
 │   ├── zsh/
 │   └── starship/
-├── terminals/              # Terminal templates (Foot, Kitty, Alacritty, Ghostty, WezTerm)
+├── terminals/              # Terminal templates (Foot, Ghostty, Kitty)
 ├── multiplexer/            # Multiplexer configs (Zellij, Tmux)
 ├── nvim/                   # Neovim configuration (NvChad + core keymaps)
 ├── ly/                     # Ly TUI display manager configuration

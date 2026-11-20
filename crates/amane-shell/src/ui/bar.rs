@@ -360,7 +360,7 @@ fn render_right_cluster(
         let elapsed_str = presentation
             .elapsed_formatted()
             .unwrap_or_else(|| "00:00".to_string());
-        let pres_label = format!("󰐩 [PRESENTING] {elapsed_str}");
+        let pres_label = format!("󰐩 Presenting {elapsed_str}");
         let pill_w = 144.0;
 
         let pres_pill = Rectangle::new()
@@ -398,7 +398,7 @@ fn render_right_cluster(
     if is_recording {
         let mins = rec_elapsed / 60;
         let secs = rec_elapsed % 60;
-        let rec_text = format!("󰑋 REC {mins:02}:{secs:02}");
+        let rec_text = format!("󰑋 Rec {mins:02}:{secs:02}");
         let rec_pill = Rectangle::new()
             .width(108.0)
             .height(34.0)

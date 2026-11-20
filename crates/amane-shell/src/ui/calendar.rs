@@ -398,16 +398,19 @@ pub fn calendar_overlay() -> LayerWindow {
             .gap(spacing::GAP_MD),
         );
 
+    let (dock_height, _, _) = crate::ui::bar::bar_layer_properties(&manifest);
+    let bottom_margin = (dock_height + 10.0) as i32;
+
     LayerWindow::new()
         .width(320.0)
         .height(350.0)
         .target_output(OutputTarget::Active)
-        .anchor_vertical(Vertical::Top)
+        .anchor_vertical(Vertical::Bottom)
         .anchor_horizontal(Horizontal::Right)
         .margin(Margin {
-            top: 38,
+            top: 0,
             right: 12,
-            bottom: 0,
+            bottom: bottom_margin,
             left: 0,
         })
         .layer(Layer::Overlay)

@@ -200,7 +200,7 @@ pub fn screen_record_overlay() -> LayerWindow {
                         &tokens,
                     )),
                     Box::new(
-                        Text::new("STREAM RECORDING ACTIVE")
+                        Text::new("Recording in Progress")
                             .size(typography::BODY)
                             .color(tokens.text_primary)
                             .font(&font),
@@ -222,7 +222,7 @@ pub fn screen_record_overlay() -> LayerWindow {
 
         let telemetry_line = Row::new(vec![
             Box::new(
-                Text::new("TARGET: 1920x1080 @ 144Hz")
+                Text::new("1920x1080 @ 144Hz")
                     .size(typography::CAPTION)
                     .color(tokens.text_secondary)
                     .font(&font),
@@ -234,7 +234,7 @@ pub fn screen_record_overlay() -> LayerWindow {
                     .font(&font),
             ),
             Box::new(
-                Text::new("CODEC: H.264 VAAPI")
+                Text::new("H.264 VAAPI")
                     .size(typography::CAPTION)
                     .color(tokens.text_secondary)
                     .font(&font),
@@ -246,7 +246,7 @@ pub fn screen_record_overlay() -> LayerWindow {
                     .font(&font),
             ),
             Box::new(
-                Text::new("OUTPUT: ~/Videos/Recordings/")
+                Text::new("~/Videos/Recordings/")
                     .size(typography::CAPTION)
                     .color(tokens.text_muted)
                     .font(&font),
@@ -270,12 +270,12 @@ pub fn screen_record_overlay() -> LayerWindow {
                 Row::new(vec![
                     Box::new(Text::new("󰙦").size(16.0).color(Color::WHITE).font(&font)),
                     Box::new(
-                        Text::new("[ TERMINATE & COMMIT STREAM ]")
+                        Text::new("Stop Recording")
                             .size(typography::BODY)
                             .color(Color::WHITE)
                             .font(&font),
                     ),
-                    Box::new(components::keycap("SPACE", &tokens)),
+                    Box::new(components::keycap("Space", &tokens)),
                 ])
                 .gap(spacing::GAP_SM)
                 .align(Align::Center),
@@ -290,13 +290,8 @@ pub fn screen_record_overlay() -> LayerWindow {
         .gap(spacing::GAP_MD)
     } else {
         // Idle view: Select Region vs Fullscreen with audio toggle
-        let header = components::modal_header(
-            "⏺",
-            "RECORDER // TELEMETRY HUD",
-            Some("WF-RECORDER"),
-            &tokens,
-            close,
-        );
+        let header =
+            components::modal_header("⏺", "Screen Recorder", Some("wf-recorder"), &tokens, close);
 
         // Action Cards: Region vs Fullscreen
         let region_card = Rectangle::new()
@@ -316,7 +311,7 @@ pub fn screen_record_overlay() -> LayerWindow {
                         Row::new(vec![
                             Box::new(Text::new("⛶").size(20.0).color(tokens.accent).font(&font)),
                             Box::new(
-                                Text::new("REGION")
+                                Text::new("Region")
                                     .size(typography::BODY)
                                     .color(tokens.text_primary)
                                     .font(&font),
@@ -354,7 +349,7 @@ pub fn screen_record_overlay() -> LayerWindow {
                         Row::new(vec![
                             Box::new(Text::new("󰍹").size(20.0).color(tokens.accent).font(&font)),
                             Box::new(
-                                Text::new("FULLSCREEN")
+                                Text::new("Fullscreen")
                                     .size(typography::BODY)
                                     .color(tokens.text_primary)
                                     .font(&font),
@@ -406,9 +401,9 @@ pub fn screen_record_overlay() -> LayerWindow {
                 Row::new(vec![
                     Box::new(
                         Text::new(if rec.with_audio {
-                            "󰍬 MIC AUDIO: ON"
+                            "󰍬 Mic Audio: On"
                         } else {
-                            "󰍭 MIC AUDIO: OFF"
+                            "󰍭 Mic Audio: Off"
                         })
                         .size(typography::SECONDARY)
                         .color(audio_fg)
@@ -422,7 +417,7 @@ pub fn screen_record_overlay() -> LayerWindow {
 
         let telemetry_info = Row::new(vec![
             Box::new(
-                Text::new("TARGET: 1080p @ 144Hz")
+                Text::new("1080p @ 144Hz")
                     .size(typography::CAPTION)
                     .color(tokens.text_secondary)
                     .font(&font),

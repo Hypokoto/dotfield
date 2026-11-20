@@ -23,7 +23,7 @@ pub static ACTIONS: &[PowerAction] = &[
     PowerAction {
         id: "lock",
         icon: "󰌾",
-        title: "LOCK",
+        title: "Lock",
         op_code: "SYS:01",
         key_hint: "L",
         command: "command -v gtklock >/dev/null 2>&1 && gtklock || swaylock || true",
@@ -32,7 +32,7 @@ pub static ACTIONS: &[PowerAction] = &[
     PowerAction {
         id: "suspend",
         icon: "󰒲",
-        title: "SUSPEND",
+        title: "Suspend",
         op_code: "SYS:02",
         key_hint: "S",
         command: "systemctl suspend",
@@ -41,7 +41,7 @@ pub static ACTIONS: &[PowerAction] = &[
     PowerAction {
         id: "reboot",
         icon: "󰑐",
-        title: "REBOOT",
+        title: "Reboot",
         op_code: "SYS:03",
         key_hint: "R",
         command: "systemctl reboot",
@@ -50,7 +50,7 @@ pub static ACTIONS: &[PowerAction] = &[
     PowerAction {
         id: "poweroff",
         icon: "󰐥",
-        title: "HALT",
+        title: "Shutdown",
         op_code: "SYS:04",
         key_hint: "P",
         command: "systemctl poweroff",
@@ -59,7 +59,7 @@ pub static ACTIONS: &[PowerAction] = &[
     PowerAction {
         id: "exit",
         icon: "󰈆",
-        title: "EXIT",
+        title: "Exit",
         op_code: "SYS:05",
         key_hint: "E",
         command: "niri msg action quit",
@@ -192,7 +192,7 @@ pub fn powermenu_overlay() -> LayerWindow {
 
     let header_card = crate::ui::components::modal_header(
         "󰐥",
-        "BLACKSITE // SESSION & POWER",
+        "Session & Power",
         Some(&format!("{user_name}@{host_name}")),
         &tokens,
         close,
@@ -204,14 +204,13 @@ pub fn powermenu_overlay() -> LayerWindow {
     for (idx, action) in ACTIONS.iter().enumerate() {
         let is_selected = idx == menu.selected;
 
-        let (card_fill, card_border, icon_color, title_color, op_color) = if is_selected {
+        let (card_fill, card_border, icon_color, title_color) = if is_selected {
             if action.is_critical {
                 (
                     tokens.danger_subtle,
                     tokens.border_danger,
                     tokens.danger,
                     tokens.text_primary,
-                    tokens.danger,
                 )
             } else {
                 (
@@ -219,7 +218,6 @@ pub fn powermenu_overlay() -> LayerWindow {
                     tokens.border_focus,
                     tokens.accent,
                     tokens.text_primary,
-                    tokens.accent,
                 )
             }
         } else if action.is_critical {
@@ -228,7 +226,6 @@ pub fn powermenu_overlay() -> LayerWindow {
                 tokens.border_subtle,
                 tokens.danger,
                 tokens.text_secondary,
-                tokens.danger,
             )
         } else {
             (
@@ -236,7 +233,6 @@ pub fn powermenu_overlay() -> LayerWindow {
                 tokens.border_subtle,
                 tokens.text_secondary,
                 tokens.text_secondary,
-                tokens.text_muted,
             )
         };
 
@@ -268,14 +264,8 @@ pub fn powermenu_overlay() -> LayerWindow {
             .child(
                 Column::new(vec![
                     Box::new(
-                        Text::new(format!("[{}]", action.op_code))
-                            .size(crate::ui::tokens::typography::CAPTION)
-                            .color(op_color)
-                            .font(&tokens.font_family),
-                    ),
-                    Box::new(
                         Text::new(action.icon)
-                            .size(26.0)
+                            .size(28.0)
                             .color(icon_color)
                             .font(&tokens.font_family),
                     ),
@@ -287,7 +277,7 @@ pub fn powermenu_overlay() -> LayerWindow {
                     ),
                     Box::new(key_chip),
                 ])
-                .gap(3.0)
+                .gap(6.0)
                 .align(Align::Center),
             );
 
@@ -303,7 +293,7 @@ pub fn powermenu_overlay() -> LayerWindow {
     let footer_row = Row::new(vec![
         Box::new(crate::ui::components::keycap("←/→", &tokens)),
         Box::new(
-            Text::new("NAVIGATE")
+            Text::new("Navigate")
                 .size(crate::ui::tokens::typography::BADGE)
                 .color(tokens.text_secondary)
                 .font(&tokens.font_family),
@@ -314,9 +304,9 @@ pub fn powermenu_overlay() -> LayerWindow {
                 .color(tokens.text_muted)
                 .font(&tokens.font_family),
         ),
-        Box::new(crate::ui::components::keycap("ENTER", &tokens)),
+        Box::new(crate::ui::components::keycap("Enter", &tokens)),
         Box::new(
-            Text::new("EXECUTE")
+            Text::new("Execute")
                 .size(crate::ui::tokens::typography::BADGE)
                 .color(tokens.text_secondary)
                 .font(&tokens.font_family),
@@ -327,9 +317,9 @@ pub fn powermenu_overlay() -> LayerWindow {
                 .color(tokens.text_muted)
                 .font(&tokens.font_family),
         ),
-        Box::new(crate::ui::components::keycap("ESC", &tokens)),
+        Box::new(crate::ui::components::keycap("Esc", &tokens)),
         Box::new(
-            Text::new("CANCEL")
+            Text::new("Cancel")
                 .size(crate::ui::tokens::typography::BADGE)
                 .color(tokens.text_secondary)
                 .font(&tokens.font_family),

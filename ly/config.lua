@@ -3,10 +3,10 @@
 -- Target installation: /etc/ly/config.lua
 
 return {
-    -- Terminal & Colors (Dotfield Fluent: Void #121216, Fluent Blue #60CDFF, Crimson #E63946, Bone #F0F0F5)
+    -- Terminal & Colors (Dotfield Controlled Chaos: Void #121216, Industrial Amber #FFB000, Crimson #E63946, Bone #F0F0F5)
     bg = 0x121216,
     fg = 0xF0F0F5,
-    border_fg = 0x60CDFF,
+    border_fg = 0xFFB000,
     border_bg = 0x121216,
     text_fg = 0xF0F0F5,
     error_fg = 0xE63946,

@@ -166,12 +166,12 @@ impl ThemeTokens {
         let accent = if !p.highlight.is_empty() {
             Color::from(p.highlight.as_str())
         } else {
-            Color::from(palette::ACCENT_BLUE)
+            Color::from(palette::INDUSTRIAL_AMBER)
         };
         let accent_hover = if !p.hover.is_empty() {
             Color::from(p.hover.as_str())
         } else {
-            Color::from("#72D6FF")
+            Color::from(palette::PALE_AMBER)
         };
         let danger = if !p.accent.is_empty() {
             Color::from(p.accent.as_str())

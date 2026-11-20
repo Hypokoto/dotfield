@@ -17,7 +17,6 @@ designs/
 review/
 reviews/
 docs/designs/
-docs/reviews/
 gtk/gtk-3.0/bookmarks
 gtk/gtk-4.0/bookmarks
 nvim/lazy-lock.json
@@ -25,6 +24,7 @@ nvim/lazy-lock.json
 *.bak
 *.tmp
 *.review.*/
+*.review/
 
 # Editor and IDE configurations
 .idea/

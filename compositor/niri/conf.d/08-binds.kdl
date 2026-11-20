@@ -4,7 +4,7 @@
 binds {
     // Core Windows 11 Workflow Keybindings
     Super_L { spawn "amane-msg" "start-menu"; }
-    Mod+D { toggle-overview; }                  // Win+D: Show Desktop / Overview
+    Mod+D { toggle-overview; }                  // Win+D: Task View / Overview
     Mod+S { spawn "amane-msg" "launcher"; }     // Win+S: Windows Search
     Mod+Space { spawn "amane-msg" "launcher"; }
     Mod+E { spawn "ghostty" "-e" "yazi"; }      // Win+E: File Explorer

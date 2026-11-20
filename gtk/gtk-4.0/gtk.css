@@ -1,10 +1,10 @@
-/* Dotfield Modern Fluent & Controlled Chaos Theme — GTK 4.0 / Libadwaita CSS
+/* Dotfield Controlled Chaos Theme — GTK 4.0 / Libadwaita CSS
  * Void Black (#0A0A0C) · Dark Mica (#16161C) · Graphite (#1C1C23)
- * Fluent Accent (#60CDFF) · Industrial Amber (#FFB000) · Crimson (#E63946) · Iron (#34343D)
+ * Industrial Amber (#FFB000) · Crimson (#E63946) · Iron (#34343D)
  */
 
-@define-color accent_color #60CDFF;
-@define-color accent_bg_color #60CDFF;
+@define-color accent_color #FFB000;
+@define-color accent_bg_color #FFB000;
 @define-color accent_fg_color #000000;
 
 @define-color secondary_accent #FFB000;
@@ -49,7 +49,7 @@
 @define-color scrollbar_outline_color rgba(0, 0, 0, 0.5);
 
 /* Selection & Focus */
-@define-color theme_selected_bg_color #60CDFF;
+@define-color theme_selected_bg_color #FFB000;
 @define-color theme_selected_fg_color #000000;
 
 /* Window & general widget styling */

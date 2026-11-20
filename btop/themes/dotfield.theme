@@ -1,5 +1,5 @@
 # Dotfield Controlled Chaos Theme for btop
-# Void Black (#0A0A0C) · Graphite (#1C1C23) · Fluent Blue (#60CDFF) · Industrial Amber (#FFB000) · Crimson (#E63946)
+# Void Black (#0A0A0C) · Graphite (#1C1C23) · Industrial Amber (#FFB000) · Pale Amber (#FFD166) · Crimson (#E63946)
 
 # Main background, empty for terminal default
 theme[main_bg]="#0A0A0C"
@@ -8,16 +8,16 @@ theme[main_bg]="#0A0A0C"
 theme[main_fg]="#E8E6E3"
 
 # Title color for boxes
-theme[title]="#60CDFF"
+theme[title]="#FFB000"
 
 # Highlight color for keyboard shortcuts
-theme[hi_fg]="#FFB000"
+theme[hi_fg]="#FFD166"
 
 # Background color of selected item in processes box
 theme[selected_bg]="#1C1C23"
 
 # Foreground color of selected item in processes box
-theme[selected_fg]="#60CDFF"
+theme[selected_fg]="#FFB000"
 
 # Color of inactive/disabled text
 theme[inactive_fg]="#53535D"
@@ -29,7 +29,7 @@ theme[graph_text]="#E8E6E3"
 theme[meter_bg]="#1C1C23"
 
 # Misc colors for processes box including mini cpu graphs, details memory graph and process list divider
-theme[proc_misc]="#60CDFF"
+theme[proc_misc]="#8B949E"
 
 # Box outline colors
 theme[cpu_box]="#34343D"
@@ -40,13 +40,13 @@ theme[proc_box]="#34343D"
 # Box divider line and small symbols
 theme[div_line]="#34343D"
 
-# Temperature graph colors (Blue -> Amber -> Crimson)
-theme[temp_start]="#60CDFF"
+# Temperature graph colors (Amber -> Crimson)
+theme[temp_start]="#FFD166"
 theme[temp_mid]="#FFB000"
 theme[temp_end]="#E63946"
 
 # CPU graph colors
-theme[cpu_start]="#60CDFF"
+theme[cpu_start]="#FFD166"
 theme[cpu_mid]="#FFB000"
 theme[cpu_end]="#E63946"
 
@@ -56,31 +56,31 @@ theme[free_mid]="#FFB000"
 theme[free_end]="#E63946"
 
 # Mem/Disk cached meter
-theme[cached_start]="#82AAFF"
+theme[cached_start]="#8B949E"
 theme[cached_mid]="#FFB000"
 theme[cached_end]="#E63946"
 
 # Mem/Disk available meter
-theme[available_start]="#60CDFF"
+theme[available_start]="#FFD166"
 theme[available_mid]="#FFB000"
 theme[available_end]="#E63946"
 
 # Mem/Disk used meter
-theme[used_start]="#60CDFF"
+theme[used_start]="#FFD166"
 theme[used_mid]="#FFB000"
 theme[used_end]="#E63946"
 
 # Download graph colors
-theme[download_start]="#82AAFF"
-theme[download_mid]="#60CDFF"
+theme[download_start]="#8B949E"
+theme[download_mid]="#FFB000"
 theme[download_end]="#7BC47F"
 
 # Upload graph colors
-theme[upload_start]="#C792EA"
+theme[upload_start]="#FFD166"
 theme[upload_mid]="#FFB000"
 theme[upload_end]="#E63946"
 
 # Process box color gradient for threads, mem and cpu usage
-theme[process_start]="#60CDFF"
+theme[process_start]="#FFD166"
 theme[process_mid]="#FFB000"
 theme[process_end]="#E63946"

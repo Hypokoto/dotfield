@@ -70,7 +70,7 @@ Keep the compositor visually quiet. Use amber to identify focus and crimson to i
 
 ### Terminals
 
-Applies to Foot, Kitty, Ghostty, Alacritty, and WezTerm.
+Applies to Foot, Ghostty, and Kitty.
 
 | Element | Color |
 |---|---|
@@ -106,23 +106,21 @@ Use amber for selection and crimson for matched search terms. Keep the rest of t
 
 Notifications should remain compact. Reserve crimson for urgent notifications rather than using it for every message.
 
-### Rust + Slint Profile Switcher
+### Amane Desktop Shell (Niri Dock, Start Menu, Control Center, Overview)
 
 | Element | Color |
 |---|---|
-| Main background | `#0A0A0C` |
-| Cards | `#121216` |
-| Elevated cards | `#1C1C23` |
-| Borders | `#34343D` |
-| Primary text | `#E8E6E3` |
-| Secondary text | `#A1A1AA` |
-| Active profile border | `#FFB000` |
-| Primary action button | `#FFB000` |
-| Primary button text | `#0A0A0C` |
-| Error message | `#E63946` |
-| Disabled controls | `#8B949E` |
+| Background / Panels | `#0A0A0C` / `#121216` |
+| Cards / Elevated surfaces | `#1C1C23` |
+| Borders & Dividers | `#34343D` |
+| Primary text / Headings | `#E8E6E3` |
+| Secondary / Muted labels | `#A1A1AA` |
+| Primary Accent & Active Pips | `#FFB000` (Industrial Amber) |
+| Accent Hover & Active Highlights | `#FFD166` (Pale Amber) |
+| Critical / Alarms / Mute | `#E63946` (Crimson) |
+| Neutral Controls & Muted Dots | `#8B949E` (Steel) |
 
-Avoid decorative animations, glowing borders, and unnecessary transitions. Prioritize responsive controls, readable information, and explicit feedback.
+Avoid decorative bloat, glowing borders, and unnecessary transitions. Prioritize responsive controls, readable information, and explicit feedback.
 
 ---
 

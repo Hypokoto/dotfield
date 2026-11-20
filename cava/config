@@ -40,8 +40,8 @@ foreground = '#E8E6E3'
 
 # Vertical gradient from baseline to peak
 gradient = 1
-gradient_color_1 = '#8B949E'
-gradient_color_2 = '#60CDFF'
+gradient_color_1 = '#34343D'
+gradient_color_2 = '#8B949E'
 gradient_color_3 = '#7BC47F'
 gradient_color_4 = '#FFD166'
 gradient_color_5 = '#FFB000'

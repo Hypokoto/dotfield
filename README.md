@@ -74,7 +74,7 @@ Dotfield natively supports two distinct Wayland compositor workflows:
 ## Integrated Desktop Stack
 
 - **Fastfetch ([fastfetch](fastfetch))**: Aesthetic fetch layout themed with the Controlled Chaos palette and custom braille emblem art.
-- **Terminals**: Templates for [Foot](terminals/foot), [Kitty](terminals/kitty), [Alacritty](terminals/alacritty), [Ghostty](terminals/ghostty), and [WezTerm](terminals/wezterm).
+- **Terminals**: Templates for [Ghostty](terminals/ghostty), [Foot](terminals/foot), and [Kitty](terminals/kitty).
 - **Multiplexers**:
   - **[Zellij](multiplexer/zellij)**: Zero-collision modal configuration (`clear-defaults=true`), `Ctrl-a` leader prefix, and instant `Alt` navigation (`Alt-h/j/k/l`, `Alt-n`, `Alt-t`, `Alt-w`, `Alt-z`, `Alt-1..9`).
   - **[Tmux](multiplexer/tmux)**: Harmonized with Zellij keybindings, Vi copy mode with rectangle selection, floating modal popups (`display-popup`), and dynamic prefix indicator.
@@ -159,21 +159,30 @@ Stages dotfiles into `~/.config/`, links helper scripts, sets up permissions, an
 | `Mod + Escape` | Lock screen (`swaylock`) |
 | `Print` / `Shift + Print` | Screenshot (Full / Area) |
 
-### Niri Keybindings
+### Niri Keybindings (Windows 11 Fluent Shell & Blacksite Ergonomics)
 | Keybinding | Action |
 | :--- | :--- |
-| `Mod + Return` | Launch default terminal (`foot`) |
-| `Mod + Shift + Return` | Terminal Manager Grid overlay (`amane`) |
-| `Mod + Space` | Application Launcher Grid overlay (`amane`) |
-| `Mod + Shift + Space` | Control Center & Quick Settings overlay (`amane`) |
-| `Mod + Shift + C` | Monthly Calendar overlay (`amane`) |
-| `Mod + Shift + R` | Wayland Screen Recorder overlay (`amane`) |
+| `Super_L` | Centered Start Menu & Application Grid (`amane`) |
+| `Mod + Space` / `Mod + S` | Application Launcher / Windows Search (`amane`) |
+| `Mod + A` / `Mod + Shift + Space` | Control Center & Quick Settings (`amane`) |
+| `Mod + N` | Notification Center & Calendar View (`amane`) |
+| `Mod + W` / `Mod + I` | Widgets & Quick Settings (`amane`) |
+| `Mod + Tab` / `Alt + Tab` / `Mod + D` | Task View (Spatial Ribbon Overview) |
+| `Mod + E` | File Explorer (`ghostty -e yazi`) |
+| `Ctrl + Shift + Escape` | Task Manager (`ghostty -e btop`) |
+| `Ctrl + Alt + Delete` / `Mod + Shift + E`| System Security & Powermenu (`amane`) |
+| `Alt + F4` / `Mod + Q` | Close active window |
+| `Mod + L` / `Mod + Escape` | Lock screen (`scripts/lock.sh`) |
+| `Mod + Return` / `Ctrl + Alt + T` | Terminal Selector (`scripts/terminal-select.sh`) |
+| `Mod + Ctrl + Return` | Centered 960x600 Floating Scratchpad (`ghostty`) |
+| `Ctrl + Mod + Left` / `Right` | Move up / down virtual workspace |
+| `Ctrl + Mod + D` | Focus clean desktop workspace (`05 SCRATCH`) |
+| `Mod + Shift + P` | Zero-Disruption Presentation Shield (`amane`) |
 | `Mod + Shift + D` | Display Configurator overlay (`amane`) |
-| `Mod + Shift + E` | Powermenu overlay (`amane`) |
-| `Mod + Shift + N/A/B/T`| Network / Audio / Bluetooth / Tray overlays (`amane`) |
-| `Mod + Q` | Close focused window |
-| `Mod + Escape` | Lock screen |
-| `Print` / `Shift + Print` | Screenshot (Full / Area) |
+| `Mod + Shift + C` | Interactive Monthly Calendar (`amane`) |
+| `Mod + Shift + R` | Wayland Screen Recorder (`amane`) |
+| `Mod + Shift + N/A/B/T` | Network / Audio / Bluetooth / Tray quick views |
+| `Print` / `Shift + Print` / `Mod + Shift + S` | Screenshot (Full / Interactive Area) |
 
 ### Multiplexer Keybindings (Harmonized across Zellij & Tmux)
 | Keybinding | Action |

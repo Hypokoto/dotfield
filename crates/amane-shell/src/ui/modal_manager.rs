@@ -11,6 +11,10 @@ pub enum ModalType {
     TerminalManager,
     Powermenu,
     ScreenRecord,
+    Widgets,
+    StartMenu,
+    ActionCenter,
+    Overview,
 }
 
 pub struct ModalManager;
@@ -39,6 +43,18 @@ impl ModalManager {
         if target != ModalType::ScreenRecord {
             crate::ui::screen_record::close();
         }
+        if target != ModalType::Widgets {
+            crate::ui::widgets_board::close();
+        }
+        if target != ModalType::StartMenu {
+            crate::ui::start_menu::close();
+        }
+        if target != ModalType::ActionCenter {
+            crate::ui::action_center::close();
+        }
+        if target != ModalType::Overview {
+            crate::ui::overview::close();
+        }
 
         #[cfg(target_os = "linux")]
         unsafe {
@@ -55,6 +71,10 @@ impl ModalManager {
         crate::ui::terminal_manager::close();
         crate::ui::powermenu::close();
         crate::ui::screen_record::close();
+        crate::ui::widgets_board::close();
+        crate::ui::start_menu::close();
+        crate::ui::action_center::close();
+        crate::ui::overview::close();
 
         #[cfg(target_os = "linux")]
         unsafe {

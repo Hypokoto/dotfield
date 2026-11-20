@@ -25,7 +25,11 @@ const CANONICAL_WORKSPACES: [&str; 5] = [
 const WS_LABELS: [&str; 10] = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"];
 
 pub fn bar_layer_properties(manifest: &ShellManifest) -> (f32, Zone, bool) {
-    let height = manifest.bar.height as f32;
+    let height = if manifest.bar.position == "bottom" && manifest.bar.height == 34.0 {
+        48.0
+    } else {
+        manifest.bar.height as f32
+    };
     (height, Zone::Reserve, true)
 }
 
@@ -35,12 +39,21 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
     let tokens = ThemeTokens::from_manifest(&manifest);
 
     let (height, bar_zone, is_visible) = bar_layer_properties(&manifest);
+    let is_bottom = manifest.bar.position == "bottom";
 
-    // Left section: BLACKSITE Brand & Arch Indicator & Active Window Title
+    // Left section: BLACKSITE Brand or Workspace Radar
     let mut left_items: Vec<Box<dyn Widget>> = Vec::new();
-    left_items.push(Box::new(render_brand(&manifest, &tokens)));
-    if bar_cfg.show_title {
-        left_items.push(Box::new(render_title(&manifest, &tokens)));
+    if is_bottom {
+        let (ws_widget, _) = render_workspaces(&manifest, &tokens, monitor_name);
+        left_items.push(Box::new(ws_widget));
+        if bar_cfg.show_title {
+            left_items.push(Box::new(render_title(&manifest, &tokens)));
+        }
+    } else {
+        left_items.push(Box::new(render_brand(&manifest, &tokens)));
+        if bar_cfg.show_title {
+            left_items.push(Box::new(render_title(&manifest, &tokens)));
+        }
     }
     let left_container = Rectangle::new()
         .width(Parent)
@@ -52,17 +65,20 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
                 .align(Align::Center),
         );
 
-    // Center section: 5 Workspaces
-    let (center_widget, ws_width) = if bar_cfg.show_workspaces {
-        render_workspaces(&manifest, &tokens, monitor_name)
+    // Center section: Dock (if bottom) or 5 Workspaces (if top)
+    let (center_widget, center_width): (Box<dyn Widget>, f32) = if is_bottom {
+        crate::ui::dock::render_dock(&manifest, &tokens)
+    } else if bar_cfg.show_workspaces {
+        let (ws_widget, ws_width) = render_workspaces(&manifest, &tokens, monitor_name);
+        (Box::new(ws_widget), ws_width)
     } else {
-        (Row::new(Vec::new()), 0.0)
+        (Box::new(Row::new(Vec::new())), 0.0)
     };
     let center_container = Rectangle::new()
-        .width(ws_width)
+        .width(center_width)
         .height(Parent)
         .align_child(Center, Center)
-        .child(center_widget);
+        .child(Row::new(vec![center_widget]));
 
     // Right section: System Telemetry
     let right_widget = if bar_cfg.show_telemetry {
@@ -88,7 +104,12 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
     let background_container = Rectangle::new()
         .width(Parent)
         .height(Parent)
-        .fill(Color::TRANSPARENT)
+        .fill(if is_bottom {
+            tokens.surface
+        } else {
+            Color::TRANSPARENT
+        })
+        .border(if is_bottom { 1.0 } else { 0.0 }, tokens.border_subtle)
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,
@@ -97,10 +118,16 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
         })
         .child(content_row);
 
+    let anchor_vert = if is_bottom {
+        Vertical::Bottom
+    } else {
+        Vertical::Top
+    };
+
     LayerWindow::new()
         .width(Full)
         .height(height)
-        .anchor_vertical(Vertical::Top)
+        .anchor_vertical(anchor_vert)
         .layer(Layer::Top)
         .space(bar_zone)
         .visible(is_visible)
@@ -742,6 +769,7 @@ fn render_telemetry(
     // Clock (clickable: toggles interactive monthly Calendar)
     let clock_service = crate::services::clock::ClockService::read();
     let now = clock_service.formatted();
+    let is_bottom_pos = manifest.bar.position == "bottom";
     let clock_pill = Rectangle::new()
         .width(132.0)
         .height(26.0)
@@ -757,7 +785,11 @@ fn render_telemetry(
         })
         .align_child(Center, Center)
         .on_click(move |_| {
-            crate::ui::calendar::toggle();
+            if is_bottom_pos {
+                crate::ui::action_center::toggle();
+            } else {
+                crate::ui::calendar::toggle();
+            }
         })
         .child(
             Text::new(now)
@@ -766,6 +798,27 @@ fn render_telemetry(
                 .font(font),
         );
     pills.push(Box::new(clock_pill));
+
+    if manifest.bar.position == "bottom" {
+        let action_center_btn = Rectangle::new()
+            .width(32.0)
+            .height(26.0)
+            .radius(radius::SM)
+            .fill(tokens.surface)
+            .border(1.0, tokens.border_subtle)
+            .cursor(Pointer)
+            .align_child(Center, Center)
+            .on_click(|_| {
+                crate::ui::action_center::toggle();
+            })
+            .child(
+                Text::new("󱂬")
+                    .size(13.0)
+                    .color(tokens.text_secondary)
+                    .font(font),
+            );
+        pills.push(Box::new(action_center_btn));
+    }
 
     // Powermenu icon button (Crimson #E63946)
     let power_pill = Rectangle::new()

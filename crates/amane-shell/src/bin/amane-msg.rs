@@ -27,6 +27,10 @@ Fast-Path Opcodes (0-alloc byte frames, <0.2ms):
   topology              Toggle project topology & worktree switcher (alias)
   presentation          Toggle zero-disruption presentation mode shield
   sidecar               Spawn or focus companion sidecar for active window
+  widgets               Toggle left slide-in widgets board
+  start-menu            Toggle centered Start Menu & application grid
+  action-center         Toggle right slide-in action center & calendar hub
+  overview              Toggle spatial ribbon workspace overview
   display-config        Toggle interactive display configurator
   control-center        Toggle control center
   network               Toggle network settings

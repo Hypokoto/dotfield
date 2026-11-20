@@ -1,4 +1,5 @@
 pub mod battery;
+pub mod cava;
 pub mod clock;
 pub mod niri;
 pub mod presentation;

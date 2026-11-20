@@ -10,6 +10,10 @@ binds {
     Mod+Ctrl+Return { spawn "ghostty" "--class=floating-term"; }
     Mod+Space { spawn "amane-msg" "launcher"; }
     Mod+Shift+Space { spawn "amane-msg" "control-center"; }
+    Mod+D { spawn "amane-msg" "start-menu"; }
+    Mod+W { spawn "amane-msg" "widgets"; }
+    Mod+N { spawn "amane-msg" "action-center"; }
+    Mod+Tab { spawn "amane-msg" "overview"; }
     Mod+Q { close-window; }
     Mod+Shift+E { spawn "amane-msg" "powermenu"; }
 

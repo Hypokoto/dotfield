@@ -85,11 +85,15 @@ pub const OP_SCREEN_REC: u8 = 0x0B;
 pub const OP_RELOAD: u8 = 0x0C;
 pub const OP_SIDECAR: u8 = 0x0D;
 pub const OP_PRESENTATION: u8 = 0x0E;
+pub const OP_WIDGETS: u8 = 0x0F;
 pub const OP_OSD_VOL_UP: u8 = 0x10;
 pub const OP_OSD_VOL_DOWN: u8 = 0x11;
 pub const OP_OSD_VOL_MUTE: u8 = 0x12;
 pub const OP_OSD_BRIGHT_UP: u8 = 0x13;
 pub const OP_OSD_BRIGHT_DN: u8 = 0x14;
+pub const OP_START_MENU: u8 = 0x15;
+pub const OP_ACTION_CENTER: u8 = 0x16;
+pub const OP_OVERVIEW: u8 = 0x17;
 
 pub fn opcode_to_name(opcode: u8) -> Option<(&'static str, &'static [&'static str])> {
     match opcode {
@@ -107,11 +111,15 @@ pub fn opcode_to_name(opcode: u8) -> Option<(&'static str, &'static [&'static st
         OP_RELOAD => Some(("reload", &[])),
         OP_SIDECAR => Some(("sidecar", &[])),
         OP_PRESENTATION => Some(("presentation", &[])),
+        OP_WIDGETS => Some(("widgets", &[])),
         OP_OSD_VOL_UP => Some(("osd", &["volume-up"])),
         OP_OSD_VOL_DOWN => Some(("osd", &["volume-down"])),
         OP_OSD_VOL_MUTE => Some(("osd", &["volume-mute"])),
         OP_OSD_BRIGHT_UP => Some(("osd", &["brightness-up"])),
         OP_OSD_BRIGHT_DN => Some(("osd", &["brightness-down"])),
+        OP_START_MENU => Some(("start-menu", &[])),
+        OP_ACTION_CENTER => Some(("action-center", &[])),
+        OP_OVERVIEW => Some(("overview", &[])),
         _ => None,
     }
 }
@@ -132,11 +140,15 @@ pub fn name_to_opcode(name: &str) -> Option<u8> {
         "reload" => Some(OP_RELOAD),
         "sidecar" => Some(OP_SIDECAR),
         "presentation" => Some(OP_PRESENTATION),
+        "widgets" => Some(OP_WIDGETS),
         "volume-up" => Some(OP_OSD_VOL_UP),
         "volume-down" => Some(OP_OSD_VOL_DOWN),
         "volume-mute" => Some(OP_OSD_VOL_MUTE),
         "brightness-up" => Some(OP_OSD_BRIGHT_UP),
         "brightness-down" => Some(OP_OSD_BRIGHT_DN),
+        "start-menu" | "start" => Some(OP_START_MENU),
+        "action-center" => Some(OP_ACTION_CENTER),
+        "overview" => Some(OP_OVERVIEW),
         _ => None,
     }
 }
@@ -162,6 +174,11 @@ mod tests {
         assert_eq!(name_to_opcode("sidecar"), Some(OP_SIDECAR));
         assert_eq!(name_to_opcode("presentation"), Some(OP_PRESENTATION));
         assert_eq!(name_to_opcode("display-config"), Some(OP_DISPLAY_CFG));
+        assert_eq!(name_to_opcode("widgets"), Some(OP_WIDGETS));
+        assert_eq!(name_to_opcode("start-menu"), Some(OP_START_MENU));
+        assert_eq!(name_to_opcode("start"), Some(OP_START_MENU));
+        assert_eq!(name_to_opcode("action-center"), Some(OP_ACTION_CENTER));
+        assert_eq!(name_to_opcode("overview"), Some(OP_OVERVIEW));
         assert_eq!(name_to_opcode("unknown-cmd"), None);
 
         assert_eq!(opcode_to_name(OP_LAUNCHER), Some(("launcher", &[][..])));
@@ -170,6 +187,13 @@ mod tests {
             opcode_to_name(OP_PRESENTATION),
             Some(("presentation", &[][..]))
         );
+        assert_eq!(opcode_to_name(OP_WIDGETS), Some(("widgets", &[][..])));
+        assert_eq!(opcode_to_name(OP_START_MENU), Some(("start-menu", &[][..])));
+        assert_eq!(
+            opcode_to_name(OP_ACTION_CENTER),
+            Some(("action-center", &[][..]))
+        );
+        assert_eq!(opcode_to_name(OP_OVERVIEW), Some(("overview", &[][..])));
         let (osd, args) = opcode_to_name(OP_OSD_VOL_UP).unwrap();
         assert_eq!(osd, "osd");
         assert_eq!(args, &["volume-up"]);

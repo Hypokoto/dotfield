@@ -38,7 +38,7 @@ binds {
     Mod+Ctrl+F  { expand-column-to-available-width; }
 
     // Tabbed Column Mode
-    Mod+W { toggle-column-tabbed-display; }
+    Mod+T { toggle-column-tabbed-display; }
 
     // Fine Width Adjustments
     Mod+Minus { set-column-width "-10%"; }

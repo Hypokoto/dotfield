@@ -49,6 +49,10 @@ Commands / Fast-Path IPC Actions (Forwarded to running daemon):
   calendar                Toggle interactive calendar overlay
   screen-recorder         Toggle screen recorder overlay
   presentation            Toggle zero-disruption presentation mode
+  widgets                 Toggle left slide-in widgets board
+  start-menu              Toggle centered Start Menu & application grid
+  action-center           Toggle right slide-in action center & calendar hub
+  overview                Toggle spatial ribbon workspace overview
   reload                  Reload shell configuration
   osd <action> [delta]    Trigger OSD action (volume-up, volume-down, etc.)
   ipc <action> [args...]  Send generic IPC action
@@ -130,6 +134,14 @@ fn parse_cli_args() -> Result<Cli, String> {
             "--presentation" | "presentation" => {
                 cli.target_action = Some("presentation".to_string())
             }
+            "--widgets" | "widgets" => cli.target_action = Some("widgets".to_string()),
+            "--start-menu" | "start-menu" | "--start" | "start" => {
+                cli.target_action = Some("start-menu".to_string())
+            }
+            "--action-center" | "action-center" => {
+                cli.target_action = Some("action-center".to_string())
+            }
+            "--overview" | "overview" => cli.target_action = Some("overview".to_string()),
             "--reload" | "reload" => cli.target_action = Some("reload".to_string()),
             other => {
                 return Err(format!("Unknown option or action: {other}"));
@@ -353,6 +365,26 @@ fn ipc_presentation_handler(_args: &[String]) -> String {
     }
 }
 
+fn ipc_widgets_handler(_args: &[String]) -> String {
+    ui::widgets_board::toggle();
+    "widgets toggled".to_string()
+}
+
+fn ipc_start_menu_handler(_args: &[String]) -> String {
+    ui::start_menu::toggle();
+    "start-menu toggled".to_string()
+}
+
+fn ipc_action_center_handler(_args: &[String]) -> String {
+    ui::action_center::toggle();
+    "action-center toggled".to_string()
+}
+
+fn ipc_overview_handler(_args: &[String]) -> String {
+    ui::overview::toggle();
+    "overview toggled".to_string()
+}
+
 fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
     // Acquire exclusive daemon lock
     let lock = match DaemonLock::try_acquire()? {
@@ -382,19 +414,20 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         let _ = std::fs::remove_file(&sock);
     }
 
-    // Start background event watchers (e.g. Niri socket, StatusNotifierWatcher tray, battery monitor, telemetry, topology)
+    // Start background event watchers (e.g. Niri socket, StatusNotifierWatcher tray, battery monitor, telemetry, topology, cava)
     services::niri::NiriService::start();
     services::tray::TrayService::start();
     services::battery::BatteryMonitor::start();
     services::telemetry::TelemetryService::start();
     services::topology::TopologyService::refresh_async();
+    services::cava::CavaService::start();
 
     // Start notification auto-dismiss timer worker
     ui::notifications::start_expiry_worker();
 
     let show_bar = !no_bar && manifest.bar.enabled;
 
-    // Run Amane application with bar (if enabled), osd, notifications, launcher, control-center, display-config, terminal-manager, powermenu, calendar, and screen-recorder
+    // Run Amane application with bar (if enabled), osd, notifications, launcher, control-center, display-config, terminal-manager, powermenu, calendar, screen-recorder, widgets, start-menu, action-center, and overview
     let mut app = amane::App::new()
         .ipc("osd", ipc_osd_handler)
         .ipc("reload", ipc_reload_handler)
@@ -409,6 +442,11 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         .ipc("topology", ipc_terminal_manager_handler)
         .ipc("sidecar", ipc_sidecar_handler)
         .ipc("presentation", ipc_presentation_handler)
+        .ipc("widgets", ipc_widgets_handler)
+        .ipc("start-menu", ipc_start_menu_handler)
+        .ipc("start", ipc_start_menu_handler)
+        .ipc("action-center", ipc_action_center_handler)
+        .ipc("overview", ipc_overview_handler)
         .ipc("powermenu", ipc_powermenu_handler)
         .ipc("calendar", ipc_calendar_handler)
         .ipc("screen-recorder", ipc_screen_record_handler);
@@ -426,6 +464,10 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         .window(ui::powermenu::powermenu_overlay)
         .window(ui::calendar::calendar_overlay)
         .window(ui::screen_record::screen_record_overlay)
+        .window(ui::widgets_board::widgets_board_overlay)
+        .window(ui::start_menu::start_menu_overlay)
+        .window(ui::action_center::action_center_overlay)
+        .window(ui::overview::overview_overlay)
         .run();
 
     // If event loop returns unexpectedly, exit with code 1 so supervisor can restart

@@ -309,21 +309,21 @@ flowchart LR
 ## Phase 16: Layer 6: Fluid Material Desktop & Centered Taskbar Architecture
 *Goal: Re-architect Amane Wayland desktop surfaces with a configurable bottom-centered application dock, left-slide widgets board with live spectrum visualizer, centered Start Menu app grid, right-slide Action Center & calendar hub, and spatial ribbon overview in Pure Rust + Vello GPU rendering.*
 
-- [ ] **Adaptive Bottom-Centered Dock (`ui/dock.rs`, `ui/bar.rs`)**:
+- [x] **Adaptive Bottom-Centered Dock (`ui/dock.rs`, `ui/bar.rs`)**:
   - Configurable bar positioning (`manifest.bar.position = "bottom" | "top"`).
   - Centered pinned applications and dynamic running window indicators with active status pips.
   - Window activation semantics: focus existing window on click, preview flyout for multi-instance, and shift/middle-click for new instance.
-- [ ] **Left Slide-In Widgets Board (`ui/widgets_board.rs`)**:
+- [x] **Left Slide-In Widgets Board (`ui/widgets_board.rs`)**:
   - 180ms cubic ease-out slide-in flyout summoned via dock trigger button or `Mod+W` / `amane-msg widgets`.
   - System specs card, dynamic developer quotes, and optional Cava audio spectrum visualizer (`services/cava.rs`) with 0 Hz idle parking.
-- [ ] **Centered Start Menu & App Grid (`ui/start_menu.rs`)**:
+- [x] **Centered Start Menu & App Grid (`ui/start_menu.rs`)**:
   - 150ms cubic ease-out centered dock-anchored popup summoned via `Super` or `amane-msg start-menu`.
   - Live fuzzy search input, 4x3 pinned grid, A-Z categorized scrollable list, and session power bar.
-- [ ] **Right Slide-In Action Center Hub (`ui/action_center.rs`)**:
+- [x] **Right Slide-In Action Center Hub (`ui/action_center.rs`)**:
   - 180ms cubic ease-out right flyout summoned via telemetry capsule or `Mod+N` / `amane-msg action-center`.
   - Persistent notification history with dismiss gestures, 3x2 quick toggles, interactive volume & brightness sliders, and compact calendar.
-- [ ] **Spatial Ribbon Overview (`ui/overview.rs`)**:
+- [x] **Spatial Ribbon Overview (`ui/overview.rs`)**:
   - Fullscreen semi-transparent backdrop overlay with bottom-anchored workspace cards and spatial Niri column miniatures summoned via `Mod+Tab`.
-- [ ] **Fast-Path IPC Protocols & Zero-Poll Power Invariants**:
+- [x] **Fast-Path IPC Protocols & Zero-Poll Power Invariants**:
   - Fast-path 1-byte opcodes for `widgets`, `start-menu`, `action-center`, and `overview`.
   - Strict 0 Hz Wayland frame request parking at rest across all new flyouts.

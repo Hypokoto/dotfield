@@ -115,6 +115,10 @@ pub fn unpin_app(app_name: &str) {
     {
         menu.pinned_apps.remove(pos);
         save_pinned_apps(&menu.pinned_apps);
+        let total = menu.pinned_apps.len();
+        if menu.selected >= total && total > 0 {
+            menu.selected = total - 1;
+        }
     }
 }
 
@@ -264,6 +268,77 @@ pub fn execute_shell_action(id: &str) {
     }
 }
 
+pub fn handle_enter_submission() {
+    let menu = StartMenuService::read();
+    let query = menu.query.trim().to_string();
+
+    if query.starts_with(':') {
+        let cmd = query.trim_start_matches(':').trim().to_string();
+        if !cmd.is_empty() {
+            let _ = std::process::Command::new("ghostty")
+                .arg("-e")
+                .arg("sh")
+                .arg("-c")
+                .arg(format!("{}; exec $SHELL", cmd))
+                .spawn();
+        }
+        drop(menu);
+        close();
+    } else if query.starts_with('>') {
+        let action_query = query.trim_start_matches('>').trim().to_lowercase();
+        let actions = get_shell_actions();
+        let filtered: Vec<_> = actions
+            .into_iter()
+            .filter(|a| {
+                action_query.is_empty()
+                    || a.id.contains(&action_query)
+                    || a.title.to_lowercase().contains(&action_query)
+            })
+            .collect();
+        if let Some(act) = filtered.get(menu.selected) {
+            execute_shell_action(act.id);
+        }
+        drop(menu);
+        close();
+    } else {
+        let apps = Apps::read();
+        let query_lower = query.to_lowercase();
+        let is_pinned_view = query_lower.is_empty() && menu.view_mode == StartMenuViewMode::Pinned;
+        let target_app: Option<DesktopApp> = if is_pinned_view {
+            let mut pinned_list = Vec::new();
+            for pin_name in &menu.pinned_apps {
+                if let Some(app) = apps
+                    .list()
+                    .iter()
+                    .find(|a| a.name().eq_ignore_ascii_case(pin_name))
+                {
+                    pinned_list.push(app.clone());
+                }
+            }
+            pinned_list.get(menu.selected).cloned()
+        } else {
+            let matched: Vec<DesktopApp> = apps
+                .list()
+                .iter()
+                .filter(|&a| {
+                    query_lower.is_empty()
+                        || a.name().to_lowercase().contains(&query_lower)
+                        || a.description()
+                            .is_some_and(|d| d.to_lowercase().contains(&query_lower))
+                })
+                .cloned()
+                .collect();
+            matched.get(menu.selected).cloned()
+        };
+
+        if let Some(target) = target_app {
+            target.launch();
+        }
+        drop(menu);
+        close();
+    }
+}
+
 pub fn start_menu_overlay() -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
     let menu = StartMenuService::read();
@@ -301,6 +376,9 @@ pub fn start_menu_overlay() -> LayerWindow {
             menu.query = text;
             menu.selected = 0;
             menu.scroll_row = 0;
+        })
+        .on_submit(|_| {
+            handle_enter_submission();
         });
 
     let has_query = !menu.query.trim().is_empty();
@@ -830,7 +908,20 @@ pub fn start_menu_overlay() -> LayerWindow {
             }
         }
         let total_pinned = pinned_apps_list.len();
-        let badge_text = format!("{} pinned", total_pinned);
+        let items_per_page = PINNED_COLS * PINNED_ROWS;
+        let total_pages = total_pinned.div_ceil(items_per_page).max(1);
+        let current_page = (menu.selected / items_per_page).min(total_pages - 1);
+
+        let badge_text = if total_pages > 1 {
+            format!(
+                "{} pinned • Page {}/{}",
+                total_pinned,
+                current_page + 1,
+                total_pages
+            )
+        } else {
+            format!("{} pinned", total_pinned)
+        };
 
         let header = Row::new(vec![
             Box::new(
@@ -932,16 +1023,18 @@ pub fn start_menu_overlay() -> LayerWindow {
                     ),
             )
         } else {
-            let max_items = (PINNED_COLS * PINNED_ROWS).min(total_pinned);
+            let page_start = current_page * items_per_page;
+            let tile_height = if total_pages > 1 { 80.0 } else { 84.0 };
             let mut rows: Vec<Box<dyn Widget>> = Vec::new();
 
             for r in 0..PINNED_ROWS {
                 let mut col_items: Vec<Box<dyn Widget>> = Vec::new();
                 for c in 0..PINNED_COLS {
-                    let idx = r * PINNED_COLS + c;
-                    if idx < max_items {
-                        let app = &pinned_apps_list[idx];
-                        let is_selected = idx == menu.selected;
+                    let page_idx = r * PINNED_COLS + c;
+                    let global_idx = page_start + page_idx;
+                    if global_idx < total_pinned {
+                        let app = &pinned_apps_list[global_idx];
+                        let is_selected = global_idx == menu.selected;
                         let launched = app.clone();
                         let pin_name = app.name().to_string();
 
@@ -988,7 +1081,7 @@ pub fn start_menu_overlay() -> LayerWindow {
 
                         let tile = Rectangle::new()
                             .width(92.0)
-                            .height(84.0)
+                            .height(tile_height)
                             .radius(radius::MD)
                             .fill(if is_selected {
                                 tokens.surface_elevated
@@ -1005,8 +1098,8 @@ pub fn start_menu_overlay() -> LayerWindow {
                             )
                             .cursor(Pointer)
                             .padding(Padding {
-                                top: 6.0,
-                                bottom: 6.0,
+                                top: 5.0,
+                                bottom: 5.0,
                                 left: 4.0,
                                 right: 4.0,
                             })
@@ -1021,11 +1114,11 @@ pub fn start_menu_overlay() -> LayerWindow {
                                 }
                                 _ => {}
                             })
-                            .child(Column::new(label_children).align(Center).gap(2.0));
+                            .child(Column::new(label_children).align(Center).gap(1.5));
 
                         col_items.push(Box::new(tile));
                     } else {
-                        col_items.push(Box::new(Rectangle::new().width(92.0).height(84.0)));
+                        col_items.push(Box::new(Rectangle::new().width(92.0).height(tile_height)));
                     }
                 }
                 rows.push(Box::new(
@@ -1035,13 +1128,65 @@ pub fn start_menu_overlay() -> LayerWindow {
                 ));
             }
 
+            let grid_col = Column::new(rows)
+                .gap(if total_pages > 1 {
+                    6.0
+                } else {
+                    spacing::GAP_SM
+                })
+                .width(Parent)
+                .align(Align::Center);
+
+            let mut container_children: Vec<Box<dyn Widget>> = vec![Box::new(grid_col)];
+
+            if total_pages > 1 {
+                let mut dot_widgets: Vec<Box<dyn Widget>> = Vec::new();
+                for p in 0..total_pages {
+                    let is_current = p == current_page;
+                    let target_sel = p * items_per_page;
+                    let dot = Rectangle::new()
+                        .width(if is_current { 16.0 } else { 6.0 })
+                        .height(6.0)
+                        .radius(3.0)
+                        .fill(if is_current {
+                            tokens.accent
+                        } else {
+                            tokens.border_subtle
+                        })
+                        .cursor(Pointer)
+                        .on_click(move |_| {
+                            let mut menu = StartMenuService::write();
+                            menu.selected = target_sel;
+                        });
+                    dot_widgets.push(Box::new(dot));
+                }
+
+                let dots_row = Row::new(dot_widgets).gap(6.0).align(Align::Center);
+                container_children.push(Box::new(dots_row));
+            }
+
+            let container_column = Column::new(container_children)
+                .gap(6.0)
+                .width(Parent)
+                .align(Align::Center);
+
             Box::new(
-                Rectangle::new().width(Parent).height(268.0).child(
-                    Column::new(rows)
-                        .gap(spacing::GAP_SM)
-                        .width(Parent)
-                        .align(Align::Center),
-                ),
+                Rectangle::new()
+                    .width(Parent)
+                    .height(268.0)
+                    .on_scroll(move |scroll| {
+                        if total_pages > 1 {
+                            let mut menu = StartMenuService::write();
+                            let items = PINNED_COLS * PINNED_ROWS;
+                            let cur = menu.selected / items;
+                            if scroll.y > 0.0 && cur + 1 < total_pages {
+                                menu.selected = ((cur + 1) * items).min(total_pinned - 1);
+                            } else if scroll.y < 0.0 && cur > 0 {
+                                menu.selected = (cur - 1) * items;
+                            }
+                        }
+                    })
+                    .child(container_column),
             ) as Box<dyn Widget>
         };
 
@@ -1232,75 +1377,7 @@ pub fn start_menu_overlay() -> LayerWindow {
                 }
             }
             Key::Enter => {
-                let menu = StartMenuService::read();
-                let query = menu.query.trim().to_string();
-
-                if query.starts_with(':') {
-                    let cmd = query.trim_start_matches(':').trim().to_string();
-                    if !cmd.is_empty() {
-                        let _ = std::process::Command::new("ghostty")
-                            .arg("-e")
-                            .arg("sh")
-                            .arg("-c")
-                            .arg(format!("{}; exec $SHELL", cmd))
-                            .spawn();
-                    }
-                    drop(menu);
-                    close();
-                } else if query.starts_with('>') {
-                    let action_query = query.trim_start_matches('>').trim().to_lowercase();
-                    let actions = get_shell_actions();
-                    let filtered: Vec<_> = actions
-                        .into_iter()
-                        .filter(|a| {
-                            action_query.is_empty()
-                                || a.id.contains(&action_query)
-                                || a.title.to_lowercase().contains(&action_query)
-                        })
-                        .collect();
-                    if let Some(act) = filtered.get(menu.selected) {
-                        execute_shell_action(act.id);
-                    }
-                    drop(menu);
-                    close();
-                } else {
-                    let apps = Apps::read();
-                    let query_lower = query.to_lowercase();
-                    let is_pinned_view =
-                        query_lower.is_empty() && menu.view_mode == StartMenuViewMode::Pinned;
-                    let target_app: Option<DesktopApp> = if is_pinned_view {
-                        let mut pinned_list = Vec::new();
-                        for pin_name in &menu.pinned_apps {
-                            if let Some(app) = apps
-                                .list()
-                                .iter()
-                                .find(|a| a.name().eq_ignore_ascii_case(pin_name))
-                            {
-                                pinned_list.push(app.clone());
-                            }
-                        }
-                        pinned_list.get(menu.selected).cloned()
-                    } else {
-                        let matched: Vec<DesktopApp> = apps
-                            .list()
-                            .iter()
-                            .filter(|&a| {
-                                query_lower.is_empty()
-                                    || a.name().to_lowercase().contains(&query_lower)
-                                    || a.description()
-                                        .is_some_and(|d| d.to_lowercase().contains(&query_lower))
-                            })
-                            .cloned()
-                            .collect();
-                        matched.get(menu.selected).cloned()
-                    };
-
-                    if let Some(target) = target_app {
-                        target.launch();
-                    }
-                    drop(menu);
-                    close();
-                }
+                handle_enter_submission();
             }
             Key::Right => {
                 let apps = Apps::read();
@@ -1373,29 +1450,46 @@ pub fn start_menu_overlay() -> LayerWindow {
                 }
             }
             Key::PageDown => {
-                let apps = Apps::read();
                 let mut menu = StartMenuService::write();
-                let query_lower = menu.query.trim().to_lowercase();
-                let count = apps
-                    .list()
-                    .iter()
-                    .filter(|&a| {
-                        query_lower.is_empty()
-                            || a.name().to_lowercase().contains(&query_lower)
-                            || a.description()
-                                .is_some_and(|d| d.to_lowercase().contains(&query_lower))
-                    })
-                    .count();
-                let total_rows = count.div_ceil(LIST_COLS);
-                menu.scroll_row = (menu.scroll_row + LIST_VISIBLE_ROWS)
-                    .min(total_rows.saturating_sub(LIST_VISIBLE_ROWS));
-                menu.selected =
-                    (menu.selected + LIST_VISIBLE_ROWS * LIST_COLS).min(count.saturating_sub(1));
+                let is_pinned =
+                    menu.query.is_empty() && menu.view_mode == StartMenuViewMode::Pinned;
+                if is_pinned {
+                    let items_per_page = PINNED_COLS * PINNED_ROWS;
+                    let total_pinned = menu.pinned_apps.len();
+                    if total_pinned > 0 {
+                        menu.selected = (menu.selected + items_per_page).min(total_pinned - 1);
+                    }
+                } else {
+                    let apps = Apps::read();
+                    let query_lower = menu.query.trim().to_lowercase();
+                    let count = apps
+                        .list()
+                        .iter()
+                        .filter(|&a| {
+                            query_lower.is_empty()
+                                || a.name().to_lowercase().contains(&query_lower)
+                                || a.description()
+                                    .is_some_and(|d| d.to_lowercase().contains(&query_lower))
+                        })
+                        .count();
+                    let total_rows = count.div_ceil(LIST_COLS);
+                    menu.scroll_row = (menu.scroll_row + LIST_VISIBLE_ROWS)
+                        .min(total_rows.saturating_sub(LIST_VISIBLE_ROWS));
+                    menu.selected = (menu.selected + LIST_VISIBLE_ROWS * LIST_COLS)
+                        .min(count.saturating_sub(1));
+                }
             }
             Key::PageUp => {
                 let mut menu = StartMenuService::write();
-                menu.scroll_row = menu.scroll_row.saturating_sub(LIST_VISIBLE_ROWS);
-                menu.selected = menu.selected.saturating_sub(LIST_VISIBLE_ROWS * LIST_COLS);
+                let is_pinned =
+                    menu.query.is_empty() && menu.view_mode == StartMenuViewMode::Pinned;
+                if is_pinned {
+                    let items_per_page = PINNED_COLS * PINNED_ROWS;
+                    menu.selected = menu.selected.saturating_sub(items_per_page);
+                } else {
+                    menu.scroll_row = menu.scroll_row.saturating_sub(LIST_VISIBLE_ROWS);
+                    menu.selected = menu.selected.saturating_sub(LIST_VISIBLE_ROWS * LIST_COLS);
+                }
             }
             _ => {}
         })
@@ -1629,5 +1723,41 @@ mod tests {
 
         unpin_app("AnotherApp");
         assert!(!is_pinned("AnotherApp"));
+    }
+
+    #[test]
+    fn test_pinned_apps_pagination_math() {
+        let items_per_page = PINNED_COLS * PINNED_ROWS;
+        assert_eq!(items_per_page, 18);
+
+        // 0 pinned apps -> 1 page
+        let total_pages_0 = 0usize.div_ceil(items_per_page).max(1);
+        assert_eq!(total_pages_0, 1);
+
+        // 18 pinned apps -> 1 page
+        let total_pages_18 = 18usize.div_ceil(items_per_page).max(1);
+        assert_eq!(total_pages_18, 1);
+
+        // 19 pinned apps -> 2 pages
+        let total_pages_19 = 19usize.div_ceil(items_per_page).max(1);
+        assert_eq!(total_pages_19, 2);
+
+        // 36 pinned apps -> 2 pages
+        let total_pages_36 = 36usize.div_ceil(items_per_page).max(1);
+        assert_eq!(total_pages_36, 2);
+
+        // 37 pinned apps -> 3 pages
+        let total_pages_37 = 37usize.div_ceil(items_per_page).max(1);
+        assert_eq!(total_pages_37, 3);
+
+        // Page indexing
+        let selected_0 = 0;
+        assert_eq!(selected_0 / items_per_page, 0);
+
+        let selected_17 = 17;
+        assert_eq!(selected_17 / items_per_page, 0);
+
+        let selected_18 = 18;
+        assert_eq!(selected_18 / items_per_page, 1);
     }
 }

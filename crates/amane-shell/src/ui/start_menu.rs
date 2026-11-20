@@ -1,5 +1,5 @@
 //! Centered Start Menu & Unified Desktop Launcher.
-//! Windows 11 Fluent style bottom-dock anchored flyout (640px x 680px, 12px corner radius).
+//! Windows 11 Fluent style bottom-dock anchored flyout (640px x 604px, 12px corner radius).
 //! Features:
 //! - Pinned Apps Grid (6 columns x 3 rows) with smart multi-line label formatting (no ugly 10-char chop)
 //! - Universal Instant-Focus Search with live matching
@@ -13,9 +13,9 @@
 use std::time::{Duration, Instant};
 
 use amane::{
-    Align, Apps, Center, Color, Column, DesktopApp, Horizontal, Image, Key, Keyboard, Layer,
-    LayerWindow, Margin, OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text,
-    TextInput, Vertical, Widget, Zone,
+    Align, Apps, Center, Color, Column, DesktopApp, Horizontal, Image, Justify, Key, Keyboard,
+    Layer, LayerWindow, Margin, OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service,
+    Text, TextInput, Vertical, Widget, Zone,
 };
 
 use crate::config::ConfigService;
@@ -24,7 +24,7 @@ use crate::ui::tokens::{ThemeTokens, radius, spacing, typography};
 pub const PINNED_COLS: usize = 6;
 pub const PINNED_ROWS: usize = 3;
 pub const LIST_COLS: usize = 2;
-pub const LIST_VISIBLE_ROWS: usize = 5;
+pub const LIST_VISIBLE_ROWS: usize = 7;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StartMenuViewMode {
@@ -313,6 +313,7 @@ pub fn start_menu_overlay() -> LayerWindow {
             ),
         ])
         .width(Parent)
+        .justify(Justify::SpaceBetween)
         .align(Align::Center);
 
         let cmd_title = if cmd.is_empty() {
@@ -375,7 +376,7 @@ pub fn start_menu_overlay() -> LayerWindow {
             Box::new(
                 Rectangle::new()
                     .width(Parent)
-                    .height(290.0)
+                    .height(412.0)
                     .align_child(Align::Start, Align::Start)
                     .child(cmd_card),
             ) as Box<dyn Widget>,
@@ -408,10 +409,11 @@ pub fn start_menu_overlay() -> LayerWindow {
             ),
         ])
         .width(Parent)
+        .justify(Justify::SpaceBetween)
         .align(Align::Center);
 
         let mut action_rows: Vec<Box<dyn Widget>> = Vec::new();
-        for (idx, action) in filtered_actions.iter().enumerate().take(5) {
+        for (idx, action) in filtered_actions.iter().enumerate().take(7) {
             let is_sel = idx == menu.selected;
             let action_id = action.id;
             let row_card = Rectangle::new()
@@ -479,7 +481,7 @@ pub fn start_menu_overlay() -> LayerWindow {
             Box::new(
                 Rectangle::new()
                     .width(Parent)
-                    .height(290.0)
+                    .height(412.0)
                     .child(Column::new(action_rows).gap(spacing::GAP_SM).width(Parent)),
             ) as Box<dyn Widget>,
             action_header,
@@ -524,13 +526,8 @@ pub fn start_menu_overlay() -> LayerWindow {
                     .radius(radius::SM)
                     .fill(tokens.surface_elevated)
                     .border(1.0, tokens.border_subtle)
-                    .padding(Padding {
-                        top: 2.0,
-                        bottom: 2.0,
-                        left: 10.0,
-                        right: 10.0,
-                    })
                     .cursor(Pointer)
+                    .align_child(Center, Center)
                     .on_click(|_| {
                         let mut menu = StartMenuService::write();
                         if !menu.query.is_empty() {
@@ -554,13 +551,14 @@ pub fn start_menu_overlay() -> LayerWindow {
             ),
         ])
         .width(Parent)
+        .justify(Justify::SpaceBetween)
         .align(Align::Center);
 
         let content_widget: Box<dyn Widget> = if total_results == 0 {
             Box::new(
                 Rectangle::new()
                     .width(Parent)
-                    .height(290.0)
+                    .height(412.0)
                     .align_child(Center, Center)
                     .child(
                         Column::new(vec![
@@ -697,7 +695,7 @@ pub fn start_menu_overlay() -> LayerWindow {
             Box::new(
                 Rectangle::new()
                     .width(Parent)
-                    .height(290.0)
+                    .height(412.0)
                     .child(Column::new(card_rows).gap(spacing::GAP_SM).width(Parent)),
             ) as Box<dyn Widget>
         };
@@ -719,13 +717,8 @@ pub fn start_menu_overlay() -> LayerWindow {
                     .radius(radius::SM)
                     .fill(tokens.surface_elevated)
                     .border(1.0, tokens.border_subtle)
-                    .padding(Padding {
-                        top: 2.0,
-                        bottom: 2.0,
-                        left: 10.0,
-                        right: 10.0,
-                    })
                     .cursor(Pointer)
+                    .align_child(Center, Center)
                     .on_click(|_| {
                         let mut menu = StartMenuService::write();
                         menu.view_mode = StartMenuViewMode::AllApps;
@@ -741,6 +734,7 @@ pub fn start_menu_overlay() -> LayerWindow {
             ),
         ])
         .width(Parent)
+        .justify(Justify::SpaceBetween)
         .align(Align::Center);
 
         let max_items = (PINNED_COLS * PINNED_ROWS).min(total_results);
@@ -839,7 +833,7 @@ pub fn start_menu_overlay() -> LayerWindow {
 
         (
             Box::new(
-                Rectangle::new().width(Parent).height(290.0).child(
+                Rectangle::new().width(Parent).height(268.0).child(
                     Column::new(rows)
                         .gap(spacing::GAP_SM)
                         .width(Parent)
@@ -956,6 +950,7 @@ pub fn start_menu_overlay() -> LayerWindow {
 
     let footer_row = Row::new(vec![Box::new(user_info), Box::new(power_buttons)])
         .width(Parent)
+        .justify(Justify::SpaceBetween)
         .align(Align::Center);
 
     let mut content_elements: Vec<Box<dyn Widget>> =
@@ -981,12 +976,14 @@ pub fn start_menu_overlay() -> LayerWindow {
 
     let start_menu_content = Column::new(content_elements)
         .gap(spacing::GAP_MD)
-        .width(Parent);
+        .width(Parent)
+        .height(Parent)
+        .justify(Justify::SpaceBetween);
 
-    // 640px width x 680px height with 12px corner radius (radius::XL)
+    // 640px width x 604px height with 12px corner radius (radius::XL)
     let container = Rectangle::new()
         .width(640.0)
-        .height(680.0)
+        .height(604.0)
         .fill(tokens.acrylic_bg)
         .border(1.0, tokens.acrylic_border)
         .radius(radius::XL)
@@ -1002,7 +999,7 @@ pub fn start_menu_overlay() -> LayerWindow {
 
     LayerWindow::new()
         .width(640.0)
-        .height(680.0)
+        .height(604.0)
         .anchor_horizontal(Horizontal::Middle)
         .anchor_vertical(Vertical::Bottom)
         .margin(Margin {
@@ -1251,7 +1248,7 @@ fn render_recommended_section(font: &str, tokens: &ThemeTokens) -> Rectangle {
         .gap(spacing::GAP_SM)
         .width(Parent);
 
-    Rectangle::new().width(Parent).height(118.0).child(content)
+    Rectangle::new().width(Parent).height(124.0).child(content)
 }
 
 fn render_quick_action_item<F>(
@@ -1365,5 +1362,13 @@ mod tests {
         assert!(actions.iter().any(|a| a.id == "control-center"));
         assert!(actions.iter().any(|a| a.id == "power"));
         assert!(actions.iter().any(|a| a.id == "display"));
+    }
+
+    #[test]
+    fn test_start_menu_grid_dimensions() {
+        assert_eq!(LIST_VISIBLE_ROWS, 7);
+        assert_eq!(PINNED_COLS, 6);
+        assert_eq!(PINNED_ROWS, 3);
+        assert_eq!(LIST_COLS, 2);
     }
 }

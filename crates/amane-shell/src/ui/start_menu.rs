@@ -10,12 +10,13 @@
 //! - User Profile & One-Click Power Controls (Lock, Sleep, Reboot, Shutdown)
 //! - Full Keyboard Accessibility (Arrows, Enter, Escape, PageUp, PageDown)
 
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use amane::{
-    Align, Apps, Center, Color, Column, DesktopApp, Horizontal, Image, Justify, Key, Keyboard,
-    Layer, LayerWindow, Margin, OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service,
-    Text, TextInput, Vertical, Widget, Zone,
+    Align, Apps, Button, Center, Color, Column, DesktopApp, Horizontal, Image, Justify, Key,
+    Keyboard, Layer, LayerWindow, Margin, OutputTarget, Padding, Parent, Pointer, Rectangle, Row,
+    Service, Text, TextInput, Vertical, Widget, Zone,
 };
 
 use crate::config::ConfigService;
@@ -39,6 +40,7 @@ pub struct StartMenuService {
     pub selected: usize,
     pub scroll_row: usize,
     pub view_mode: StartMenuViewMode,
+    pub pinned_apps: Vec<String>,
 }
 
 impl Service for StartMenuService {
@@ -50,11 +52,78 @@ impl Service for StartMenuService {
             selected: 0,
             scroll_row: 0,
             view_mode: StartMenuViewMode::Pinned,
+            pinned_apps: load_pinned_apps(),
         }
     }
 
     fn interval() -> Duration {
         Duration::from_secs(3600)
+    }
+}
+
+pub fn pinned_apps_path() -> PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    PathBuf::from(home).join(".config/dotfield/pinned_apps.json")
+}
+
+pub fn load_pinned_apps() -> Vec<String> {
+    let path = pinned_apps_path();
+    if let Ok(content) = std::fs::read_to_string(&path)
+        && let Ok(apps) = serde_json::from_str::<Vec<String>>(&content)
+    {
+        return apps;
+    }
+    // "unpin all by default": empty list initially
+    Vec::new()
+}
+
+pub fn save_pinned_apps(apps: &[String]) {
+    let path = pinned_apps_path();
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(json) = serde_json::to_string_pretty(apps) {
+        let _ = std::fs::write(&path, json);
+    }
+}
+
+pub fn is_pinned(app_name: &str) -> bool {
+    let menu = StartMenuService::read();
+    menu.pinned_apps
+        .iter()
+        .any(|p| p.eq_ignore_ascii_case(app_name))
+}
+
+pub fn pin_app(app_name: &str) {
+    let mut menu = StartMenuService::write();
+    if !menu
+        .pinned_apps
+        .iter()
+        .any(|p| p.eq_ignore_ascii_case(app_name))
+    {
+        menu.pinned_apps.push(app_name.to_string());
+        save_pinned_apps(&menu.pinned_apps);
+    }
+}
+
+pub fn unpin_app(app_name: &str) {
+    let mut menu = StartMenuService::write();
+    if let Some(pos) = menu
+        .pinned_apps
+        .iter()
+        .position(|p| p.eq_ignore_ascii_case(app_name))
+    {
+        menu.pinned_apps.remove(pos);
+        save_pinned_apps(&menu.pinned_apps);
+    }
+}
+
+pub fn toggle_pin_app(app_name: &str) {
+    let pinned = is_pinned(app_name);
+    if pinned {
+        unpin_app(app_name);
+    } else {
+        pin_app(app_name);
     }
 }
 
@@ -625,6 +694,40 @@ pub fn start_menu_overlay() -> LayerWindow {
                             app_desc
                         };
 
+                        let is_pinned_app = is_pinned(&app_name);
+                        let pin_icon = if is_pinned_app { "󰤰" } else { "󰤱" };
+                        let pin_color = if is_pinned_app {
+                            tokens.accent
+                        } else {
+                            tokens.steel
+                        };
+                        let app_name_for_pin = app_name.clone();
+                        let app_name_for_card = app_name.clone();
+
+                        let pin_btn = Rectangle::new()
+                            .width(28.0)
+                            .height(28.0)
+                            .radius(radius::SM)
+                            .fill(if is_pinned_app {
+                                tokens.surface_elevated
+                            } else {
+                                tokens.surface
+                            })
+                            .border(
+                                1.0,
+                                if is_pinned_app {
+                                    tokens.accent
+                                } else {
+                                    tokens.border_subtle
+                                },
+                            )
+                            .cursor(Pointer)
+                            .align_child(Center, Center)
+                            .on_click(move |_| {
+                                toggle_pin_app(&app_name_for_pin);
+                            })
+                            .child(Text::new(pin_icon).size(14.0).color(pin_color).font(font));
+
                         let card = Rectangle::new()
                             .width(292.0)
                             .height(52.0)
@@ -647,36 +750,50 @@ pub fn start_menu_overlay() -> LayerWindow {
                                 top: 4.0,
                                 bottom: 4.0,
                                 left: 10.0,
-                                right: 10.0,
+                                right: 8.0,
                             })
                             .align_child(Align::Start, Align::Center)
-                            .on_click(move |_| {
-                                launched.launch();
-                                close();
+                            .on_click(move |btn| match btn {
+                                Button::Left => {
+                                    launched.launch();
+                                    close();
+                                }
+                                Button::Right => {
+                                    toggle_pin_app(&app_name_for_card);
+                                }
+                                _ => {}
                             })
                             .child(
                                 Row::new(vec![
-                                    icon_widget,
                                     Box::new(
-                                        Column::new(vec![
+                                        Row::new(vec![
+                                            icon_widget,
                                             Box::new(
-                                                Text::new(&app_name)
-                                                    .size(typography::SECONDARY)
-                                                    .color(tokens.text_primary)
-                                                    .font(font),
-                                            ),
-                                            Box::new(
-                                                Text::new(&desc_truncated)
-                                                    .size(typography::CAPTION)
-                                                    .color(tokens.text_secondary)
-                                                    .font(font),
+                                                Column::new(vec![
+                                                    Box::new(
+                                                        Text::new(&app_name)
+                                                            .size(typography::SECONDARY)
+                                                            .color(tokens.text_primary)
+                                                            .font(font),
+                                                    ),
+                                                    Box::new(
+                                                        Text::new(&desc_truncated)
+                                                            .size(typography::CAPTION)
+                                                            .color(tokens.text_secondary)
+                                                            .font(font),
+                                                    ),
+                                                ])
+                                                .align(Align::Start)
+                                                .gap(1.0),
                                             ),
                                         ])
-                                        .align(Align::Start)
-                                        .gap(1.0),
+                                        .gap(spacing::GAP_MD)
+                                        .align(Align::Center),
                                     ),
+                                    Box::new(pin_btn),
                                 ])
-                                .gap(spacing::GAP_MD)
+                                .width(Parent)
+                                .justify(Justify::SpaceBetween)
                                 .align(Align::Center),
                             );
 
@@ -702,13 +819,37 @@ pub fn start_menu_overlay() -> LayerWindow {
 
         (content_widget, header)
     } else {
-        // View A: Default Pinned Apps Grid (6 columns x 3 rows)
+        // View A: Custom Pinned Apps Grid (6 columns x 3 rows)
+        let mut pinned_apps_list: Vec<DesktopApp> = Vec::new();
+        for pin_name in &menu.pinned_apps {
+            if let Some(app) = all_apps_list
+                .iter()
+                .find(|a| a.name().eq_ignore_ascii_case(pin_name))
+            {
+                pinned_apps_list.push(app.clone());
+            }
+        }
+        let total_pinned = pinned_apps_list.len();
+        let badge_text = format!("{} pinned", total_pinned);
+
         let header = Row::new(vec![
             Box::new(
-                Text::new("Pinned")
-                    .size(typography::TITLE_SM)
-                    .color(tokens.text_primary)
-                    .font(font),
+                Row::new(vec![
+                    Box::new(
+                        Text::new("Pinned")
+                            .size(typography::TITLE_SM)
+                            .color(tokens.text_primary)
+                            .font(font),
+                    ),
+                    Box::new(
+                        Text::new(&badge_text)
+                            .size(typography::CAPTION)
+                            .color(tokens.accent)
+                            .font(font),
+                    ),
+                ])
+                .gap(spacing::GAP_SM)
+                .align(Align::Center),
             ),
             Box::new(
                 Rectangle::new()
@@ -737,101 +878,163 @@ pub fn start_menu_overlay() -> LayerWindow {
         .justify(Justify::SpaceBetween)
         .align(Align::Center);
 
-        let max_items = (PINNED_COLS * PINNED_ROWS).min(total_results);
-        let mut rows: Vec<Box<dyn Widget>> = Vec::new();
-
-        for r in 0..PINNED_ROWS {
-            let mut col_items: Vec<Box<dyn Widget>> = Vec::new();
-            for c in 0..PINNED_COLS {
-                let idx = r * PINNED_COLS + c;
-                if idx < max_items {
-                    let app = &matched_apps[idx];
-                    let is_selected = idx == menu.selected;
-                    let launched = app.clone();
-
-                    let icon_widget: Box<dyn Widget> = match app.icon_path() {
-                        Some(path) => Box::new(
-                            Rectangle::new()
-                                .width(32.0)
-                                .height(32.0)
-                                .fill(Image::contain(path)),
-                        ),
-                        None => Box::new(
-                            Rectangle::new()
-                                .width(32.0)
-                                .height(32.0)
-                                .radius(radius::SM)
-                                .fill(tokens.surface)
-                                .align_child(Center, Center)
-                                .child(Text::new("󰵆").size(18.0).color(tokens.accent).font(font)),
-                        ),
-                    };
-
-                    let (line1, line2_opt) = format_tile_label(app.name());
-
-                    let mut label_children: Vec<Box<dyn Widget>> = vec![
-                        icon_widget,
-                        Box::new(
-                            Text::new(&line1)
+        let content_widget: Box<dyn Widget> = if total_pinned == 0 {
+            Box::new(
+                Rectangle::new()
+                    .width(Parent)
+                    .height(268.0)
+                    .radius(radius::MD)
+                    .fill(tokens.surface)
+                    .border(1.0, tokens.border_subtle)
+                    .align_child(Center, Center)
+                    .child(
+                        Column::new(vec![
+                            Box::new(Text::new("󰤱").size(28.0).color(tokens.steel).font(font)),
+                            Box::new(
+                                Text::new("No pinned applications")
+                                    .size(typography::BODY)
+                                    .color(tokens.text_primary)
+                                    .font(font),
+                            ),
+                            Box::new(
+                                Text::new(
+                                    "Right-click any app or click 󰤱 in 'All apps' to pin it here",
+                                )
                                 .size(typography::CAPTION)
-                                .color(tokens.text_primary)
+                                .color(tokens.text_muted)
                                 .font(font),
-                        ),
-                    ];
+                            ),
+                            Box::new(
+                                Rectangle::new()
+                                    .width(160.0)
+                                    .height(28.0)
+                                    .radius(radius::SM)
+                                    .fill(tokens.surface_elevated)
+                                    .border(1.0, tokens.accent)
+                                    .cursor(Pointer)
+                                    .align_child(Center, Center)
+                                    .on_click(|_| {
+                                        let mut menu = StartMenuService::write();
+                                        menu.view_mode = StartMenuViewMode::AllApps;
+                                        menu.selected = 0;
+                                        menu.scroll_row = 0;
+                                    })
+                                    .child(
+                                        Text::new("Browse All Apps ❯")
+                                            .size(typography::CAPTION)
+                                            .color(tokens.accent)
+                                            .font(font),
+                                    ),
+                            ),
+                        ])
+                        .align(Center)
+                        .gap(spacing::GAP_SM),
+                    ),
+            )
+        } else {
+            let max_items = (PINNED_COLS * PINNED_ROWS).min(total_pinned);
+            let mut rows: Vec<Box<dyn Widget>> = Vec::new();
 
-                    if let Some(line2) = line2_opt {
-                        label_children.push(Box::new(
-                            Text::new(&line2)
-                                .size(9.5)
-                                .color(tokens.text_secondary)
-                                .font(font),
-                        ));
-                    }
+            for r in 0..PINNED_ROWS {
+                let mut col_items: Vec<Box<dyn Widget>> = Vec::new();
+                for c in 0..PINNED_COLS {
+                    let idx = r * PINNED_COLS + c;
+                    if idx < max_items {
+                        let app = &pinned_apps_list[idx];
+                        let is_selected = idx == menu.selected;
+                        let launched = app.clone();
+                        let pin_name = app.name().to_string();
 
-                    let tile = Rectangle::new()
-                        .width(92.0)
-                        .height(84.0)
-                        .radius(radius::MD)
-                        .fill(if is_selected {
-                            tokens.surface_elevated
-                        } else {
-                            tokens.surface
-                        })
-                        .border(
-                            1.0,
-                            if is_selected {
-                                tokens.accent
+                        let icon_widget: Box<dyn Widget> = match app.icon_path() {
+                            Some(path) => Box::new(
+                                Rectangle::new()
+                                    .width(32.0)
+                                    .height(32.0)
+                                    .fill(Image::contain(path)),
+                            ),
+                            None => Box::new(
+                                Rectangle::new()
+                                    .width(32.0)
+                                    .height(32.0)
+                                    .radius(radius::SM)
+                                    .fill(tokens.surface)
+                                    .align_child(Center, Center)
+                                    .child(
+                                        Text::new("󰵆").size(18.0).color(tokens.accent).font(font),
+                                    ),
+                            ),
+                        };
+
+                        let (line1, line2_opt) = format_tile_label(app.name());
+
+                        let mut label_children: Vec<Box<dyn Widget>> = vec![
+                            icon_widget,
+                            Box::new(
+                                Text::new(&line1)
+                                    .size(typography::CAPTION)
+                                    .color(tokens.text_primary)
+                                    .font(font),
+                            ),
+                        ];
+
+                        if let Some(line2) = line2_opt {
+                            label_children.push(Box::new(
+                                Text::new(&line2)
+                                    .size(9.5)
+                                    .color(tokens.text_secondary)
+                                    .font(font),
+                            ));
+                        }
+
+                        let tile = Rectangle::new()
+                            .width(92.0)
+                            .height(84.0)
+                            .radius(radius::MD)
+                            .fill(if is_selected {
+                                tokens.surface_elevated
                             } else {
-                                tokens.border_subtle
-                            },
-                        )
-                        .cursor(Pointer)
-                        .padding(Padding {
-                            top: 6.0,
-                            bottom: 6.0,
-                            left: 4.0,
-                            right: 4.0,
-                        })
-                        .align_child(Center, Center)
-                        .on_click(move |_| {
-                            launched.launch();
-                            close();
-                        })
-                        .child(Column::new(label_children).align(Center).gap(2.0));
+                                tokens.surface
+                            })
+                            .border(
+                                1.0,
+                                if is_selected {
+                                    tokens.accent
+                                } else {
+                                    tokens.border_subtle
+                                },
+                            )
+                            .cursor(Pointer)
+                            .padding(Padding {
+                                top: 6.0,
+                                bottom: 6.0,
+                                left: 4.0,
+                                right: 4.0,
+                            })
+                            .align_child(Center, Center)
+                            .on_click(move |btn| match btn {
+                                Button::Left => {
+                                    launched.launch();
+                                    close();
+                                }
+                                Button::Right => {
+                                    unpin_app(&pin_name);
+                                }
+                                _ => {}
+                            })
+                            .child(Column::new(label_children).align(Center).gap(2.0));
 
-                    col_items.push(Box::new(tile));
-                } else {
-                    col_items.push(Box::new(Rectangle::new().width(92.0).height(84.0)));
+                        col_items.push(Box::new(tile));
+                    } else {
+                        col_items.push(Box::new(Rectangle::new().width(92.0).height(84.0)));
+                    }
                 }
+                rows.push(Box::new(
+                    Row::new(col_items)
+                        .gap(spacing::GAP_SM)
+                        .align(Align::Center),
+                ));
             }
-            rows.push(Box::new(
-                Row::new(col_items)
-                    .gap(spacing::GAP_SM)
-                    .align(Align::Center),
-            ));
-        }
 
-        (
             Box::new(
                 Rectangle::new().width(Parent).height(268.0).child(
                     Column::new(rows)
@@ -839,9 +1042,10 @@ pub fn start_menu_overlay() -> LayerWindow {
                         .width(Parent)
                         .align(Align::Center),
                 ),
-            ) as Box<dyn Widget>,
-            header,
-        )
+            ) as Box<dyn Widget>
+        };
+
+        (content_widget, header)
     };
 
     // 3. Recommended Section (Only in Pinned Mode)
@@ -1062,18 +1266,36 @@ pub fn start_menu_overlay() -> LayerWindow {
                 } else {
                     let apps = Apps::read();
                     let query_lower = query.to_lowercase();
-                    let matched: Vec<DesktopApp> = apps
-                        .list()
-                        .iter()
-                        .filter(|&a| {
-                            query_lower.is_empty()
-                                || a.name().to_lowercase().contains(&query_lower)
-                                || a.description()
-                                    .is_some_and(|d| d.to_lowercase().contains(&query_lower))
-                        })
-                        .cloned()
-                        .collect();
-                    if let Some(target) = matched.get(menu.selected) {
+                    let is_pinned_view =
+                        query_lower.is_empty() && menu.view_mode == StartMenuViewMode::Pinned;
+                    let target_app: Option<DesktopApp> = if is_pinned_view {
+                        let mut pinned_list = Vec::new();
+                        for pin_name in &menu.pinned_apps {
+                            if let Some(app) = apps
+                                .list()
+                                .iter()
+                                .find(|a| a.name().eq_ignore_ascii_case(pin_name))
+                            {
+                                pinned_list.push(app.clone());
+                            }
+                        }
+                        pinned_list.get(menu.selected).cloned()
+                    } else {
+                        let matched: Vec<DesktopApp> = apps
+                            .list()
+                            .iter()
+                            .filter(|&a| {
+                                query_lower.is_empty()
+                                    || a.name().to_lowercase().contains(&query_lower)
+                                    || a.description()
+                                        .is_some_and(|d| d.to_lowercase().contains(&query_lower))
+                            })
+                            .cloned()
+                            .collect();
+                        matched.get(menu.selected).cloned()
+                    };
+
+                    if let Some(target) = target_app {
                         target.launch();
                     }
                     drop(menu);
@@ -1084,16 +1306,21 @@ pub fn start_menu_overlay() -> LayerWindow {
                 let apps = Apps::read();
                 let mut menu = StartMenuService::write();
                 let query_lower = menu.query.trim().to_lowercase();
-                let count = apps
-                    .list()
-                    .iter()
-                    .filter(|&a| {
-                        query_lower.is_empty()
-                            || a.name().to_lowercase().contains(&query_lower)
-                            || a.description()
-                                .is_some_and(|d| d.to_lowercase().contains(&query_lower))
-                    })
-                    .count();
+                let is_pinned =
+                    menu.query.is_empty() && menu.view_mode == StartMenuViewMode::Pinned;
+                let count = if is_pinned {
+                    menu.pinned_apps.len()
+                } else {
+                    apps.list()
+                        .iter()
+                        .filter(|&a| {
+                            query_lower.is_empty()
+                                || a.name().to_lowercase().contains(&query_lower)
+                                || a.description()
+                                    .is_some_and(|d| d.to_lowercase().contains(&query_lower))
+                        })
+                        .count()
+                };
                 if count > 0 {
                     menu.selected = (menu.selected + 1).min(count - 1);
                 }
@@ -1109,16 +1336,19 @@ pub fn start_menu_overlay() -> LayerWindow {
                 let is_pinned =
                     menu.query.is_empty() && menu.view_mode == StartMenuViewMode::Pinned;
                 let step = if is_pinned { PINNED_COLS } else { LIST_COLS };
-                let count = apps
-                    .list()
-                    .iter()
-                    .filter(|&a| {
-                        query_lower.is_empty()
-                            || a.name().to_lowercase().contains(&query_lower)
-                            || a.description()
-                                .is_some_and(|d| d.to_lowercase().contains(&query_lower))
-                    })
-                    .count();
+                let count = if is_pinned {
+                    menu.pinned_apps.len()
+                } else {
+                    apps.list()
+                        .iter()
+                        .filter(|&a| {
+                            query_lower.is_empty()
+                                || a.name().to_lowercase().contains(&query_lower)
+                                || a.description()
+                                    .is_some_and(|d| d.to_lowercase().contains(&query_lower))
+                        })
+                        .count()
+                };
                 if count > 0 {
                     menu.selected = (menu.selected + step).min(count - 1);
                     if !is_pinned {
@@ -1370,5 +1600,34 @@ mod tests {
         assert_eq!(PINNED_COLS, 6);
         assert_eq!(PINNED_ROWS, 3);
         assert_eq!(LIST_COLS, 2);
+    }
+
+    #[test]
+    fn test_pin_and_unpin_apps_logic() {
+        let _lock = crate::ui::TEST_UI_MUTEX.lock().unwrap();
+        // Clear pinned apps for clean test
+        {
+            let mut menu = StartMenuService::write();
+            menu.pinned_apps.clear();
+        }
+        assert!(!is_pinned("TestApp"));
+
+        pin_app("TestApp");
+        assert!(is_pinned("TestApp"));
+        assert!(is_pinned("testapp")); // Case-insensitive check
+
+        // Duplicate pin should be idempotent
+        pin_app("TestApp");
+        assert_eq!(StartMenuService::read().pinned_apps.len(), 1);
+
+        // Toggle pin
+        toggle_pin_app("TestApp");
+        assert!(!is_pinned("TestApp"));
+
+        toggle_pin_app("AnotherApp");
+        assert!(is_pinned("AnotherApp"));
+
+        unpin_app("AnotherApp");
+        assert!(!is_pinned("AnotherApp"));
     }
 }

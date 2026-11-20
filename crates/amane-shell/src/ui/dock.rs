@@ -78,7 +78,7 @@ pub fn render_dock(manifest: &ShellManifest, tokens: &ThemeTokens) -> (Box<dyn W
 
     // 2. Search Quick-Launch Pill (Windows 11 style)
     let search_btn = render_search_pill(font, tokens, || {
-        crate::ui::launcher::toggle();
+        crate::ui::start_menu::toggle();
     });
     dock_items.push(Box::new(search_btn));
     total_width += 112.0 + spacing::GAP_SM;

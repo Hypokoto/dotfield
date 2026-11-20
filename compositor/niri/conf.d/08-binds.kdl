@@ -5,8 +5,8 @@ binds {
     // Core Windows 11 Workflow Keybindings
     Super_L { spawn "amane-msg" "start-menu"; }
     Mod+D { focus-workspace "05 SCRATCH"; }       // Win+D: Show Desktop / Clean Scratch
-    Mod+S { spawn "amane-msg" "launcher"; }     // Win+S: Windows Search
-    Mod+Space { spawn "amane-msg" "launcher"; }
+    Mod+S { spawn "amane-msg" "start-menu"; }     // Win+S: Windows Search & Start
+    Mod+Space { spawn "amane-msg" "start-menu"; }
     Mod+E { spawn "ghostty" "-e" "yazi"; }      // Win+E: File Explorer
     Mod+A { spawn "amane-msg" "control-center"; } // Win+A: Quick Settings
     Mod+N { spawn "amane-msg" "action-center"; }  // Win+N: Notification Center / Calendar

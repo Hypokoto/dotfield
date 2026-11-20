@@ -19,8 +19,8 @@ pub struct ModalManager;
 impl ModalManager {
     /// Opens the specified modal exclusively, closing any other active modal.
     pub fn open_exclusive(target: ModalType) {
-        if target != ModalType::Launcher {
-            crate::ui::launcher::close();
+        if target != ModalType::StartMenu && target != ModalType::Launcher {
+            crate::ui::start_menu::close();
         }
         if target != ModalType::ControlCenter {
             crate::ui::control_center::close();
@@ -36,9 +36,6 @@ impl ModalManager {
         }
         if target != ModalType::ScreenRecord {
             crate::ui::screen_record::close();
-        }
-        if target != ModalType::StartMenu {
-            crate::ui::start_menu::close();
         }
         if target != ModalType::Overview {
             crate::ui::overview::close();

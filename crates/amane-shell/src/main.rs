@@ -282,8 +282,8 @@ fn ipc_reload_handler(_args: &[String]) -> String {
 }
 
 fn ipc_launcher_handler(_args: &[String]) -> String {
-    ui::launcher::toggle();
-    "launcher toggled".to_string()
+    ui::start_menu::toggle();
+    "start-menu toggled".to_string()
 }
 
 fn ipc_control_center_handler(_args: &[String]) -> String {
@@ -433,7 +433,6 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
 
     app.window(ui::osd::osd_overlay)
         .window(ui::notifications::notification_popups)
-        .window(ui::launcher::launcher_overlay)
         .window(ui::control_center::control_center_panel)
         .window(ui::display_config::display_config_overlay)
         .window(ui::powermenu::powermenu_overlay)

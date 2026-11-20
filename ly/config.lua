@@ -3,27 +3,27 @@
 -- Target installation: /etc/ly/config.lua
 
 return {
-    -- Terminal & Colors (Hex mapping: Void #08080A, Amber #FFB000, Crimson #E63946, Bone #E6E6EB, Iron #282A36)
-    bg = 0x08080A,
-    fg = 0xE6E6EB,
-    border_fg = 0xFFB000,
-    border_bg = 0x08080A,
-    text_fg = 0xE6E6EB,
+    -- Terminal & Colors (Dotfield Fluent: Void #121216, Fluent Blue #60CDFF, Crimson #E63946, Bone #F0F0F5)
+    bg = 0x121216,
+    fg = 0xF0F0F5,
+    border_fg = 0x60CDFF,
+    border_bg = 0x121216,
+    text_fg = 0xF0F0F5,
     error_fg = 0xE63946,
-    error_bg = 0x08080A,
+    error_bg = 0x121216,
 
     -- Visual Styling & Frame
-    box_title = "BLACKSITE // DOTFIELD",
+    box_title = "ARCH LINUX // DOTFIELD",
     hide_borders = false,
     hide_fkeys = false,
     blank_password = false,
-    asterisk = "*",
+    asterisk = "•",
     margin_box_h = 2,
     margin_box_v = 1,
 
     -- Clock & Status
     clock = "%a %d %b %H:%M:%S",
-    bigclock = false,
+    bigclock = true,
 
     -- Performance & Latency (Zero animation overhead)
     animate = false,

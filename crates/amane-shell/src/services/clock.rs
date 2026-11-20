@@ -6,6 +6,8 @@ use chrono::{Local, Timelike};
 
 pub struct ClockService {
     formatted: String,
+    time_formatted: String,
+    date_formatted: String,
     last_minute: u32,
 }
 
@@ -14,6 +16,8 @@ impl Service for ClockService {
         let now = Local::now();
         Self {
             formatted: now.format("%a %b %d  %H:%M").to_string(),
+            time_formatted: now.format("%H:%M").to_string(),
+            date_formatted: now.format("%d/%m/%Y").to_string(),
             last_minute: now.minute(),
         }
     }
@@ -43,6 +47,8 @@ impl Service for ClockService {
         if minute != self.last_minute {
             self.last_minute = minute;
             self.formatted = now.format("%a %b %d  %H:%M").to_string();
+            self.time_formatted = now.format("%H:%M").to_string();
+            self.date_formatted = now.format("%d/%m/%Y").to_string();
             true
         } else {
             false
@@ -53,6 +59,14 @@ impl Service for ClockService {
 impl ClockService {
     pub fn formatted(&self) -> &str {
         &self.formatted
+    }
+
+    pub fn time(&self) -> &str {
+        &self.time_formatted
+    }
+
+    pub fn date(&self) -> &str {
+        &self.date_formatted
     }
 
     pub fn last_minute(&self) -> u32 {

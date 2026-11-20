@@ -43,10 +43,10 @@ impl Default for PaletteConfig {
             overlay: "#1C1C23".to_string(),
             muted: "#A1A1AA".to_string(),
             accent: "#E63946".to_string(),
-            highlight: "#FFB000".to_string(),
+            highlight: "#60CDFF".to_string(),
             foreground: "#E8E6E3".to_string(),
             border: "#34343D".to_string(),
-            hover: "#FFD166".to_string(),
+            hover: "#72D6FF".to_string(),
             steel: "#8B949E".to_string(),
             success: "#7BC47F".to_string(),
             danger_critical: "#9D0208".to_string(),
@@ -69,8 +69,8 @@ impl Default for BarSettings {
     fn default() -> Self {
         Self {
             enabled: true,
-            height: 34.0,
-            position: "top".to_string(),
+            height: 48.0,
+            position: "bottom".to_string(),
             show_workspaces: true,
             show_title: true,
             show_telemetry: true,
@@ -225,7 +225,7 @@ mod tests {
     #[test]
     fn test_default_manifest() {
         let manifest = ShellManifest::default();
-        assert_eq!(manifest.bar.height, 34.0);
+        assert_eq!(manifest.bar.height, 48.0);
         assert!(manifest.bar.enabled);
         assert_eq!(manifest.theme.font_size, 10.0);
         assert_eq!(manifest.palette.accent, "#E63946");
@@ -245,7 +245,7 @@ mod tests {
             toml::from_str(toml_str).expect("failed to parse partial toml");
         assert_eq!(manifest.bar.height, 28.0);
         assert!(manifest.bar.enabled);
-        assert_eq!(manifest.bar.position, "top");
+        assert_eq!(manifest.bar.position, "bottom");
         assert_eq!(manifest.theme.font_size, 12.0);
         assert_eq!(manifest.theme.font_family, "JetBrainsMono Nerd Font");
         assert_eq!(manifest.palette.accent, "#E63946");
@@ -254,7 +254,7 @@ mod tests {
     #[test]
     fn test_empty_toml_deserialization() {
         let manifest: ShellManifest = toml::from_str("").expect("failed to parse empty toml");
-        assert_eq!(manifest.bar.height, 34.0);
+        assert_eq!(manifest.bar.height, 48.0);
         assert_eq!(manifest.terminal.default, "ghostty");
     }
 

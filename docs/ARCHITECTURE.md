@@ -46,13 +46,18 @@ flowchart TD
 - **Memory Footprint**: Steady state ~58–60 MB RAM.
 - **Supervisor**: Supervised under systemd user manager (`amane.service`) with auto-recreation across output DPMS/re-negotiation events and auto-healing CLI IPC.
 - **Integrated Capabilities**:
-  - Full-width Top Status Bar with dynamic multi-monitor tracking (`window_per_monitor`).
+  - Full-width Top Status Bar / Centered Dock with dynamic multi-monitor tracking (`window_per_monitor`).
   - Spatial Workspace Radar tracking Niri's infinite horizontal ribbon via `$NIRI_SOCKET`.
-  - Modern Grid-based Application Launcher with arrow-key long-press scrolling.
-  - Modern Grid-based Terminal Manager with active terminal indicators.
+  - Centered Start Menu & Application Grid (`Super` / `amane-msg start-menu`) with fuzzy search and session controls.
+  - Spatial Ribbon Overview (`Mod+Tab` / `amane-msg overview`) with live column geometry miniatures and workspace cards.
+  - Unified Control Manager & Quick Settings (`ui/control_center.rs`) consolidating:
+    - 6-button Quick Toggles ($2 \times 3$ grid: Wi-Fi, Bluetooth, DND, Display Config, Screen Record, Presentation Shield).
+    - Hardware Sliders for Volume and Display Brightness.
+    - Integrated 20-band CAVA live Audio Spectrum Visualizer with 0 Hz silent parking.
+    - Hero Digital Clock, interactive Month Calendar with Today indicator, and notification drawer.
+    - Subview navigation pills (`Net`, `Audio`, `BlueZ`, `Cal`, `Tray`).
   - Interactive Display Configurator for dynamic layout adjustments.
-  - Quick Settings Control Center and Notification HUD.
-  - Monthly interactive Calendar and Wayland Screen Recorder.
+  - Modern Grid-based Application Launcher with arrow-key long-press scrolling.
   - System Powermenu (Lock, Sleep, Reboot, Shutdown).
   - Sub-millisecond IPC over `$XDG_RUNTIME_DIR/amane.sock`.
 

@@ -8,12 +8,9 @@ pub enum ModalType {
     ControlCenter,
     Calendar,
     DisplayConfig,
-    TerminalManager,
     Powermenu,
     ScreenRecord,
-    Widgets,
     StartMenu,
-    ActionCenter,
     Overview,
 }
 
@@ -34,23 +31,14 @@ impl ModalManager {
         if target != ModalType::DisplayConfig {
             crate::ui::display_config::close();
         }
-        if target != ModalType::TerminalManager {
-            crate::ui::terminal_manager::close();
-        }
         if target != ModalType::Powermenu {
             crate::ui::powermenu::close();
         }
         if target != ModalType::ScreenRecord {
             crate::ui::screen_record::close();
         }
-        if target != ModalType::Widgets {
-            crate::ui::widgets_board::close();
-        }
         if target != ModalType::StartMenu {
             crate::ui::start_menu::close();
-        }
-        if target != ModalType::ActionCenter {
-            crate::ui::action_center::close();
         }
         if target != ModalType::Overview {
             crate::ui::overview::close();
@@ -68,12 +56,9 @@ impl ModalManager {
         crate::ui::control_center::close();
         crate::ui::calendar::close();
         crate::ui::display_config::close();
-        crate::ui::terminal_manager::close();
         crate::ui::powermenu::close();
         crate::ui::screen_record::close();
-        crate::ui::widgets_board::close();
         crate::ui::start_menu::close();
-        crate::ui::action_center::close();
         crate::ui::overview::close();
 
         #[cfg(target_os = "linux")]

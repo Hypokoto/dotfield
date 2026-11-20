@@ -1,0 +1,106 @@
+# Dotfield Yazi Theme Configuration
+# Controlled Chaos (Void Black, Graphite, Fluent Blue, Industrial Amber, Crimson)
+
+[mgr]
+cwd = { fg = "#60cdff", bold = true }
+hovered = { bg = "#1c1c23", bold = true }
+preview_hovered = { underline = true }
+
+# Search and Marker
+find_keyword = { fg = "#ffd166", italic = true }
+find_position = { fg = "#e63946", bold = true }
+marker_copied = { fg = "#7bc47f", bg = "#7bc47f" }
+marker_cut = { fg = "#e63946", bg = "#e63946" }
+marker_marked = { fg = "#ffb000", bg = "#ffb000" }
+marker_selected = { fg = "#60cdff", bg = "#60cdff" }
+
+# Tabs
+tab_active = { fg = "#0a0a0c", bg = "#60cdff", bold = true }
+tab_inactive = { fg = "#8b949e", bg = "#121216" }
+count_copied = { fg = "#0a0a0c", bg = "#7bc47f" }
+count_cut = { fg = "#0a0a0c", bg = "#e63946" }
+count_selected = { fg = "#0a0a0c", bg = "#60cdff" }
+
+# Border
+border_symbol = "│"
+border_style = { fg = "#34343d" }
+
+[status]
+separator_open = ""
+separator_close = ""
+separator_style = { fg = "#1c1c23", bg = "#1c1c23" }
+
+mode_normal = { fg = "#0a0a0c", bg = "#60cdff", bold = true }
+mode_select = { fg = "#0a0a0c", bg = "#ffb000", bold = true }
+mode_unset = { fg = "#0a0a0c", bg = "#e63946", bold = true }
+
+progress_label = { bold = true }
+progress_normal = { fg = "#60cdff", bg = "#121216" }
+progress_error = { fg = "#e63946", bg = "#121216" }
+
+permissions_t = { fg = "#60cdff" }
+permissions_r = { fg = "#ffb000" }
+permissions_w = { fg = "#e63946" }
+permissions_x = { fg = "#7bc47f" }
+permissions_s = { fg = "#8b949e" }
+
+[select]
+border = { fg = "#60cdff" }
+active = { fg = "#ffd166", bold = true }
+inactive = { fg = "#e8e6e3" }
+
+[input]
+border = { fg = "#60cdff" }
+title = { fg = "#e8e6e3" }
+value = { fg = "#e8e6e3" }
+selected = { bg = "#1c1c23" }
+
+[completion]
+border = { fg = "#34343d" }
+active = { bg = "#1c1c23", fg = "#60cdff" }
+inactive = { fg = "#e8e6e3" }
+
+[tasks]
+border = { fg = "#34343d" }
+title = { fg = "#60cdff" }
+hovered = { underline = true }
+
+[which]
+cols = 3
+mask = { bg = "#0a0a0c" }
+cand = { fg = "#60cdff" }
+rest = { fg = "#8b949e" }
+desc = { fg = "#e8e6e3" }
+separator = "  "
+separator_style = { fg = "#34343d" }
+
+[help]
+on = { fg = "#60cdff" }
+exec = { fg = "#8b949e" }
+desc = { fg = "#e8e6e3" }
+hovered = { bg = "#1c1c23", bold = true }
+footer = { fg = "#0a0a0c", bg = "#60cdff" }
+
+[filetype]
+rules = [
+    # Media
+    { mime = "image/*", fg = "#c792ea" },
+    { mime = "video/*", fg = "#ff6b76" },
+    { mime = "audio/*", fg = "#ffd166" },
+    # Archives
+    { mime = "application/*zip", fg = "#ffb000" },
+    { mime = "application/x-tar", fg = "#ffb000" },
+    { mime = "application/x-bzip2", fg = "#ffb000" },
+    { mime = "application/x-7z-compressed", fg = "#ffb000" },
+    { mime = "application/x-rar", fg = "#ffb000" },
+    # Code & Configs
+    { url = "*.rs", fg = "#e63946" },
+    { url = "*.kdl", fg = "#60cdff" },
+    { url = "*.toml", fg = "#ffb000" },
+    { url = "*.json", fg = "#ffd166" },
+    { url = "*.sh", fg = "#7bc47f" },
+    { url = "*.zsh", fg = "#7bc47f" },
+    { url = "*.md", fg = "#82aaff" },
+    # Directories
+    { url = "*/", fg = "#60cdff", bold = true },
+]

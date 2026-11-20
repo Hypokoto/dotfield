@@ -49,13 +49,14 @@ Dotfield natively supports two distinct Wayland compositor workflows:
 - **Compositor**: [Niri](https://github.com/YaLTeR/niri) infinite horizontal scrollable tiling.
 - **Desktop Shell**: **`amane`** (`crates/amane-shell`) — Built with **Pure Rust + Amane** (Vulkan and Vello backends).
 - **Features**:
-  - Top status bar with hardware telemetry (CPU, RAM, network, battery, clock).
-  - Modern grid-based Application Launcher with keyboard long-press scrolling.
-  - Modern grid-based Terminal Manager with active terminal indicators.
+  - Full-width Top Status Bar or Bottom-Centered Taskbar Dock with dynamic multi-monitor tracking.
+  - Spatial Workspace Radar tracking Niri's infinite horizontal ribbon via `$NIRI_SOCKET`.
+  - Centered Start Menu & Application Grid (`Super`) with fuzzy search and session controls.
+  - Spatial Ribbon Overview (`Mod+Tab`) with live window geometry previews.
+  - Unified Control Manager & Quick Settings (6 quick toggles, volume/brightness sliders, integrated 20-band CAVA audio visualizer, hero clock, calendar, and notification history).
+  - Modern grid-based Application Launcher (`Mod+Space`).
   - Interactive Display Configurator for multi-monitor arrangements.
-  - Quick Settings Control Center and Notification HUD.
-  - Interactive Monthly Calendar and Wayland Screen Recorder.
-  - Sub-millisecond IPC communication via `$XDG_RUNTIME_DIR/amane.sock`.
+  - Fast-path 1-byte opcode IPC communication via `$XDG_RUNTIME_DIR/amane.sock`.
   - Supervised by systemd user service (`amane.service`) with auto-recreation across output DPMS/re-negotiation events.
   - Zero WebKit, Electron, or Slint overhead (~60 MB RAM).
 

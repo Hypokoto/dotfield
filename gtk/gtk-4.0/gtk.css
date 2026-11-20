@@ -1,23 +1,24 @@
-/* Dotfield Controlled Chaos Theme — GTK 4.0 / Libadwaita CSS Overrides
- * Void Black (#0A0A0C) · Obsidian (#121216) · Graphite (#1C1C23)
- * Industrial Amber (#FFB000) · Crimson (#E63946) · Iron (#34343D)
+/* Dotfield Modern Fluent & Controlled Chaos Theme — GTK 4.0 / Libadwaita CSS
+ * Void Black (#0A0A0C) · Dark Mica (#16161C) · Graphite (#1C1C23)
+ * Fluent Accent (#60CDFF) · Industrial Amber (#FFB000) · Crimson (#E63946) · Iron (#34343D)
  */
 
-@define-color accent_color #FFB000;
-@define-color accent_bg_color #FFB000;
-@define-color accent_fg_color #0A0A0C;
+@define-color accent_color #60CDFF;
+@define-color accent_bg_color #60CDFF;
+@define-color accent_fg_color #000000;
 
+@define-color secondary_accent #FFB000;
 @define-color destructive_color #E63946;
 @define-color destructive_bg_color #E63946;
 @define-color destructive_fg_color #FFFFFF;
 
-@define-color success_color #2A9D8F;
-@define-color success_bg_color #2A9D8F;
-@define-color success_fg_color #0A0A0C;
+@define-color success_color #7BC47F;
+@define-color success_bg_color #7BC47F;
+@define-color success_fg_color #000000;
 
 @define-color warning_color #FFD166;
 @define-color warning_bg_color #FFD166;
-@define-color warning_fg_color #0A0A0C;
+@define-color warning_fg_color #000000;
 
 @define-color error_color #E63946;
 @define-color error_bg_color #E63946;
@@ -29,27 +30,27 @@
 @define-color view_bg_color #121216;
 @define-color view_fg_color #E8E6E3;
 
-@define-color headerbar_bg_color #121216;
+@define-color headerbar_bg_color #16161C;
 @define-color headerbar_fg_color #E8E6E3;
-@define-color headerbar_border_color #34343D;
+@define-color headerbar_border_color rgba(255, 255, 255, 0.08);
 @define-color headerbar_backdrop_color #0A0A0C;
 
 @define-color card_bg_color #1C1C23;
 @define-color card_fg_color #E8E6E3;
 @define-color card_border_color #34343D;
 
-@define-color dialog_bg_color #121216;
+@define-color dialog_bg_color #16161C;
 @define-color dialog_fg_color #E8E6E3;
 
 @define-color popover_bg_color #1C1C23;
 @define-color popover_fg_color #E8E6E3;
 
-@define-color shade_color rgba(0, 0, 0, 0.36);
+@define-color shade_color rgba(0, 0, 0, 0.40);
 @define-color scrollbar_outline_color rgba(0, 0, 0, 0.5);
 
 /* Selection & Focus */
-@define-color theme_selected_bg_color #FFB000;
-@define-color theme_selected_fg_color #0A0A0C;
+@define-color theme_selected_bg_color #60CDFF;
+@define-color theme_selected_fg_color #000000;
 
 /* Window & general widget styling */
 window {
@@ -61,12 +62,16 @@ headerbar {
     background-color: @headerbar_bg_color;
     color: @headerbar_fg_color;
     border-bottom: 1px solid @headerbar_border_color;
+    padding: 4px 8px;
 }
 
+/* Rounded inputs and buttons */
 entry, textview text {
     background-color: @view_bg_color;
     color: @view_fg_color;
     border: 1px solid #34343D;
+    border-radius: 8px;
+    padding: 6px 10px;
 }
 
 entry:focus {
@@ -74,12 +79,62 @@ entry:focus {
     box-shadow: 0 0 0 1px @accent_color;
 }
 
+button {
+    border-radius: 8px;
+    border: 1px solid #34343D;
+    transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+button:hover {
+    background-color: #262630;
+    border-color: @accent_color;
+}
+
 button.suggested-action, .accent {
     background-color: @accent_color;
     color: @accent_fg_color;
+    border-color: @accent_color;
+}
+
+button.suggested-action:hover {
+    background-color: #72d6ff;
 }
 
 button.destructive-action {
     background-color: @destructive_color;
     color: @destructive_fg_color;
+    border-color: @destructive_color;
+}
+
+/* Cards & Lists */
+.card, list {
+    background-color: @card_bg_color;
+    border: 1px solid @card_border_color;
+    border-radius: 8px;
+}
+
+row:selected {
+    background-color: #262630;
+    color: @accent_color;
+}
+
+/* Popovers & Dialogs */
+popover, .popover {
+    background-color: @popover_bg_color;
+    color: @popover_fg_color;
+    border: 1px solid #34343D;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* Scrollbars */
+scrollbar slider {
+    background-color: rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    min-width: 6px;
+    min-height: 6px;
+}
+
+scrollbar slider:hover {
+    background-color: @accent_color;
 }

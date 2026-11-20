@@ -23,10 +23,7 @@ Usage:
 
 Fast-Path Opcodes (0-alloc byte frames, <0.2ms):
   launcher              Toggle application launcher modal
-  terminal-manager      Toggle terminal selector
-  topology              Toggle project topology & worktree switcher (alias)
   presentation          Toggle zero-disruption presentation mode shield
-  sidecar               Spawn or focus companion sidecar for active window
   widgets               Toggle left slide-in widgets board
   start-menu            Toggle centered Start Menu & application grid
   action-center         Toggle right slide-in action center & calendar hub
@@ -122,5 +119,35 @@ fn main() {
     let _ = stream.read_to_string(&mut response);
     if !response.trim().is_empty() {
         println!("{}", response.trim());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_socket_path_resolution() {
+        let original = env::var_os("XDG_RUNTIME_DIR");
+        unsafe {
+            env::set_var("XDG_RUNTIME_DIR", "/run/user/1000");
+        }
+        let path = socket_path().expect("socket_path should resolve when XDG_RUNTIME_DIR is set");
+        assert_eq!(path, PathBuf::from("/run/user/1000/amane.sock"));
+
+        if let Some(orig) = original {
+            unsafe {
+                env::set_var("XDG_RUNTIME_DIR", orig);
+            }
+        }
+    }
+
+    #[test]
+    fn test_name_to_opcode_mappings() {
+        assert!(name_to_opcode("launcher").is_some());
+        assert!(name_to_opcode("start-menu").is_some());
+        assert!(name_to_opcode("overview").is_some());
+        assert!(name_to_opcode("control-center").is_some());
+        assert!(name_to_opcode("nonexistent-command-xyz").is_none());
     }
 }

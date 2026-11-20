@@ -125,7 +125,6 @@ pub fn open() {
     crate::ui::control_center::close();
     crate::ui::calendar::close();
     crate::ui::launcher::close();
-    crate::ui::terminal_manager::close();
     crate::ui::powermenu::close();
 }
 

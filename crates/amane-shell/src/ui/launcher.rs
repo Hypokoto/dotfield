@@ -88,12 +88,6 @@ pub fn get_shell_actions() -> Vec<ShellAction> {
             subtitle: "Switch multi-monitor layouts via Kanshi",
         },
         ShellAction {
-            id: "terminal-manager",
-            icon: "󰆍",
-            title: "Terminal Manager",
-            subtitle: "Select and launch terminal emulator",
-        },
-        ShellAction {
             id: "powermenu",
             icon: "󰐥",
             title: "Power Menu",
@@ -124,9 +118,6 @@ pub fn execute_shell_action(id: &str) {
     match id {
         "display-config" => {
             crate::ui::display_config::toggle();
-        }
-        "terminal-manager" => {
-            crate::ui::terminal_manager::toggle();
         }
         "powermenu" => {
             crate::ui::powermenu::toggle();
@@ -798,7 +789,7 @@ mod tests {
     fn test_get_shell_actions() {
         let actions = get_shell_actions();
         assert!(actions.iter().any(|a| a.id == "display-config"));
-        assert!(actions.iter().any(|a| a.id == "terminal-manager"));
+        assert!(actions.iter().any(|a| a.id == "control-center"));
         assert!(actions.iter().any(|a| a.id == "reload"));
     }
 }

@@ -1,0 +1,67 @@
+# Dotfield imv Configuration
+# Minimalist, high-performance Wayland image viewer
+
+[options]
+# Background matching Void Black
+background = 0A0A0C
+
+# Scaling mode: fit larger images, keep original size for smaller ones
+scaling_mode = shrink
+upscaling_method = linear
+
+# Window dimensions
+width = 1280
+height = 800
+
+# Loop input stream
+loop_input = true
+
+# Overlay styling
+overlay = false
+overlay_font = JetBrainsMono Nerd Font:13
+overlay_text = [${imv_current_index}/${imv_file_count}] (${imv_width}x${imv_height} | ${imv_scale}%) ${imv_current_file}
+overlay_text_color = E8E6E3
+overlay_text_alpha = ff
+overlay_background_color = 121216
+overlay_background_alpha = dd
+
+[binds]
+# Navigation
+q = quit
+<Escape> = quit
+f = fullscreen
+i = overlay
+d = overlay
+
+# Zoom & Pan
+<plus> = zoom 1
+<equal> = zoom 1
+<minus> = zoom -1
+<BackSpace> = reset
+x = zoom actual
+c = center
+
+# Panning
+j = pan 0 -50
+k = pan 0 50
+<Down> = pan 0 -50
+<Up> = pan 0 50
+
+# Image Cycling
+h = prev
+l = next
+<Left> = prev
+<Right> = next
+<bracketleft> = prev
+<bracketright> = next
+gg = goto 1
+<Shift+G> = goto -1
+
+# Rotation & Flip
+r = rotate by 90
+<Shift+R> = rotate by -90
+v = flip vertical
+h = flip horizontal
+
+# Display modes
+s = scaling next

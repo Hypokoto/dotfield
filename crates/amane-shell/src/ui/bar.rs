@@ -1,11 +1,10 @@
 use amane::{
-    Align, Audio, Bluetooth, Center, Color, Full, Layer, LayerWindow, Network, Notifications,
+    Align, Audio, Battery, Center, Color, Column, Full, Layer, LayerWindow, Network, Notifications,
     Padding, Parent, Pointer, Rectangle, Row, Scroll, Service, Text, Vertical, Widget, Workspaces,
     Zone,
 };
 
 use crate::config::{ConfigService, ShellManifest};
-use crate::services::niri::NiriWindowService;
 use crate::services::presentation::PresentationService;
 use crate::services::telemetry::TelemetryService;
 use crate::ui::tokens::{ThemeTokens, radius, spacing, typography};
@@ -22,10 +21,11 @@ const CANONICAL_WORKSPACES: [&str; 5] = [
     "05 SCRATCH",
 ];
 
-const WS_LABELS: [&str; 10] = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"];
-
 pub fn bar_layer_properties(manifest: &ShellManifest) -> (f32, Zone, bool) {
-    let height = if manifest.bar.position == "bottom" && manifest.bar.height == 34.0 {
+    let height = if manifest.bar.height == 34.0
+        || manifest.bar.height == 32.0
+        || manifest.bar.position == "bottom"
+    {
         48.0
     } else {
         manifest.bar.height as f32
@@ -35,26 +35,22 @@ pub fn bar_layer_properties(manifest: &ShellManifest) -> (f32, Zone, bool) {
 
 fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
-    let bar_cfg = &manifest.bar;
     let tokens = ThemeTokens::from_manifest(&manifest);
-
     let (height, bar_zone, is_visible) = bar_layer_properties(&manifest);
-    let is_bottom = manifest.bar.position == "bottom";
+    let font = manifest.theme.font_family.clone();
 
-    // Left section: BLACKSITE Brand or Workspace Radar
+    // 1. Left Cluster: Windows 11 Widgets Board trigger (Telemetry) + Desktop workspace switcher
     let mut left_items: Vec<Box<dyn Widget>> = Vec::new();
-    if is_bottom {
+
+    if manifest.bar.show_telemetry {
+        left_items.push(Box::new(render_compact_telemetry(&tokens, &font)));
+    }
+
+    if manifest.bar.show_workspaces {
         let (ws_widget, _) = render_workspaces(&manifest, &tokens, monitor_name);
         left_items.push(Box::new(ws_widget));
-        if bar_cfg.show_title {
-            left_items.push(Box::new(render_title(&manifest, &tokens)));
-        }
-    } else {
-        left_items.push(Box::new(render_brand(&manifest, &tokens)));
-        if bar_cfg.show_title {
-            left_items.push(Box::new(render_title(&manifest, &tokens)));
-        }
     }
+
     let left_container = Rectangle::new()
         .width(Parent)
         .height(Parent)
@@ -65,32 +61,21 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
                 .align(Align::Center),
         );
 
-    // Center section: Dock (if bottom) or 5 Workspaces (if top)
-    let (center_widget, center_width): (Box<dyn Widget>, f32) = if is_bottom {
-        crate::ui::dock::render_dock(&manifest, &tokens)
-    } else if bar_cfg.show_workspaces {
-        let (ws_widget, ws_width) = render_workspaces(&manifest, &tokens, monitor_name);
-        (Box::new(ws_widget), ws_width)
-    } else {
-        (Box::new(Row::new(Vec::new())), 0.0)
-    };
+    // 2. Center Cluster: Windows 11 style centered dock
+    let (dock_widget, dock_width) = crate::ui::dock::render_dock(&manifest, &tokens);
     let center_container = Rectangle::new()
-        .width(center_width)
+        .width(dock_width)
         .height(Parent)
         .align_child(Center, Center)
-        .child(Row::new(vec![center_widget]));
+        .child(Row::new(vec![dock_widget]));
 
-    // Right section: System Telemetry
-    let right_widget = if bar_cfg.show_telemetry {
-        render_telemetry(&manifest, &tokens, monitor_name)
-    } else {
-        Rectangle::new().width(0.0).height(0.0)
-    };
+    // 3. Right Cluster: Telemetry + System Tray + Quick Settings + Clock + Show Desktop
+    let right_row = render_right_cluster(&manifest, &tokens, monitor_name, &font);
     let right_container = Rectangle::new()
         .width(Parent)
         .height(Parent)
         .align_child(Align::End, Align::Center)
-        .child(right_widget);
+        .child(right_row);
 
     let content_row = Row::new(vec![
         Box::new(left_container),
@@ -101,33 +86,24 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
     .height(Parent)
     .align(Align::Center);
 
+    // Translucent dark acrylic/mica background with subtle 1px border outline from PALETTE tokens
     let background_container = Rectangle::new()
         .width(Parent)
         .height(Parent)
-        .fill(if is_bottom {
-            tokens.surface
-        } else {
-            Color::TRANSPARENT
-        })
-        .border(if is_bottom { 1.0 } else { 0.0 }, tokens.border_subtle)
+        .fill(tokens.acrylic_bg)
+        .border(1.0, tokens.acrylic_border)
         .padding(Padding {
-            top: 2.0,
-            bottom: 2.0,
+            top: 0.0,
+            bottom: 0.0,
             left: spacing::PAD_MD,
-            right: spacing::PAD_MD,
+            right: spacing::PAD_SM,
         })
         .child(content_row);
-
-    let anchor_vert = if is_bottom {
-        Vertical::Bottom
-    } else {
-        Vertical::Top
-    };
 
     LayerWindow::new()
         .width(Full)
         .height(height)
-        .anchor_vertical(anchor_vert)
+        .anchor_vertical(Vertical::Bottom)
         .layer(Layer::Top)
         .space(bar_zone)
         .visible(is_visible)
@@ -135,14 +111,66 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
         .child(background_container)
 }
 
-fn render_brand(manifest: &ShellManifest, tokens: &ThemeTokens) -> Rectangle {
-    let font = &manifest.theme.font_family;
+/// Compact weather/telemetry pill reading persistent /proc pread descriptors
+fn render_compact_telemetry(tokens: &ThemeTokens, font: &str) -> Rectangle {
+    let telem = TelemetryService::read();
+    let cpu = telem.cpu_percent;
+    let mem = telem.mem_percent;
+
+    let is_crit = cpu >= 95 || mem >= 90;
+    let is_anom = cpu >= 85 || mem >= 80;
+
+    let bg_color = if is_crit {
+        tokens.danger
+    } else if is_anom {
+        tokens.surface_elevated
+    } else {
+        tokens.surface
+    };
+
+    let border_color = if is_crit {
+        tokens.border_danger
+    } else if is_anom {
+        tokens.border_focus
+    } else {
+        tokens.border_subtle
+    };
+
+    let glyph_color = if is_crit { Color::WHITE } else { tokens.accent };
+
+    let text_color = if is_crit {
+        Color::WHITE
+    } else if is_anom {
+        tokens.accent
+    } else {
+        tokens.text_primary
+    };
+
+    let content_row = Row::new(vec![
+        Box::new(Text::new("󰍛").size(14.5).color(glyph_color).font(font)),
+        Box::new(
+            Text::new(format!("{cpu}%"))
+                .size(typography::BODY)
+                .color(text_color)
+                .font(font),
+        ),
+        Box::new(Text::new("󰘚").size(14.5).color(glyph_color).font(font)),
+        Box::new(
+            Text::new(format!("{mem}%"))
+                .size(typography::BODY)
+                .color(text_color)
+                .font(font),
+        ),
+    ])
+    .gap(6.0)
+    .align(Align::Center);
+
     Rectangle::new()
         .width(116.0)
-        .height(26.0)
-        .radius(radius::SM)
-        .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .height(34.0)
+        .radius(radius::MD)
+        .fill(bg_color)
+        .border(1.0, border_color)
         .cursor(Pointer)
         .padding(Padding {
             top: 2.0,
@@ -152,21 +180,12 @@ fn render_brand(manifest: &ShellManifest, tokens: &ThemeTokens) -> Rectangle {
         })
         .align_child(Center, Center)
         .on_click(|_| {
-            crate::ui::launcher::toggle();
+            let _ = std::process::Command::new("ghostty")
+                .arg("-e")
+                .arg("btop")
+                .spawn();
         })
-        .child(
-            Row::new(vec![
-                Box::new(Text::new("󰣇").size(13.0).color(tokens.accent).font(font)),
-                Box::new(
-                    Text::new("BLACKSITE")
-                        .size(typography::CAPTION + 0.5)
-                        .color(tokens.text_primary)
-                        .font(font),
-                ),
-            ])
-            .gap(6.0)
-            .align(Align::Center),
-        )
+        .child(content_row)
 }
 
 fn render_workspaces(
@@ -196,10 +215,10 @@ fn render_workspaces(
         .map(|ws| ws.index() as usize)
         .max()
         .unwrap_or(0)
-        .max(5);
+        .max(2);
 
     let mut total_width = 0.0;
-    let gap = 6.0;
+    let gap = 4.0;
 
     for num in 1..=max_idx {
         let ws_match = relevant_workspaces.iter().find(|ws| {
@@ -224,8 +243,8 @@ fn render_workspaces(
         let is_occupied = ws_match.map(|ws| ws.windows() > 0).unwrap_or(false);
         let ws_id = ws_match.map(|ws| ws.id());
 
-        // Only display workspace if it has open applications (occupied), is active/focused, or urgent
-        let should_display = is_focused || is_occupied || is_urgent;
+        // Display workspace if active/focused, occupied, or urgent
+        let should_display = is_focused || is_occupied || is_urgent || num <= 2;
         if !should_display {
             continue;
         }
@@ -233,26 +252,30 @@ fn render_workspaces(
         let pill_width = 34.0;
 
         let fill = if is_focused {
-            tokens.accent
+            tokens.surface_elevated
         } else if is_urgent {
             tokens.danger
         } else if is_occupied {
-            tokens.surface_elevated
-        } else {
             tokens.surface
+        } else {
+            Color::TRANSPARENT
         };
 
         let tile_border = if is_focused {
             tokens.accent
         } else if is_urgent {
             tokens.border_danger
-        } else {
+        } else if is_occupied {
             tokens.border_subtle
+        } else {
+            Color::TRANSPARENT
         };
 
         let text_color = if is_focused {
-            tokens.bg
-        } else if is_urgent || is_occupied {
+            tokens.accent
+        } else if is_urgent {
+            Color::WHITE
+        } else if is_occupied {
             tokens.text_primary
         } else {
             tokens.steel
@@ -264,27 +287,13 @@ fn render_workspaces(
             format!("{num}")
         };
 
-        let label_owned;
-        let label: &str = if num >= 1 && num <= WS_LABELS.len() {
-            WS_LABELS[num - 1]
-        } else {
-            label_owned = format!("{num:02}");
-            &label_owned
-        };
-
         let tile = Rectangle::new()
             .width(pill_width)
-            .height(26.0)
-            .radius(radius::SM)
+            .height(34.0)
+            .radius(radius::MD)
             .fill(fill)
             .border(1.0, tile_border)
             .cursor(Pointer)
-            .padding(Padding {
-                top: 2.0,
-                bottom: 2.0,
-                left: 4.0,
-                right: 4.0,
-            })
             .align_child(Center, Center)
             .on_click(move |_| {
                 if let Some(id) = ws_id {
@@ -294,8 +303,8 @@ fn render_workspaces(
                 }
             })
             .child(
-                Text::new(label)
-                    .size(typography::CAPTION + 0.5)
+                Text::new(format!("{num}"))
+                    .size(typography::BODY)
                     .color(text_color)
                     .font(font),
             );
@@ -304,31 +313,24 @@ fn render_workspaces(
         total_width += pill_width;
     }
 
-    // Fallback: If no workspace is occupied or focused yet, at least show workspace 01
     if buttons.is_empty() {
         let pill_width = 34.0;
         let target_name = CANONICAL_WORKSPACES[0].to_string();
         let tile = Rectangle::new()
             .width(pill_width)
-            .height(26.0)
-            .radius(radius::SM)
-            .fill(tokens.accent)
+            .height(34.0)
+            .radius(radius::MD)
+            .fill(tokens.surface_elevated)
             .border(1.0, tokens.accent)
             .cursor(Pointer)
-            .padding(Padding {
-                top: 2.0,
-                bottom: 2.0,
-                left: 4.0,
-                right: 4.0,
-            })
             .align_child(Center, Center)
             .on_click(move |_| {
                 Workspaces::focus_name(target_name.clone());
             })
             .child(
-                Text::new("01")
-                    .size(typography::CAPTION + 0.5)
-                    .color(tokens.bg)
+                Text::new("1")
+                    .size(typography::BODY)
+                    .color(tokens.accent)
                     .font(font),
             );
 
@@ -343,407 +345,28 @@ fn render_workspaces(
     (Row::new(buttons).gap(gap).align(Align::Center), total_width)
 }
 
-fn render_title(manifest: &ShellManifest, tokens: &ThemeTokens) -> Rectangle {
-    let win = NiriWindowService::read();
-    let display_text = if !win.display_title.is_empty() {
-        win.display_title.as_str()
-    } else if !win.title.is_empty() {
-        win.title.as_str()
-    } else if !win.app_id.is_empty() {
-        win.app_id.as_str()
-    } else {
-        "Dotfield"
-    };
-
-    let font = &manifest.theme.font_family;
-    let title_w = if win.layout_width > 0.0 {
-        win.layout_width
-    } else {
-        (display_text.chars().count() as f32 * 8.5 + 40.0).clamp(64.0, 280.0)
-    };
-
-    Rectangle::new()
-        .width(title_w)
-        .height(26.0)
-        .radius(radius::SM)
-        .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
-        .padding(Padding {
-            top: 2.0,
-            bottom: 2.0,
-            left: 8.0,
-            right: 8.0,
-        })
-        .align_child(Center, Center)
-        .child(
-            Row::new(vec![
-                Box::new(Text::new("󰣆").size(12.0).color(tokens.accent).font(font)),
-                Box::new(
-                    Text::new(display_text)
-                        .size(typography::SECONDARY)
-                        .color(tokens.text_primary)
-                        .font(font),
-                ),
-            ])
-            .gap(6.0)
-            .align(Align::Center),
-        )
-}
-
-fn render_telemetry(
+fn render_right_cluster(
     manifest: &ShellManifest,
     tokens: &ThemeTokens,
     monitor_name: Option<&str>,
-) -> Rectangle {
-    let font = &manifest.theme.font_family;
+    font: &str,
+) -> Row {
     let mut pills: Vec<Box<dyn Widget>> = Vec::new();
 
-    // Exception HUD: Ghost Capsule (trips on CPU > 85%, RAM > 80%, PSI stalls, or Battery <= 20% discharging)
-    let telem = TelemetryService::read();
-    let mut anomaly_pill_w = 0.0;
-    if telem.is_anomalous() {
-        let (label, is_crit) = if telem.cpu_stalled {
-            ("󱐋 CPU STALL".to_string(), true)
-        } else if telem.mem_stalled {
-            ("󱐋 MEM STALL".to_string(), true)
-        } else if telem.cpu_percent >= 85 {
-            let detail = if let (Some(name), Some(pid)) = (&telem.culprit_name, telem.culprit_pid) {
-                format!("󰍛 {}% {} ({})", telem.cpu_percent, name, pid)
-            } else {
-                format!("󰍛 {}%", telem.cpu_percent)
-            };
-            (detail, telem.is_critical())
-        } else if telem.mem_percent >= 80 {
-            let detail = if let Some(name) = &telem.culprit_name {
-                format!("󰘚 {}% {}", telem.mem_percent, name)
-            } else {
-                format!("󰘚 {}%", telem.mem_percent)
-            };
-            (detail, telem.is_critical())
-        } else if telem.battery_present
-            && !telem.battery_charging
-            && telem.battery_percent.unwrap_or(100) <= 20
-        {
-            let bat_p = telem.battery_percent.unwrap_or(0);
-            (format!("󰁺 {bat_p}% LOW BAT"), bat_p <= 10)
-        } else {
-            (format!("󰍛 {}%", telem.cpu_percent), false)
-        };
-
-        let border_col = if is_crit {
-            tokens.border_danger
-        } else {
-            tokens.border_focus
-        };
-        let text_col = if is_crit {
-            tokens.danger
-        } else {
-            tokens.accent
-        };
-        let pill_w = (label.chars().count() as f32 * 7.5).max(64.0) + 16.0;
-        anomaly_pill_w = pill_w;
-
-        let anomaly_pill = Rectangle::new()
-            .width(pill_w)
-            .height(26.0)
-            .radius(radius::SM)
-            .fill(tokens.surface_elevated)
-            .border(1.0, border_col)
-            .padding(Padding {
-                top: 2.0,
-                bottom: 2.0,
-                left: 8.0,
-                right: 8.0,
-            })
-            .align_child(Center, Center)
-            .child(
-                Text::new(label)
-                    .size(typography::SECONDARY)
-                    .color(text_col)
-                    .font(font),
-            );
-        pills.push(Box::new(anomaly_pill));
-    }
-
-    // Audio status (PipeWire: interactive click to open Audio widget, scroll to adjust volume)
-    let audio = Audio::read();
-    let mic_muted = audio.microphone_muted();
-    let vol_text = if audio.muted() {
-        "󰖁 MUTED".to_string()
-    } else if mic_muted {
-        format!("󰕾 {}% 󰍭", audio.volume())
-    } else {
-        format!("󰕾 {}%", audio.volume())
-    };
-    let vol_pill = Rectangle::new()
-        .width(76.0)
-        .height(26.0)
-        .radius(radius::SM)
-        .fill(tokens.surface)
-        .border(
-            1.0,
-            if audio.muted() {
-                tokens.border_danger
-            } else {
-                tokens.border_subtle
-            },
-        )
-        .cursor(Pointer)
-        .padding(Padding {
-            top: 2.0,
-            bottom: 2.0,
-            left: 6.0,
-            right: 6.0,
-        })
-        .on_click(move |_| {
-            crate::ui::control_center::open_view(crate::ui::control_center::ActiveView::Audio);
-        })
-        .on_scroll(|scroll: Scroll| {
-            let step = if scroll.y < 0.0 { 5 } else { -5 };
-            let current = Audio::read().volume() as i32;
-            let target = (current + step).clamp(0, 100) as u8;
-            Audio::set_volume(target);
-        })
-        .align_child(Center, Center)
-        .child(
-            Text::new(vol_text)
-                .size(typography::SECONDARY)
-                .color(if audio.muted() {
-                    tokens.danger
-                } else {
-                    tokens.steel
-                })
-                .font(font),
-        );
-    pills.push(Box::new(vol_pill));
-
-    // Network status (NetworkManager: interactive click to open Network widget)
-    let network = Network::read();
-    let net_text = if network.connected() {
-        if network.ssid().is_empty() {
-            "󰈀 Wired".to_string()
-        } else {
-            format!("󰤨 {}", network.ssid())
-        }
-    } else {
-        "󰤭 Offline".to_string()
-    };
-    let net_pill = Rectangle::new()
-        .width(84.0)
-        .height(26.0)
-        .radius(radius::SM)
-        .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
-        .cursor(Pointer)
-        .padding(Padding {
-            top: 2.0,
-            bottom: 2.0,
-            left: 6.0,
-            right: 6.0,
-        })
-        .align_child(Center, Center)
-        .on_click(move |_| {
-            crate::ui::control_center::open_view(crate::ui::control_center::ActiveView::Network);
-        })
-        .child(
-            Text::new(net_text)
-                .size(typography::SECONDARY)
-                .color(if network.connected() {
-                    tokens.steel
-                } else {
-                    tokens.danger
-                })
-                .font(font),
-        );
-    pills.push(Box::new(net_pill));
-
-    // Bluetooth status (BlueZ: interactive click to open Bluetooth widget)
-    let bluetooth = Bluetooth::read();
-    if bluetooth.available() {
-        let bt_powered = bluetooth.powered();
-        let connected_count = bluetooth.devices().iter().filter(|d| d.connected()).count();
-        let bt_text = if !bt_powered {
-            "󰂲 Off".to_string()
-        } else if connected_count > 0 {
-            format!("󰂱 {connected_count}")
-        } else {
-            "󰂯 On".to_string()
-        };
-        let bt_pill = Rectangle::new()
-            .width(54.0)
-            .height(26.0)
-            .radius(radius::SM)
-            .fill(tokens.surface)
-            .border(
-                1.0,
-                if connected_count > 0 {
-                    tokens.border_focus
-                } else {
-                    tokens.border_subtle
-                },
-            )
-            .cursor(Pointer)
-            .padding(Padding {
-                top: 2.0,
-                bottom: 2.0,
-                left: 6.0,
-                right: 6.0,
-            })
-            .align_child(Center, Center)
-            .on_click(move |_| {
-                crate::ui::control_center::open_view(
-                    crate::ui::control_center::ActiveView::Bluetooth,
-                );
-            })
-            .child(
-                Text::new(bt_text)
-                    .size(typography::SECONDARY)
-                    .color(if connected_count > 0 {
-                        tokens.accent
-                    } else if bt_powered {
-                        tokens.steel
-                    } else {
-                        tokens.text_muted
-                    })
-                    .font(font),
-            );
-        pills.push(Box::new(bt_pill));
-    }
-
-    // Notifications status badge (with Contextual Focus Shield in 01 DEV and 04 SECURITY)
-    let notifs = Notifications::read();
-    let notifs_count = notifs.list().len();
-    let in_focus_shield = Workspaces::read().list().iter().any(|ws| {
-        (ws.focused() || ws.active())
-            && ws
-                .name()
-                .map(|n| n.contains("01 DEV") || n.contains("04 SECURITY"))
-                .unwrap_or(false)
-    });
-    let has_critical = notifs
-        .list()
-        .iter()
-        .any(|n| n.urgency() == amane::Urgency::Critical);
-
-    let mut notif_pill_w = 0.0;
-    if notifs_count > 0 {
-        let (pill_fill, border_col, text_col, icon_label, width) =
-            if in_focus_shield && !has_critical {
-                (
-                    tokens.surface,
-                    tokens.border_subtle,
-                    tokens.steel,
-                    "•".to_string(),
-                    24.0,
-                )
-            } else {
-                (
-                    tokens.danger,
-                    tokens.border_danger,
-                    Color::WHITE,
-                    format!("󰂚 {notifs_count}"),
-                    52.0,
-                )
-            };
-        notif_pill_w = width;
-
-        let notif_pill = Rectangle::new()
-            .width(width)
-            .height(26.0)
-            .radius(radius::SM)
-            .fill(pill_fill)
-            .border(1.0, border_col)
-            .cursor(Pointer)
-            .padding(Padding {
-                top: 2.0,
-                bottom: 2.0,
-                left: if in_focus_shield && !has_critical {
-                    4.0
-                } else {
-                    8.0
-                },
-                right: if in_focus_shield && !has_critical {
-                    4.0
-                } else {
-                    8.0
-                },
-            })
-            .align_child(Center, Center)
-            .on_click(move |_| {
-                crate::ui::control_center::toggle();
-            })
-            .child(
-                Text::new(icon_label)
-                    .size(if in_focus_shield && !has_critical {
-                        14.0
-                    } else {
-                        typography::SECONDARY
-                    })
-                    .color(text_col)
-                    .font(font),
-            );
-        pills.push(Box::new(notif_pill));
-    }
-
-    // System Tray (StatusNotifierItem applications & status cluster)
-    pills.push(crate::ui::tray::render_tray_pill(
-        manifest,
-        font,
-        monitor_name,
-    ));
-
-    // Active Screen Recording indicator (Crimson with timer, click to open recorder overlay)
-    let is_recording = crate::ui::screen_record::ScreenRecordService::read().is_recording;
-    let rec_elapsed = crate::ui::screen_record::ScreenRecordService::read()
-        .started_at
-        .map(|t| t.elapsed().as_secs())
-        .unwrap_or(0);
-    if is_recording {
-        let mins = rec_elapsed / 60;
-        let secs = rec_elapsed % 60;
-        let rec_text = format!("󰑋 REC {mins:02}:{secs:02}");
-        let rec_pill = Rectangle::new()
-            .width(108.0)
-            .height(26.0)
-            .radius(radius::SM)
-            .fill(tokens.danger)
-            .border(1.0, tokens.border_danger)
-            .cursor(Pointer)
-            .padding(Padding {
-                top: 2.0,
-                bottom: 2.0,
-                left: 8.0,
-                right: 8.0,
-            })
-            .align_child(Center, Center)
-            .on_click(move |_| {
-                crate::ui::screen_record::toggle();
-            })
-            .child(
-                Text::new(rec_text)
-                    .size(typography::SECONDARY)
-                    .color(Color::WHITE)
-                    .font(font),
-            );
-        pills.push(Box::new(rec_pill));
-    }
-
-    // Presentation Mode HUD Capsule (Director Stopwatch, rendered exclusively on primary display)
+    // 1. Presentation Mode Stopwatch (if active on primary display)
     let presentation = PresentationService::global();
     let is_presenting = presentation.is_active() && is_presentation_primary_display(monitor_name);
-    let mut pres_pill_w = 0.0;
     if is_presenting {
         let elapsed_str = presentation
             .elapsed_formatted()
             .unwrap_or_else(|| "00:00".to_string());
         let pres_label = format!("󰐩 [PRESENTING] {elapsed_str}");
         let pill_w = 144.0;
-        pres_pill_w = pill_w;
 
         let pres_pill = Rectangle::new()
             .width(pill_w)
-            .height(26.0)
-            .radius(radius::SM)
+            .height(34.0)
+            .radius(radius::MD)
             .fill(tokens.surface_elevated)
             .border(1.0, tokens.border_focus)
             .cursor(Pointer)
@@ -766,14 +389,219 @@ fn render_telemetry(
         pills.push(Box::new(pres_pill));
     }
 
-    // Clock (clickable: toggles interactive monthly Calendar)
-    let clock_service = crate::services::clock::ClockService::read();
-    let now = clock_service.formatted();
-    let is_bottom_pos = manifest.bar.position == "bottom";
-    let clock_pill = Rectangle::new()
-        .width(132.0)
-        .height(26.0)
+    // 3. Active Screen Recording Pill
+    let is_recording = crate::ui::screen_record::ScreenRecordService::read().is_recording;
+    let rec_elapsed = crate::ui::screen_record::ScreenRecordService::read()
+        .started_at
+        .map(|t| t.elapsed().as_secs())
+        .unwrap_or(0);
+    if is_recording {
+        let mins = rec_elapsed / 60;
+        let secs = rec_elapsed % 60;
+        let rec_text = format!("󰑋 REC {mins:02}:{secs:02}");
+        let rec_pill = Rectangle::new()
+            .width(108.0)
+            .height(34.0)
+            .radius(radius::MD)
+            .fill(tokens.danger)
+            .border(1.0, tokens.border_danger)
+            .cursor(Pointer)
+            .padding(Padding {
+                top: 2.0,
+                bottom: 2.0,
+                left: 8.0,
+                right: 8.0,
+            })
+            .align_child(Center, Center)
+            .on_click(move |_| {
+                crate::ui::screen_record::toggle();
+            })
+            .child(
+                Text::new(rec_text)
+                    .size(typography::SECONDARY)
+                    .color(Color::WHITE)
+                    .font(font),
+            );
+        pills.push(Box::new(rec_pill));
+    }
+
+    // 4. System Tray (StatusNotifierItem applications)
+    pills.push(crate::ui::tray::render_tray_pill(
+        manifest,
+        font,
+        monitor_name,
+    ));
+
+    // 5. Quick Settings Pill: Unified cluster for Wi-Fi, Volume, Battery (Windows 11 style)
+    let qs_pill = render_quick_settings_pill(tokens, font);
+    pills.push(Box::new(qs_pill));
+
+    // 6. Stacked Two-Line Clock & Notification Center (HH:MM and DD/MM/YYYY)
+    let clock_pill = render_stacked_clock_pill(tokens, font);
+    pills.push(Box::new(clock_pill));
+
+    // 7. Windows 11 Far-Right "Show Desktop" / Task View sliver
+    let show_desktop_sliver = Rectangle::new()
+        .width(8.0)
+        .height(34.0)
         .radius(radius::SM)
+        .fill(Color::TRANSPARENT)
+        .cursor(Pointer)
+        .align_child(Center, Center)
+        .on_click(|_| {
+            let _ = crate::services::niri::NiriService::toggle_overview();
+        })
+        .child(
+            Rectangle::new()
+                .width(3.0)
+                .height(22.0)
+                .radius(radius::PILL)
+                .fill(Color::from("#ffffff26")),
+        );
+    pills.push(Box::new(show_desktop_sliver));
+
+    Row::new(pills).gap(spacing::GAP_SM).align(Align::Center)
+}
+
+/// Unified Quick Settings pill combining Wi-Fi, Volume, and Battery status
+fn render_quick_settings_pill(tokens: &ThemeTokens, font: &str) -> Rectangle {
+    let network = Network::read();
+    let net_icon = if network.connected() {
+        if network.ssid().is_empty() {
+            "󰈀"
+        } else {
+            "󰤨"
+        }
+    } else {
+        "󰤭"
+    };
+
+    let audio = Audio::read();
+    let vol_icon = if audio.muted() {
+        "󰖁"
+    } else if audio.volume() > 50 {
+        "󰕾"
+    } else if audio.volume() > 0 {
+        "󰖀"
+    } else {
+        "󰕿"
+    };
+
+    let battery = Battery::read();
+    let bat_icon = if battery.charging() {
+        "󰂄"
+    } else if battery.percent() <= 10 {
+        "󰁺"
+    } else if battery.percent() <= 20 {
+        "󰁻"
+    } else {
+        "󰁹"
+    };
+
+    let net_color = if network.connected() {
+        tokens.text_primary
+    } else {
+        tokens.steel
+    };
+
+    let vol_color = if audio.muted() {
+        tokens.steel
+    } else {
+        tokens.text_primary
+    };
+
+    let bat_color = if battery.charging() {
+        tokens.success
+    } else if battery.percent() <= 10 {
+        tokens.danger
+    } else if battery.percent() <= 20 {
+        Color::from("#FFB000") // Amber warning
+    } else {
+        tokens.text_primary
+    };
+
+    let content_row = Row::new(vec![
+        Box::new(Text::new(net_icon).size(16.0).color(net_color).font(font)),
+        Box::new(Text::new(vol_icon).size(16.0).color(vol_color).font(font)),
+        Box::new(Text::new(bat_icon).size(16.0).color(bat_color).font(font)),
+    ])
+    .gap(10.0)
+    .align(Align::Center);
+
+    Rectangle::new()
+        .width(90.0)
+        .height(34.0)
+        .radius(radius::MD)
+        .fill(tokens.surface)
+        .border(1.0, tokens.border_subtle)
+        .cursor(Pointer)
+        .padding(Padding {
+            top: 2.0,
+            bottom: 2.0,
+            left: 8.0,
+            right: 8.0,
+        })
+        .align_child(Center, Center)
+        .on_click(|_| {
+            crate::ui::control_center::toggle();
+        })
+        .on_scroll(|scroll: Scroll| {
+            let step = if scroll.y < 0.0 { 5 } else { -5 };
+            let current = Audio::read().volume() as i32;
+            let target = (current + step).clamp(0, 100) as u8;
+            Audio::set_volume(target);
+        })
+        .child(content_row)
+}
+
+/// Two-line stacked clock and notification center pill (HH:MM / DD/MM/YYYY)
+fn render_stacked_clock_pill(tokens: &ThemeTokens, font: &str) -> Rectangle {
+    let clock = crate::services::clock::ClockService::read();
+    let time_str = clock.time();
+    let date_str = clock.date();
+
+    let notifs = Notifications::read();
+    let notifs_count = notifs.list().len();
+
+    let clock_column = Column::new(vec![
+        Box::new(
+            Text::new(time_str)
+                .size(typography::BODY_LG)
+                .color(tokens.text_primary)
+                .font(font),
+        ),
+        Box::new(
+            Text::new(date_str)
+                .size(typography::SECONDARY)
+                .color(tokens.text_secondary)
+                .font(font),
+        ),
+    ])
+    .align(Center)
+    .gap(1.0);
+
+    let mut row_items: Vec<Box<dyn Widget>> = vec![Box::new(clock_column)];
+
+    if notifs_count > 0 {
+        let notif_badge = Rectangle::new()
+            .width(18.0)
+            .height(18.0)
+            .radius(radius::PILL)
+            .fill(tokens.danger)
+            .align_child(Center, Center)
+            .child(
+                Text::new(format!("{notifs_count}"))
+                    .size(typography::CAPTION - 1.0)
+                    .color(Color::WHITE)
+                    .font(font),
+            );
+        row_items.push(Box::new(notif_badge));
+    }
+
+    Rectangle::new()
+        .width(94.0)
+        .height(34.0)
+        .radius(radius::MD)
         .fill(tokens.surface)
         .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
@@ -784,94 +612,13 @@ fn render_telemetry(
             right: 6.0,
         })
         .align_child(Center, Center)
-        .on_click(move |_| {
-            if is_bottom_pos {
-                crate::ui::action_center::toggle();
-            } else {
-                crate::ui::calendar::toggle();
-            }
+        .on_click(|_| {
+            crate::ui::control_center::open_view(crate::ui::control_center::ActiveView::Calendar);
         })
-        .child(
-            Text::new(now)
-                .size(typography::SECONDARY)
-                .color(tokens.accent)
-                .font(font),
-        );
-    pills.push(Box::new(clock_pill));
-
-    if manifest.bar.position == "bottom" {
-        let action_center_btn = Rectangle::new()
-            .width(32.0)
-            .height(26.0)
-            .radius(radius::SM)
-            .fill(tokens.surface)
-            .border(1.0, tokens.border_subtle)
-            .cursor(Pointer)
-            .align_child(Center, Center)
-            .on_click(|_| {
-                crate::ui::action_center::toggle();
-            })
-            .child(
-                Text::new("󱂬")
-                    .size(13.0)
-                    .color(tokens.text_secondary)
-                    .font(font),
-            );
-        pills.push(Box::new(action_center_btn));
-    }
-
-    // Powermenu icon button (Crimson #E63946)
-    let power_pill = Rectangle::new()
-        .width(28.0)
-        .height(26.0)
-        .radius(radius::SM)
-        .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(move |_| {
-            crate::ui::powermenu::toggle();
-        })
-        .child(Text::new("󰐥").size(12.0).color(tokens.danger).font(font));
-    pills.push(Box::new(power_pill));
-
-    let pills_count = pills.len();
-    let mut telemetry_w: f32 = 76.0 + 84.0 + 132.0 + 28.0; // Audio (76), Net (84), Clock (132), Power (28)
-    if telem.is_anomalous() {
-        telemetry_w += anomaly_pill_w;
-    }
-    if bluetooth.available() {
-        telemetry_w += 54.0;
-    }
-    if notifs_count > 0 {
-        telemetry_w += notif_pill_w;
-    }
-    if is_recording {
-        telemetry_w += 108.0;
-    }
-    if is_presenting {
-        telemetry_w += pres_pill_w;
-    }
-    let tray_items_len = crate::services::tray::TrayService::read().items.len();
-    let tray_w = if tray_items_len == 0 {
-        32.0
-    } else {
-        (tray_items_len.min(6) as f32 * 26.0) + 12.0
-    };
-    telemetry_w += tray_w;
-    if pills_count > 1 {
-        telemetry_w += (pills_count - 1) as f32 * 6.0;
-    }
-
-    Rectangle::new()
-        .width(telemetry_w)
-        .height(Parent)
-        .child(Row::new(pills).gap(6.0).align(Align::Center))
+        .child(Row::new(row_items).gap(6.0).align(Align::Center))
 }
 
 /// Determines whether the given monitor is the primary display for presentation director HUD.
-/// Laptop eDP displays are always primary; non-eDP external displays are secondary.
-/// In single-monitor rehearsal environments, the single active display is treated as primary.
 pub fn is_presentation_primary_display(monitor_name: Option<&str>) -> bool {
     let Some(name) = monitor_name else {
         return true;
@@ -887,7 +634,6 @@ pub fn is_presentation_primary_display(monitor_name: Option<&str>) -> bool {
         .filter_map(|ws| ws.output().map(|s| s.to_string()))
         .collect();
 
-    // If only one display output is active in the workspace hierarchy, allow presentation HUD
     all_outputs.len() <= 1
 }
 
@@ -908,6 +654,6 @@ mod tests {
         let (height, zone, visible) = bar_layer_properties(&manifest);
         assert!(visible);
         assert_eq!(zone, Zone::Reserve);
-        assert!(height > 0.0);
+        assert_eq!(height, 48.0);
     }
 }

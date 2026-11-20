@@ -1,23 +1,23 @@
 // Niri Appearance & Low-Latency Rendering
-// Snappy BLACKSITE animations (150ms ease-out, zero bounce)
+// Fluent snappy animations (200ms ease-out-cubic, zero bounce)
 
 prefer-no-csd
 
 animations {
     workspace-switch {
-        duration-ms 150
+        duration-ms 200
         curve "ease-out-cubic"
     }
     horizontal-view-movement {
-        duration-ms 150
+        duration-ms 200
         curve "ease-out-cubic"
     }
     window-open {
-        duration-ms 150
+        duration-ms 200
         curve "ease-out-cubic"
     }
     window-close {
-        duration-ms 150
+        duration-ms 200
         curve "ease-out-cubic"
     }
 }

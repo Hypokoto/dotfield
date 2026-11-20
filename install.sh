@@ -231,7 +231,7 @@ case "${PKG_MANAGER}" in
         COMMON_PKGS=(
             ghostty foot kitty fuzzel kanshi tmux zellij neovim zsh starship fastfetch
             mako swaylock swayidle grim slurp wl-clipboard wlr-randr wlogout
-            wf-recorder eza bat ripgrep fd dust duf btop doggo xh trash-cli
+            wf-recorder eza bat ripgrep fd dust duf btop cava doggo xh trash-cli
             zoxide direnv ttf-jetbrains-mono-nerd papirus-icon-theme playerctl bubblewrap
         )
         SWAY_PKGS=(sway swaybg swaynag)

@@ -22,8 +22,8 @@ pub fn render_tray_pill(
     for (idx, item) in tray.items.iter().enumerate().take(6) {
         let glyph = item.glyph();
         let app_pill = Rectangle::new()
-            .width(22.0)
-            .height(22.0)
+            .width(24.0)
+            .height(24.0)
             .radius(radius::SM)
             .fill(tokens.surface_elevated)
             .border(1.0, tokens.border_subtle)
@@ -36,15 +36,15 @@ pub fn render_tray_pill(
                     TrayService::activate(idx);
                 }
             })
-            .child(Text::new(glyph).size(12.0).color(tokens.accent).font(font));
+            .child(Text::new(glyph).size(14.0).color(tokens.accent).font(font));
 
         items.push(Box::new(app_pill));
     }
 
-    // Fallback: If no external SNI apps are registered, show a tray indicator icon
+    // Fallback: If no external SNI apps are registered, show a subtle chevron up icon
     if items.is_empty() {
         items.push(Box::new(
-            Text::new("󰀻").size(12.0).color(tokens.accent).font(font),
+            Text::new("󰅃").size(16.0).color(tokens.steel).font(font),
         ));
     }
 
@@ -56,15 +56,15 @@ pub fn render_tray_pill(
 
     let mut tray_container = Rectangle::new()
         .width(pill_w)
-        .height(26.0)
-        .radius(radius::SM)
+        .height(34.0)
+        .radius(radius::MD)
         .fill(tokens.surface)
         .border(1.0, tokens.border_subtle)
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,
-            left: 6.0,
-            right: 6.0,
+            left: 4.0,
+            right: 4.0,
         })
         .align_child(Center, Center);
 

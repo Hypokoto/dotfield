@@ -66,7 +66,7 @@ impl CavaService {
     fn run_cava_reader() -> anyhow::Result<()> {
         let temp_cfg = "/tmp/amane_cava_config";
         let config_content = format!(
-            "[general]\nbars = {}\n[output]\nmethod = raw\nraw_target = /dev/stdout\ndata_format = binary\nbit_format = 8bit\n",
+            "[general]\nbars = {}\nframerate = 60\nsleep_timer = 2\n\n[output]\nmethod = raw\nraw_target = /dev/stdout\ndata_format = binary\nbit_format = 8bit\n\n[smoothing]\nmonstercat = 1\nnoise_reduction = 75\n",
             CAVA_BAR_COUNT
         );
         let _ = std::fs::write(temp_cfg, config_content);

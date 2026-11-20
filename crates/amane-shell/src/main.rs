@@ -36,9 +36,6 @@ Flags:
 
 Commands / Fast-Path IPC Actions (Forwarded to running daemon):
   launcher                Toggle application launcher overlay
-  terminal-manager        Toggle terminal manager overlay
-  topology                Toggle project topology & worktree switcher
-  sidecar                 Spawn or focus companion sidecar
   display-config          Toggle display configurator overlay
   control-center          Toggle control center overlay
   network                 Open NetworkManager interactive widget
@@ -111,11 +108,6 @@ fn parse_cli_args() -> Result<Cli, String> {
                 // Legacy "run": fall through to starting shell
             }
             "--launcher" | "launcher" => cli.target_action = Some("launcher".to_string()),
-            "--terminal-manager" | "terminal-manager" | "--terminals" | "terminals" => {
-                cli.target_action = Some("terminal-manager".to_string())
-            }
-            "--topology" | "topology" => cli.target_action = Some("topology".to_string()),
-            "--sidecar" | "sidecar" => cli.target_action = Some("sidecar".to_string()),
             "--display-config" | "display-config" => {
                 cli.target_action = Some("display-config".to_string())
             }
@@ -324,18 +316,6 @@ fn ipc_display_config_handler(_args: &[String]) -> String {
     "display-config toggled".to_string()
 }
 
-fn ipc_terminal_manager_handler(_args: &[String]) -> String {
-    ui::terminal_manager::toggle();
-    "terminal-manager toggled".to_string()
-}
-
-fn ipc_sidecar_handler(_args: &[String]) -> String {
-    match services::niri::NiriService::spawn_sidecar_for_focused() {
-        Ok(()) => "sidecar spawned".to_string(),
-        Err(e) => format!("sidecar error: {e}"),
-    }
-}
-
 fn ipc_powermenu_handler(_args: &[String]) -> String {
     ui::powermenu::toggle();
     "powermenu toggled".to_string()
@@ -366,8 +346,8 @@ fn ipc_presentation_handler(_args: &[String]) -> String {
 }
 
 fn ipc_widgets_handler(_args: &[String]) -> String {
-    ui::widgets_board::toggle();
-    "widgets toggled".to_string()
+    ui::control_center::toggle();
+    "control-center toggled".to_string()
 }
 
 fn ipc_start_menu_handler(_args: &[String]) -> String {
@@ -376,8 +356,8 @@ fn ipc_start_menu_handler(_args: &[String]) -> String {
 }
 
 fn ipc_action_center_handler(_args: &[String]) -> String {
-    ui::action_center::toggle();
-    "action-center toggled".to_string()
+    ui::control_center::open_view(ui::control_center::ActiveView::Calendar);
+    "control-center calendar toggled".to_string()
 }
 
 fn ipc_overview_handler(_args: &[String]) -> String {
@@ -419,7 +399,6 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
     services::tray::TrayService::start();
     services::battery::BatteryMonitor::start();
     services::telemetry::TelemetryService::start();
-    services::topology::TopologyService::refresh_async();
     services::cava::CavaService::start();
 
     // Start notification auto-dismiss timer worker
@@ -427,7 +406,7 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
 
     let show_bar = !no_bar && manifest.bar.enabled;
 
-    // Run Amane application with bar (if enabled), osd, notifications, launcher, control-center, display-config, terminal-manager, powermenu, calendar, screen-recorder, widgets, start-menu, action-center, and overview
+    // Run Amane application with bar (if enabled), osd, notifications, launcher, control-center, display-config, powermenu, calendar, screen-recorder, widgets, start-menu, action-center, and overview
     let mut app = amane::App::new()
         .ipc("osd", ipc_osd_handler)
         .ipc("reload", ipc_reload_handler)
@@ -438,9 +417,6 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         .ipc("bluetooth", ipc_bluetooth_handler)
         .ipc("tray", ipc_tray_handler)
         .ipc("display-config", ipc_display_config_handler)
-        .ipc("terminal-manager", ipc_terminal_manager_handler)
-        .ipc("topology", ipc_terminal_manager_handler)
-        .ipc("sidecar", ipc_sidecar_handler)
         .ipc("presentation", ipc_presentation_handler)
         .ipc("widgets", ipc_widgets_handler)
         .ipc("start-menu", ipc_start_menu_handler)
@@ -460,13 +436,10 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         .window(ui::launcher::launcher_overlay)
         .window(ui::control_center::control_center_panel)
         .window(ui::display_config::display_config_overlay)
-        .window(ui::terminal_manager::terminal_manager_overlay)
         .window(ui::powermenu::powermenu_overlay)
         .window(ui::calendar::calendar_overlay)
         .window(ui::screen_record::screen_record_overlay)
-        .window(ui::widgets_board::widgets_board_overlay)
         .window(ui::start_menu::start_menu_overlay)
-        .window(ui::action_center::action_center_overlay)
         .window(ui::overview::overview_overlay)
         .run();
 

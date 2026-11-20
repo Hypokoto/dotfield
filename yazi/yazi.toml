@@ -1,0 +1,64 @@
+# Dotfield Yazi Master Configuration
+# Controlled Chaos & Modern Wayland TUI File Manager
+
+[manager]
+ratio = [1, 3, 4]
+sort_by = "alphabetical"
+sort_sensitive = false
+sort_reverse = false
+sort_dir_first = true
+linemode = "size"
+show_hidden = false
+show_symlink = true
+scrolloff = 5
+
+[preview]
+wrap = "no"
+tab_size = 4
+max_width = 1200
+max_height = 1000
+image_filter = "lanczos3"
+image_quality = 90
+sixel_fraction = 15
+
+[opener]
+edit = [
+    { run = '${EDITOR:-nvim} "$@"', block = true, desc = "Edit with editor" },
+]
+play = [
+    { run = 'mpv "$@"', orphan = true, desc = "Play with mpv" },
+]
+image = [
+    { run = 'imv "$@"', orphan = true, desc = "View with imv" },
+]
+open = [
+    { run = 'xdg-open "$@"', desc = "Open with default system application" },
+]
+
+[open]
+rules = [
+    { mime = "text/*", use = "edit" },
+    { mime = "image/*", use = "image" },
+    { mime = "video/*", use = "play" },
+    { mime = "audio/*", use = "play" },
+    { mime = "application/json", use = "edit" },
+    { mime = "application/x-ndjson", use = "edit" },
+    { mime = "application/toml", use = "edit" },
+    { mime = "application/pdf", use = "open" },
+    { url = "*.kdl", use = "edit" },
+    { url = "*.rs", use = "edit" },
+    { url = "*.sh", use = "edit" },
+    { url = "*.zsh", use = "edit" },
+    { url = "*.conf", use = "edit" },
+    { url = "*", use = "open" },
+]
+
+[tasks]
+micro_workers = 10
+macro_workers = 25
+bizarre_retry = 5
+
+[plugin]
+fetchers = []
+preloaders = []
+previewers = []

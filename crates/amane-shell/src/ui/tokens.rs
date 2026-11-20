@@ -20,10 +20,11 @@ pub mod spacing {
 
 /// Border radius scale providing mechanical tactical curvature (BLACKSITE Industrial Noir: 1-3px)
 pub mod radius {
-    pub const XS: f32 = 1.0; // Micro indicators, dot tags
-    pub const SM: f32 = 2.0; // Keycaps, tags, badges, buttons
-    pub const MD: f32 = 2.0; // Standard cards, buttons, input fields
-    pub const LG: f32 = 3.0; // Windows, modal shells, popovers
+    pub const XS: f32 = 2.0; // Micro indicators, dot tags
+    pub const SM: f32 = 4.0; // Keycaps, tags, badges, buttons
+    pub const MD: f32 = 6.0; // Standard cards, buttons, input fields
+    pub const LG: f32 = 8.0; // Windows, modal shells, popovers
+    pub const XL: f32 = 12.0; // Large Windows 11 flyouts and Start Menu
     pub const PILL: f32 = 999.0; // Fully rounded pills, radar dots
 }
 
@@ -54,6 +55,25 @@ pub mod typography {
     pub const DISPLAY: f32 = 22.0; // Hero display, large clock
 }
 
+/// Hardcoded design tokens strictly defined in PALETTE.md (Controlled Chaos)
+pub mod palette {
+    pub const VOID: &str = "#0A0A0C"; // Primary background
+    pub const OBSIDIAN: &str = "#121216"; // Windows, panels, and cards
+    pub const GRAPHITE: &str = "#1C1C23"; // Elevated surfaces
+    pub const IRON: &str = "#34343D"; // Borders and separators
+    pub const ASH: &str = "#A1A1AA"; // Secondary text
+    pub const BONE: &str = "#E8E6E3"; // Primary text
+    pub const CRIMSON: &str = "#E63946"; // Chaos and critical emphasis
+    pub const BLOOD_RED: &str = "#9D0208"; // Critical warnings and dangerous operations
+    pub const INDUSTRIAL_AMBER: &str = "#FFB000"; // Primary accent and active states
+    pub const PALE_AMBER: &str = "#FFD166"; // Hover states and highlighted information
+    pub const STEEL: &str = "#8B949E"; // Neutral states and secondary controls
+    pub const SUCCESS_GREEN: &str = "#7BC47F"; // Successful operations
+    pub const ACCENT_BLUE: &str = "#60CDFF"; // Fluent Blue / WinUI accent
+    pub const ACRYLIC_BG: &str = "#1c1c1ce6"; // Translucent Mica/Acrylic window background
+    pub const ACRYLIC_BORDER: &str = "#ffffff14"; // Subtle translucent 1px border outline
+}
+
 /// Semantic theme tokens resolved from the active shell manifest
 #[derive(Debug, Clone)]
 pub struct ThemeTokens {
@@ -82,93 +102,118 @@ pub struct ThemeTokens {
     pub danger_critical: Color,
     pub danger_subtle: Color,
 
+    pub warning: Color,
+    pub warning_subtle: Color,
+
     pub success: Color,
     pub steel: Color,
+
+    pub acrylic_bg: Color,
+    pub acrylic_border: Color,
+    pub card_bg: Color,
+    pub card_border: Color,
+    pub indicator_active: Color,
 
     pub font_family: String,
 }
 
+impl Default for ThemeTokens {
+    fn default() -> Self {
+        Self::from_manifest(&ShellManifest::default())
+    }
+}
+
 impl ThemeTokens {
     pub fn from_manifest(manifest: &ShellManifest) -> Self {
-        let palette = &manifest.palette;
+        let p = &manifest.palette;
 
-        let bg = if !palette.background.is_empty() {
-            Color::from(palette.background.as_str())
+        // Controlled Chaos Core Palette strictly mapped to PALETTE.md
+        let bg = if !p.background.is_empty() {
+            Color::from(p.background.as_str())
         } else {
-            Color::from("#08080A")
+            Color::from(palette::VOID)
         };
-        let surface = if !palette.surface.is_empty() {
-            Color::from(palette.surface.as_str())
+        let surface = if !p.surface.is_empty() {
+            Color::from(p.surface.as_str())
         } else {
-            Color::from("#111216")
+            Color::from(palette::OBSIDIAN)
         };
-        let surface_elevated = if !palette.overlay.is_empty() {
-            Color::from(palette.overlay.as_str())
+        let surface_elevated = if !p.overlay.is_empty() {
+            Color::from(p.overlay.as_str())
         } else {
-            Color::from("#181920")
+            Color::from(palette::GRAPHITE)
         };
-        let border_subtle = if !palette.border.is_empty() {
-            Color::from(palette.border.as_str())
+        let border_subtle = if !p.border.is_empty() {
+            Color::from(p.border.as_str())
         } else {
-            Color::from("#282A36")
+            Color::from(palette::IRON)
         };
-        let text_primary = if !palette.foreground.is_empty() {
-            Color::from(palette.foreground.as_str())
+        let text_primary = if !p.foreground.is_empty() {
+            Color::from(p.foreground.as_str())
         } else {
-            Color::from("#E6E6EB")
+            Color::from(palette::BONE)
         };
-        let text_secondary = if !palette.muted.is_empty() {
-            Color::from(palette.muted.as_str())
+        let text_secondary = if !p.muted.is_empty() {
+            Color::from(p.muted.as_str())
         } else {
-            Color::from("#8F94A6")
+            Color::from(palette::ASH)
         };
-        let text_muted = if !palette.steel.is_empty() {
-            Color::from(palette.steel.as_str())
+        let text_muted = if !p.steel.is_empty() {
+            Color::from(p.steel.as_str())
         } else {
-            Color::from("#606474")
+            Color::from(palette::STEEL)
         };
-        let accent = if !palette.highlight.is_empty() {
-            Color::from(palette.highlight.as_str())
+        let accent = if !p.highlight.is_empty() {
+            Color::from(p.highlight.as_str())
         } else {
-            Color::from("#FFB000")
+            Color::from(palette::ACCENT_BLUE)
         };
-        let accent_hover = if !palette.hover.is_empty() {
-            Color::from(palette.hover.as_str())
+        let accent_hover = if !p.hover.is_empty() {
+            Color::from(p.hover.as_str())
         } else {
-            Color::from("#FFC020")
+            Color::from("#72D6FF")
         };
-        let danger = if !palette.accent.is_empty() {
-            Color::from(palette.accent.as_str())
+        let danger = if !p.accent.is_empty() {
+            Color::from(p.accent.as_str())
         } else {
-            Color::from("#E63946")
+            Color::from(palette::CRIMSON)
         };
-        let danger_critical = if !palette.danger_critical.is_empty() {
-            Color::from(palette.danger_critical.as_str())
+        let danger_critical = if !p.danger_critical.is_empty() {
+            Color::from(p.danger_critical.as_str())
         } else {
-            Color::from("#9D0208")
+            Color::from(palette::BLOOD_RED)
         };
-        let success = if !palette.success.is_empty() {
-            Color::from(palette.success.as_str())
+        let warning = Color::from(palette::INDUSTRIAL_AMBER);
+        let warning_subtle = Color::from("#261D0A");
+        let success = if !p.success.is_empty() {
+            Color::from(p.success.as_str())
         } else {
-            Color::from("#4AF626")
+            Color::from(palette::SUCCESS_GREEN)
         };
-        let steel = if !palette.steel.is_empty() {
-            Color::from(palette.steel.as_str())
+        let steel = if !p.steel.is_empty() {
+            Color::from(p.steel.as_str())
         } else {
-            Color::from("#606474")
+            Color::from(palette::STEEL)
         };
 
-        // Derived surface & border states (Industrial Noir 65-20-8-5-2)
-        let surface_hover = Color::from("#20222B");
-        let surface_active = Color::from("#282A36");
-        let surface_selected = Color::from("#241E10");
-        let surface_track = Color::from("#0E0F13");
+        // WinUI 3 Fluent / Mica Acrylic Tokens
+        let acrylic_bg = Color::from(palette::ACRYLIC_BG);
+        let acrylic_border = Color::from(palette::ACRYLIC_BORDER);
+        let card_bg = surface_elevated;
+        let card_border = Color::from("#ffffff0f");
+        let indicator_active = accent;
+
+        // Derived surface & border states (Controlled Chaos)
+        let surface_hover = Color::from("#1C1C23");
+        let surface_active = Color::from("#252530");
+        let surface_selected = Color::from("#1A2633");
+        let surface_track = Color::from("#0A0A0C");
 
         let border_hover = Color::from("#44475A");
         let border_focus = accent;
         let border_danger = danger;
 
-        let accent_subtle = Color::from("#221B0B");
+        let accent_subtle = Color::from("#142533");
         let danger_subtle = Color::from("#251114");
 
         Self {
@@ -192,8 +237,15 @@ impl ThemeTokens {
             danger,
             danger_critical,
             danger_subtle,
+            warning,
+            warning_subtle,
             success,
             steel,
+            acrylic_bg,
+            acrylic_border,
+            card_bg,
+            card_border,
+            indicator_active,
             font_family: manifest.theme.font_family.clone(),
         }
     }

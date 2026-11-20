@@ -2,20 +2,35 @@
 // Controlled Chaos Theme: Void Black · Crimson · Industrial Amber · Steel
 
 binds {
-    // Core Application Launchers
-    // Super + Return launches configured default terminal directly
-    Mod+Return { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
-    Mod+Shift+Return { spawn "amane-msg" "topology"; }
-    Mod+Alt+Return { spawn "amane-msg" "sidecar"; }
-    Mod+Ctrl+Return { spawn "ghostty" "--class=floating-term"; }
+    // Core Windows 11 Workflow Keybindings
+    Super_L { spawn "amane-msg" "start-menu"; }
+    Mod+D { toggle-overview; }                  // Win+D: Show Desktop / Overview
+    Mod+S { spawn "amane-msg" "launcher"; }     // Win+S: Windows Search
     Mod+Space { spawn "amane-msg" "launcher"; }
-    Mod+Shift+Space { spawn "amane-msg" "control-center"; }
-    Mod+D { spawn "amane-msg" "start-menu"; }
-    Mod+W { spawn "amane-msg" "widgets"; }
-    Mod+N { spawn "amane-msg" "action-center"; }
-    Mod+Tab { spawn "amane-msg" "overview"; }
+    Mod+E { spawn "ghostty" "-e" "yazi"; }      // Win+E: File Explorer
+    Mod+A { spawn "amane-msg" "control-center"; } // Win+A: Quick Settings
+    Mod+N { spawn "amane-msg" "action-center"; }  // Win+N: Notification Center / Calendar
+    Mod+W { spawn "amane-msg" "widgets"; }        // Win+W: Widgets Board
+    Mod+I { spawn "amane-msg" "control-center"; } // Win+I: Settings
+    Mod+L { spawn "sh" "-c" "~/.config/dotfield/scripts/lock.sh"; } // Win+L: Lock Screen
+    Mod+Tab { toggle-overview; }                  // Win+Tab: Task View
+    Alt+Tab { toggle-overview; }                  // Alt+Tab: Window Switcher
+    Alt+F4 { close-window; }                      // Alt+F4: Close Active Window
     Mod+Q { close-window; }
+    Ctrl+Shift+Escape { spawn "ghostty" "-e" "btop"; } // Ctrl+Shift+Esc: Task Manager
+    Ctrl+Alt+Delete { spawn "amane-msg" "powermenu"; } // Ctrl+Alt+Del: Power / Security Menu
     Mod+Shift+E { spawn "amane-msg" "powermenu"; }
+
+    // Virtual Desktop Navigation (Windows 11 Ctrl+Win+Arrow)
+    Ctrl+Mod+Left { focus-workspace-up; }
+    Ctrl+Mod+Right { focus-workspace-down; }
+    Ctrl+Mod+D { focus-workspace "05 SCRATCH"; }
+
+    // Terminal Launchers
+    Mod+Return { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
+    Ctrl+Alt+T { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
+    Mod+Ctrl+Return { spawn "ghostty" "--class=floating-term"; }
+    Mod+Shift+Space { spawn "amane-msg" "control-center"; }
 
     // Dotfield Interactive Hardware & System Widgets
     Mod+Shift+N { spawn "amane-msg" "network"; }

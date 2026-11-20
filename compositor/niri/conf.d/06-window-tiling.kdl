@@ -9,18 +9,20 @@ binds {
     Mod+K     { focus-window-or-workspace-up; }
     Mod+Left  { focus-column-left; }
     Mod+Right { focus-column-right; }
-    Mod+Down  { focus-window-down; }
-    Mod+Up    { focus-window-up; }
+    Mod+Down  { reset-window-height; }
+    Mod+Up    { maximize-column; }
 
     // Moving Columns & Windows
     Mod+Shift+H     { move-column-left; }
     Mod+Shift+L     { move-column-right; }
     Mod+Shift+J     { move-window-down; }
     Mod+Shift+K     { move-window-up; }
-    Mod+Shift+Left  { move-column-left; }
-    Mod+Shift+Right { move-column-right; }
+    Mod+Alt+Left    { move-column-left; }
+    Mod+Alt+Right   { move-column-right; }
 
-    // Column Stacking: Consume & Expel Windows
+    // Windows Snap: Consume & Expel Columns
+    Mod+Shift+Left   { consume-or-expel-window-left; }
+    Mod+Shift+Right  { consume-or-expel-window-right; }
     Mod+BracketLeft  { consume-or-expel-window-left; }
     Mod+BracketRight { consume-or-expel-window-right; }
     Mod+Comma        { consume-window-into-column; }
@@ -67,16 +69,4 @@ binds {
     Mod+Shift+7 { move-column-to-workspace 7; }
     Mod+Shift+8 { move-column-to-workspace 8; }
     Mod+Shift+9 { move-column-to-workspace 9; }
-}
-
-// Developer Living Cell & Sidecar Window Rules
-window-rule {
-    match app-id="^dev\\."
-    default-column-width { proportion 0.66667; }
-}
-
-window-rule {
-    match app-id="^sidecar-"
-    default-column-width { proportion 0.33333; }
-    open-focused false
 }

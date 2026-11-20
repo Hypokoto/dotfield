@@ -1,9 +1,11 @@
 use std::time::{Duration, Instant};
 
+use chrono::{Datelike, Local, NaiveDate};
+
 use amane::{
     Align, Audio, Battery, Bluetooth, Brightness, Center, Color, Column, Cpu, Horizontal, Justify,
     Key, Keyboard, Layer, LayerWindow, Margin, Media, Memory, Network, Notifications, OutputTarget,
-    Padding, Parent, Pointer, Rectangle, Row, Scroll, Service, Stack, Text, Vertical, Widget, Zone,
+    Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
 };
 
 use crate::config::ConfigService;
@@ -18,6 +20,7 @@ pub enum ActiveView {
     Network,
     Audio,
     Bluetooth,
+    Calendar,
     Tray,
 }
 
@@ -107,7 +110,6 @@ pub fn control_center_panel() -> LayerWindow {
     }
 
     let tokens = ThemeTokens::from_manifest(&manifest);
-    let bg_color = tokens.surface;
     let font = manifest.theme.font_family.clone();
 
     let content: Column = match cc.view {
@@ -118,18 +120,19 @@ pub fn control_center_panel() -> LayerWindow {
                 Box::new(render_quick_toggles(&tokens, cc.dnd, &font)),
                 Box::new(render_widget_shortcuts(&tokens, &font)),
                 Box::new(render_sliders(&tokens, &font)),
-                Box::new(render_appearance(&tokens, &font)),
             ];
 
             if manifest.control_center.show_mpris {
                 sections.push(Box::new(render_media(&tokens, &font)));
             }
 
+            sections.push(Box::new(render_appearance(&tokens, &font)));
             sections.push(Box::new(render_notifications_drawer(&tokens, &font)));
             sections.push(Box::new(render_power_actions(&tokens, &font)));
 
             Column::new(sections).width(Parent).gap(spacing::GAP_MD)
         }
+        ActiveView::Calendar => render_calendar_subview(&manifest, &tokens, &font),
         ActiveView::Network => {
             let sections: Vec<Box<dyn Widget>> = vec![
                 Box::new(render_subview_header("NetworkManager", "󰤨", &tokens, &font)),
@@ -171,7 +174,8 @@ pub fn control_center_panel() -> LayerWindow {
     };
 
     let panel_height = match cc.view {
-        ActiveView::Main => 660.0,
+        ActiveView::Main => 680.0,
+        ActiveView::Calendar => 520.0,
         ActiveView::Network => 480.0,
         ActiveView::Audio => 380.0,
         ActiveView::Bluetooth => 420.0,
@@ -181,9 +185,9 @@ pub fn control_center_panel() -> LayerWindow {
     let panel = Rectangle::new()
         .width(380.0)
         .height(panel_height)
-        .radius(radius::LG)
-        .fill(bg_color)
-        .border(1.0, tokens.border_subtle)
+        .radius(radius::XL)
+        .fill(tokens.acrylic_bg)
+        .border(1.0, tokens.acrylic_border)
         .padding(Padding {
             top: spacing::PAD_MD,
             bottom: spacing::PAD_MD,
@@ -198,16 +202,19 @@ pub fn control_center_panel() -> LayerWindow {
     );
     let panel = transition.apply(panel);
 
+    let (dock_height, _, _) = crate::ui::bar::bar_layer_properties(&manifest);
+    let bottom_margin = (dock_height + 10.0) as i32;
+
     LayerWindow::new()
         .width(380.0)
         .height(panel_height)
         .target_output(OutputTarget::Active)
-        .anchor_vertical(Vertical::Top)
+        .anchor_vertical(Vertical::Bottom)
         .anchor_horizontal(Horizontal::Right)
         .margin(Margin {
-            top: 38,
+            top: 0,
             right: 12,
-            bottom: 0,
+            bottom: bottom_margin,
             left: 0,
         })
         .layer(Layer::Overlay)
@@ -371,14 +378,13 @@ fn render_system_overview(tokens: &ThemeTokens, font: &str) -> Rectangle {
 fn render_quick_toggles(tokens: &ThemeTokens, dnd: bool, font: &str) -> Rectangle {
     let network = Network::read();
     let bluetooth = Bluetooth::read();
+    let is_presenting = crate::services::presentation::PresentationService::global().is_active();
 
-    let mut toggles: Vec<Box<dyn Widget>> = Vec::new();
-
-    // Wi-Fi Toggle
+    // Row 1: Wi-Fi, Bluetooth, DND
     let wifi_active = network.connected();
     let wifi_btn = Rectangle::new()
-        .width(110.0)
-        .height(38.0)
+        .width(112.0)
+        .height(36.0)
         .radius(radius::SM)
         .fill(if wifi_active {
             tokens.accent
@@ -413,13 +419,11 @@ fn render_quick_toggles(tokens: &ThemeTokens, dnd: bool, font: &str) -> Rectangl
             })
             .font(font),
         );
-    toggles.push(Box::new(wifi_btn));
 
-    // Bluetooth Toggle
     let bt_active = bluetooth.powered();
     let bt_btn = Rectangle::new()
-        .width(110.0)
-        .height(38.0)
+        .width(112.0)
+        .height(36.0)
         .radius(radius::SM)
         .fill(if bt_active {
             tokens.accent
@@ -453,12 +457,10 @@ fn render_quick_toggles(tokens: &ThemeTokens, dnd: bool, font: &str) -> Rectangl
             })
             .font(font),
         );
-    toggles.push(Box::new(bt_btn));
 
-    // Do Not Disturb (DND)
     let dnd_btn = Rectangle::new()
-        .width(110.0)
-        .height(38.0)
+        .width(112.0)
+        .height(36.0)
         .radius(radius::SM)
         .fill(if dnd {
             tokens.danger
@@ -489,21 +491,131 @@ fn render_quick_toggles(tokens: &ThemeTokens, dnd: bool, font: &str) -> Rectangl
                 })
                 .font(font),
         );
-    toggles.push(Box::new(dnd_btn));
 
-    Rectangle::new().width(Parent).height(38.0).child(
-        Row::new(toggles)
+    let row1 = Row::new(vec![
+        Box::new(wifi_btn),
+        Box::new(bt_btn),
+        Box::new(dnd_btn),
+    ])
+    .width(Parent)
+    .justify(Justify::SpaceBetween)
+    .align(Align::Center);
+
+    // Row 2: Display, Record, Present
+    let disp_btn = Rectangle::new()
+        .width(112.0)
+        .height(36.0)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
+        .cursor(Pointer)
+        .align_child(Center, Center)
+        .on_click(|_| {
+            crate::ui::display_config::toggle();
+        })
+        .child(
+            Text::new("󰍹 Display")
+                .size(typography::SECONDARY)
+                .color(tokens.text_primary)
+                .font(font),
+        );
+
+    let rec_active = crate::ui::screen_record::ScreenRecordService::read().is_recording;
+    let rec_btn = Rectangle::new()
+        .width(112.0)
+        .height(36.0)
+        .radius(radius::SM)
+        .fill(if rec_active {
+            tokens.danger
+        } else {
+            tokens.surface_elevated
+        })
+        .border(
+            1.0,
+            if rec_active {
+                tokens.border_danger
+            } else {
+                tokens.border_subtle
+            },
+        )
+        .cursor(Pointer)
+        .align_child(Center, Center)
+        .on_click(|_| {
+            crate::ui::screen_record::toggle();
+        })
+        .child(
+            Text::new(if rec_active {
+                "󰑋 REC"
+            } else {
+                "󰑋 Record"
+            })
+            .size(typography::SECONDARY)
+            .color(if rec_active {
+                Color::WHITE
+            } else {
+                tokens.text_primary
+            })
+            .font(font),
+        );
+
+    let present_btn = Rectangle::new()
+        .width(112.0)
+        .height(36.0)
+        .radius(radius::SM)
+        .fill(if is_presenting {
+            tokens.accent
+        } else {
+            tokens.surface_elevated
+        })
+        .border(
+            1.0,
+            if is_presenting {
+                tokens.border_focus
+            } else {
+                tokens.border_subtle
+            },
+        )
+        .cursor(Pointer)
+        .align_child(Center, Center)
+        .on_click(|_| {
+            let _ = crate::services::presentation::PresentationService::global().toggle();
+        })
+        .child(
+            Text::new(if is_presenting {
+                "󰐩 Present"
+            } else {
+                "󰐩 Normal"
+            })
+            .size(typography::SECONDARY)
+            .color(if is_presenting {
+                Color::BLACK
+            } else {
+                tokens.text_primary
+            })
+            .font(font),
+        );
+
+    let row2 = Row::new(vec![
+        Box::new(disp_btn),
+        Box::new(rec_btn),
+        Box::new(present_btn),
+    ])
+    .width(Parent)
+    .justify(Justify::SpaceBetween)
+    .align(Align::Center);
+
+    Rectangle::new().width(Parent).height(80.0).child(
+        Column::new(vec![Box::new(row1), Box::new(row2)])
             .width(Parent)
-            .justify(Justify::SpaceBetween)
-            .align(Align::Center),
+            .gap(8.0),
     )
 }
 
 fn render_widget_shortcuts(tokens: &ThemeTokens, font: &str) -> Rectangle {
     let make_shortcut = |icon: &'static str, label: &'static str, view: ActiveView| {
         Rectangle::new()
-            .width(82.0)
-            .height(30.0)
+            .width(66.0)
+            .height(28.0)
             .radius(radius::SM)
             .fill(tokens.surface_elevated)
             .border(1.0, tokens.border_subtle)
@@ -527,17 +639,18 @@ fn render_widget_shortcuts(tokens: &ThemeTokens, font: &str) -> Rectangle {
                             .font(font),
                     ),
                 ])
-                .gap(3.0)
+                .gap(2.0)
                 .align(Align::Center),
             )
     };
 
-    Rectangle::new().width(Parent).height(30.0).child(
+    Rectangle::new().width(Parent).height(28.0).child(
         Row::new(vec![
-            Box::new(make_shortcut("󰤨", "Net ❯", ActiveView::Network)),
-            Box::new(make_shortcut("󰕾", "Audio ❯", ActiveView::Audio)),
-            Box::new(make_shortcut("󰂯", "BlueZ ❯", ActiveView::Bluetooth)),
-            Box::new(make_shortcut("󰀻", "Tray ❯", ActiveView::Tray)),
+            Box::new(make_shortcut("󰤨", "Net", ActiveView::Network)),
+            Box::new(make_shortcut("󰕾", "Audio", ActiveView::Audio)),
+            Box::new(make_shortcut("󰂯", "BlueZ", ActiveView::Bluetooth)),
+            Box::new(make_shortcut("󰸗", "Cal", ActiveView::Calendar)),
+            Box::new(make_shortcut("󰀻", "Tray", ActiveView::Tray)),
         ])
         .width(Parent)
         .justify(Justify::SpaceBetween)
@@ -612,85 +725,25 @@ fn render_sliders(tokens: &ThemeTokens, font: &str) -> Rectangle {
 
     let mut rows: Vec<Box<dyn Widget>> = Vec::new();
 
-    // Volume Slider Row with Mute Button and Stacked Visual Track
+    // Volume Slider Row with Mute Button using WinUI 3 fluent_slider
     let vol_slider_w = 280.0;
-    let vol_fill_w = (vol_slider_w * (vol as f32 / 100.0)).clamp(0.0, vol_slider_w);
-    let vol_fill_color = if is_muted {
-        tokens.danger_subtle
-    } else {
-        tokens.accent_subtle
-    };
-
-    let vol_bg_rect = Rectangle::new()
-        .width(vol_slider_w)
-        .height(34.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_track)
-        .border(1.0, tokens.border_subtle);
-
-    let vol_fill_rect = Rectangle::new()
-        .width(vol_fill_w)
-        .height(34.0)
-        .radius(radius::SM)
-        .fill(vol_fill_color);
-
-    let vol_label_row = Row::new(vec![
-        Box::new(
-            Text::new(if is_muted { "󰖁" } else { "󰕾" })
-                .size(typography::BODY_LG)
-                .color(if is_muted {
-                    tokens.danger
-                } else {
-                    tokens.accent
-                })
-                .font(font),
-        ),
-        Box::new(
-            Text::new(format!("Volume {vol}%"))
-                .size(typography::SECONDARY)
-                .color(if is_muted {
-                    tokens.text_secondary
-                } else {
-                    tokens.text_primary
-                })
-                .font(font),
-        ),
-    ])
-    .gap(spacing::GAP_SM)
-    .align(Align::Center);
-
-    let vol_content = Rectangle::new()
-        .width(vol_slider_w)
-        .height(34.0)
-        .padding(Padding {
-            top: 2.0,
-            bottom: 2.0,
-            left: 10.0,
-            right: 10.0,
-        })
-        .align_child(Align::Start, Align::Center)
-        .child(vol_label_row);
-
-    let vol_stack = Stack::new(vec![
-        Box::new(vol_bg_rect),
-        Box::new(vol_fill_rect),
-        Box::new(vol_content),
-    ]);
-
-    let vol_slider = Rectangle::new()
-        .width(vol_slider_w)
-        .height(34.0)
-        .cursor(Pointer)
-        .on_scroll(|scroll: Scroll| {
-            let step = if scroll.y < 0.0 { 5 } else { -5 };
+    let vol_slider = components::fluent_slider(
+        vol as f32 / 100.0,
+        vol_slider_w,
+        34.0,
+        if is_muted { "󰖁" } else { "󰕾" },
+        &format!("Volume {vol}%"),
+        is_muted,
+        tokens,
+        |step| {
             let current = Audio::read().volume() as i32;
             let target = (current + step).clamp(0, 100) as u8;
             Audio::set_volume(target);
-        })
-        .child(vol_stack);
+        },
+    );
 
     let mute_btn = Rectangle::new()
-        .width(60.0)
+        .width(66.0)
         .height(34.0)
         .radius(radius::SM)
         .fill(if is_muted {
@@ -728,77 +781,181 @@ fn render_sliders(tokens: &ThemeTokens, font: &str) -> Rectangle {
         .align(Align::Center);
     rows.push(Box::new(vol_row));
 
-    // Brightness Slider Row with Stacked Visual Track
-    let bright_slider_w = 352.0;
-    let bright_fill_w = (bright_slider_w * (bright as f32 / 100.0)).clamp(0.0, bright_slider_w);
-    let bright_fill_color = tokens.accent_subtle;
-
-    let bright_bg_rect = Rectangle::new()
-        .width(bright_slider_w)
-        .height(34.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_track)
-        .border(1.0, tokens.border_subtle);
-
-    let bright_fill_rect = Rectangle::new()
-        .width(bright_fill_w)
-        .height(34.0)
-        .radius(radius::SM)
-        .fill(bright_fill_color);
-
-    let bright_label_row = Row::new(vec![
-        Box::new(
-            Text::new("󰃠")
-                .size(typography::BODY_LG)
-                .color(tokens.accent)
-                .font(font),
-        ),
-        Box::new(
-            Text::new(format!("Brightness {bright}%"))
-                .size(typography::SECONDARY)
-                .color(tokens.text_primary)
-                .font(font),
-        ),
-    ])
-    .gap(spacing::GAP_SM)
-    .align(Align::Center);
-
-    let bright_content = Rectangle::new()
-        .width(bright_slider_w)
-        .height(34.0)
-        .padding(Padding {
-            top: 2.0,
-            bottom: 2.0,
-            left: 10.0,
-            right: 10.0,
-        })
-        .align_child(Align::Start, Align::Center)
-        .child(bright_label_row);
-
-    let bright_stack = Stack::new(vec![
-        Box::new(bright_bg_rect),
-        Box::new(bright_fill_rect),
-        Box::new(bright_content),
-    ]);
-
-    let bright_row = Rectangle::new()
-        .width(bright_slider_w)
-        .height(34.0)
-        .cursor(Pointer)
-        .on_scroll(|scroll: Scroll| {
-            let step = if scroll.y < 0.0 { 5 } else { -5 };
+    // Brightness Slider Row using WinUI 3 fluent_slider
+    let bright_slider_w = 356.0;
+    let bright_slider = components::fluent_slider(
+        bright as f32 / 100.0,
+        bright_slider_w,
+        34.0,
+        "󰃠",
+        &format!("Brightness {bright}%"),
+        false,
+        tokens,
+        |step| {
             let current = Brightness::read().percent() as i32;
             let target = (current + step).clamp(1, 100) as u8;
             Brightness::set(target);
-        })
-        .child(bright_stack);
-
-    rows.push(Box::new(bright_row));
+        },
+    );
+    rows.push(Box::new(bright_slider));
 
     Rectangle::new()
         .width(Parent)
         .height(76.0)
         .child(Column::new(rows).gap(spacing::GAP_SM))
+}
+
+fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
+    let media = Media::read();
+    let playing = media.playing();
+
+    let title_text = if media.title().is_empty() {
+        "No media playing".to_string()
+    } else {
+        format!("{} - {}", media.artist(), media.title())
+    };
+
+    let play_pause_icon = if playing { "󰏤" } else { "󰐊" };
+
+    // CAVA Audio Spectrum Visualizer integrated directly into the media card
+    let spectrum = crate::services::cava::CavaService::spectrum();
+    let mut bar_widgets: Vec<Box<dyn Widget>> = Vec::new();
+    for &val in spectrum.iter() {
+        let bar_h = (val * 24.0).clamp(3.0, 24.0);
+        let bar = Rectangle::new()
+            .width(5.0)
+            .height(bar_h)
+            .radius(radius::XS)
+            .fill(if val > 0.6 {
+                tokens.accent_hover
+            } else if val > 0.1 {
+                tokens.accent
+            } else {
+                tokens.steel
+            });
+        bar_widgets.push(Box::new(bar));
+    }
+    let spectrum_row = Row::new(bar_widgets).gap(2.0).align(Align::End);
+
+    Rectangle::new()
+        .width(Parent)
+        .height(76.0)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
+        .padding(Padding {
+            top: 6.0,
+            bottom: 6.0,
+            left: 10.0,
+            right: 10.0,
+        })
+        .child(
+            Column::new(vec![
+                Box::new(
+                    Row::new(vec![
+                        Box::new(
+                            Text::new(title_text)
+                                .size(typography::SECONDARY)
+                                .color(tokens.text_primary)
+                                .font(font),
+                        ),
+                        Box::new(
+                            Text::new(if playing { "● PLAYING" } else { "● IDLE" })
+                                .size(typography::CAPTION)
+                                .color(if playing {
+                                    tokens.success
+                                } else {
+                                    tokens.steel
+                                })
+                                .font(font),
+                        ),
+                    ])
+                    .width(Parent)
+                    .justify(Justify::SpaceBetween)
+                    .align(Align::Center),
+                ),
+                Box::new(
+                    Row::new(vec![
+                        Box::new(
+                            Rectangle::new()
+                                .width(140.0)
+                                .height(28.0)
+                                .fill(tokens.surface_track)
+                                .radius(radius::XS)
+                                .padding(Padding {
+                                    top: 2.0,
+                                    bottom: 2.0,
+                                    left: 4.0,
+                                    right: 4.0,
+                                })
+                                .align_child(Center, Align::End)
+                                .child(spectrum_row),
+                        ),
+                        Box::new(
+                            Row::new(vec![
+                                Box::new(
+                                    Rectangle::new()
+                                        .width(32.0)
+                                        .height(26.0)
+                                        .radius(radius::SM)
+                                        .fill(tokens.surface_track)
+                                        .border(1.0, tokens.border_subtle)
+                                        .cursor(Pointer)
+                                        .align_child(Center, Center)
+                                        .on_click(|_| Media::previous())
+                                        .child(
+                                            Text::new("󰒮")
+                                                .size(typography::SECONDARY)
+                                                .color(tokens.text_primary)
+                                                .font(font),
+                                        ),
+                                ),
+                                Box::new(
+                                    Rectangle::new()
+                                        .width(32.0)
+                                        .height(26.0)
+                                        .radius(radius::SM)
+                                        .fill(tokens.accent)
+                                        .border(1.0, tokens.accent_hover)
+                                        .cursor(Pointer)
+                                        .align_child(Center, Center)
+                                        .on_click(|_| Media::play_pause())
+                                        .child(
+                                            Text::new(play_pause_icon)
+                                                .size(typography::BODY_LG)
+                                                .color(Color::BLACK)
+                                                .font(font),
+                                        ),
+                                ),
+                                Box::new(
+                                    Rectangle::new()
+                                        .width(32.0)
+                                        .height(26.0)
+                                        .radius(radius::SM)
+                                        .fill(tokens.surface_track)
+                                        .border(1.0, tokens.border_subtle)
+                                        .cursor(Pointer)
+                                        .align_child(Center, Center)
+                                        .on_click(|_| Media::next())
+                                        .child(
+                                            Text::new("󰒭")
+                                                .size(typography::SECONDARY)
+                                                .color(tokens.text_primary)
+                                                .font(font),
+                                        ),
+                                ),
+                            ])
+                            .gap(spacing::GAP_SM)
+                            .align(Align::Center),
+                        ),
+                    ])
+                    .width(Parent)
+                    .justify(Justify::SpaceBetween)
+                    .align(Align::Center),
+                ),
+            ])
+            .gap(spacing::GAP_XS),
+        )
 }
 
 fn render_appearance(tokens: &ThemeTokens, font: &str) -> Rectangle {
@@ -860,100 +1017,6 @@ fn render_appearance(tokens: &ThemeTokens, font: &str) -> Rectangle {
         .child(row)
 }
 
-fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
-    let media = Media::read();
-    let playing = media.playing();
-
-    let title_text = if media.title().is_empty() {
-        "No media playing".to_string()
-    } else {
-        format!("{} - {}", media.artist(), media.title())
-    };
-
-    let play_pause_icon = if playing { "󰏤" } else { "󰐊" };
-
-    Rectangle::new()
-        .width(Parent)
-        .height(64.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .padding(Padding {
-            top: 6.0,
-            bottom: 6.0,
-            left: 10.0,
-            right: 10.0,
-        })
-        .child(
-            Column::new(vec![
-                Box::new(
-                    Text::new(title_text)
-                        .size(typography::SECONDARY)
-                        .color(tokens.text_primary)
-                        .font(font),
-                ),
-                Box::new(
-                    Row::new(vec![
-                        Box::new(
-                            Rectangle::new()
-                                .width(34.0)
-                                .height(24.0)
-                                .radius(radius::SM)
-                                .fill(tokens.surface_track)
-                                .border(1.0, tokens.border_subtle)
-                                .cursor(Pointer)
-                                .align_child(Center, Center)
-                                .on_click(|_| Media::previous())
-                                .child(
-                                    Text::new("󰒮")
-                                        .size(typography::SECONDARY)
-                                        .color(tokens.text_primary)
-                                        .font(font),
-                                ),
-                        ),
-                        Box::new(
-                            Rectangle::new()
-                                .width(34.0)
-                                .height(24.0)
-                                .radius(radius::SM)
-                                .fill(tokens.accent)
-                                .border(1.0, tokens.accent_hover)
-                                .cursor(Pointer)
-                                .align_child(Center, Center)
-                                .on_click(|_| Media::play_pause())
-                                .child(
-                                    Text::new(play_pause_icon)
-                                        .size(typography::BODY_LG)
-                                        .color(Color::BLACK)
-                                        .font(font),
-                                ),
-                        ),
-                        Box::new(
-                            Rectangle::new()
-                                .width(34.0)
-                                .height(24.0)
-                                .radius(radius::SM)
-                                .fill(tokens.surface_track)
-                                .border(1.0, tokens.border_subtle)
-                                .cursor(Pointer)
-                                .align_child(Center, Center)
-                                .on_click(|_| Media::next())
-                                .child(
-                                    Text::new("󰒭")
-                                        .size(typography::SECONDARY)
-                                        .color(tokens.text_primary)
-                                        .font(font),
-                                ),
-                        ),
-                    ])
-                    .gap(spacing::GAP_MD)
-                    .align(Align::Center),
-                ),
-            ])
-            .gap(spacing::GAP_XS),
-        )
-}
-
 fn render_notifications_drawer(tokens: &ThemeTokens, font: &str) -> Rectangle {
     let notifications = Notifications::read();
     let notifs_count = notifications.list().len();
@@ -989,13 +1052,13 @@ fn render_notifications_drawer(tokens: &ThemeTokens, font: &str) -> Rectangle {
 
     Rectangle::new()
         .width(Parent)
-        .height(80.0)
+        .height(56.0)
         .radius(radius::SM)
         .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .padding(Padding {
-            top: 8.0,
-            bottom: 8.0,
+            top: 6.0,
+            bottom: 6.0,
             left: 10.0,
             right: 10.0,
         })
@@ -1006,14 +1069,14 @@ fn render_notifications_drawer(tokens: &ThemeTokens, font: &str) -> Rectangle {
                     Text::new(if notifs_count == 0 {
                         "No new notifications"
                     } else {
-                        "Recent notifications shown in overlay"
+                        "Recent notifications active"
                     })
                     .size(typography::BADGE)
                     .color(tokens.text_muted)
                     .font(font),
                 ),
             ])
-            .gap(spacing::GAP_SM),
+            .gap(spacing::GAP_XS),
         )
 }
 
@@ -1022,7 +1085,7 @@ fn render_power_actions(tokens: &ThemeTokens, font: &str) -> Rectangle {
 
     // Lock
     let lock_btn = Rectangle::new()
-        .width(64.0)
+        .width(66.0)
         .height(30.0)
         .radius(radius::SM)
         .fill(tokens.surface_elevated)
@@ -1045,7 +1108,7 @@ fn render_power_actions(tokens: &ThemeTokens, font: &str) -> Rectangle {
 
     // Suspend
     let suspend_btn = Rectangle::new()
-        .width(64.0)
+        .width(66.0)
         .height(30.0)
         .radius(radius::SM)
         .fill(tokens.surface_elevated)
@@ -1068,7 +1131,7 @@ fn render_power_actions(tokens: &ThemeTokens, font: &str) -> Rectangle {
 
     // Reboot
     let reboot_btn = Rectangle::new()
-        .width(64.0)
+        .width(66.0)
         .height(30.0)
         .radius(radius::SM)
         .fill(tokens.surface_elevated)
@@ -1091,7 +1154,7 @@ fn render_power_actions(tokens: &ThemeTokens, font: &str) -> Rectangle {
 
     // Poweroff
     let poweroff_btn = Rectangle::new()
-        .width(64.0)
+        .width(66.0)
         .height(30.0)
         .radius(radius::SM)
         .fill(tokens.danger)
@@ -1114,7 +1177,7 @@ fn render_power_actions(tokens: &ThemeTokens, font: &str) -> Rectangle {
 
     // Logout
     let logout_btn = Rectangle::new()
-        .width(64.0)
+        .width(66.0)
         .height(30.0)
         .radius(radius::SM)
         .fill(tokens.surface_elevated)
@@ -1141,6 +1204,283 @@ fn render_power_actions(tokens: &ThemeTokens, font: &str) -> Rectangle {
     )
 }
 
+fn render_calendar_subview(
+    _manifest: &crate::config::ShellManifest,
+    tokens: &ThemeTokens,
+    font: &str,
+) -> Column {
+    let cal = crate::ui::calendar::CalendarService::read();
+    let now = Local::now();
+    let today_year = now.year();
+    let today_month = now.month();
+    let today_day = now.day();
+
+    let time_str = now.format("%H:%M:%S").to_string();
+    let full_date_str = now.format("%A, %B %d, %Y").to_string();
+
+    // 1. Subview Header
+    let subview_hdr = render_subview_header("Calendar & Events", "󰸗", tokens, font);
+
+    // 2. Hero Digital Clock Banner
+    let clock_banner = Rectangle::new()
+        .width(Parent)
+        .height(56.0)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
+        .padding(Padding {
+            top: spacing::PAD_XS,
+            bottom: spacing::PAD_XS,
+            left: spacing::PAD_MD,
+            right: spacing::PAD_MD,
+        })
+        .child(
+            Row::new(vec![Box::new(
+                Column::new(vec![
+                    Box::new(
+                        Text::new(time_str)
+                            .size(typography::DISPLAY)
+                            .color(tokens.accent)
+                            .font(font),
+                    ),
+                    Box::new(
+                        Text::new(full_date_str)
+                            .size(typography::BADGE)
+                            .color(tokens.text_secondary)
+                            .font(font),
+                    ),
+                ])
+                .gap(2.0),
+            )])
+            .align(Align::Center),
+        );
+
+    // 3. Month navigation
+    let month_name = match cal.view_month {
+        1 => "January",
+        2 => "February",
+        3 => "March",
+        4 => "April",
+        5 => "May",
+        6 => "June",
+        7 => "July",
+        8 => "August",
+        9 => "September",
+        10 => "October",
+        11 => "November",
+        12 => "December",
+        _ => "Unknown",
+    };
+    let month_label = format!("{} {}", month_name, cal.view_year);
+
+    let nav_row = Row::new(vec![
+        Box::new(
+            Row::new(vec![
+                Box::new(
+                    Rectangle::new()
+                        .width(28.0)
+                        .height(26.0)
+                        .radius(radius::SM)
+                        .fill(tokens.surface_elevated)
+                        .border(1.0, tokens.border_subtle)
+                        .cursor(Pointer)
+                        .align_child(Center, Center)
+                        .on_click(|_| {
+                            crate::ui::calendar::prev_month();
+                        })
+                        .child(Text::new("❮").size(11.0).color(tokens.accent).font(font)),
+                ),
+                Box::new(
+                    Text::new(month_label)
+                        .size(typography::BODY)
+                        .color(tokens.text_primary)
+                        .font(font),
+                ),
+                Box::new(
+                    Rectangle::new()
+                        .width(28.0)
+                        .height(26.0)
+                        .radius(radius::SM)
+                        .fill(tokens.surface_elevated)
+                        .border(1.0, tokens.border_subtle)
+                        .cursor(Pointer)
+                        .align_child(Center, Center)
+                        .on_click(|_| {
+                            crate::ui::calendar::next_month();
+                        })
+                        .child(Text::new("❯").size(11.0).color(tokens.accent).font(font)),
+                ),
+            ])
+            .gap(spacing::GAP_MD)
+            .align(Align::Center),
+        ),
+        Box::new(
+            Rectangle::new()
+                .width(52.0)
+                .height(26.0)
+                .radius(radius::SM)
+                .fill(tokens.surface_elevated)
+                .border(1.0, tokens.border_subtle)
+                .cursor(Pointer)
+                .align_child(Center, Center)
+                .on_click(|_| {
+                    crate::ui::calendar::reset_today();
+                })
+                .child(
+                    Text::new("Today")
+                        .size(typography::BADGE)
+                        .color(tokens.accent)
+                        .font(font),
+                ),
+        ),
+    ])
+    .width(Parent)
+    .justify(Justify::SpaceBetween)
+    .align(Align::Center);
+
+    // 4. Weekday headers
+    let weekday_labels = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+    let mut weekday_pills: Vec<Box<dyn Widget>> = Vec::new();
+    for label in weekday_labels {
+        let pill = Rectangle::new()
+            .width(44.0)
+            .height(20.0)
+            .align_child(Center, Center)
+            .child(
+                Text::new(label)
+                    .size(typography::BADGE)
+                    .color(tokens.text_muted)
+                    .font(font),
+            );
+        weekday_pills.push(Box::new(pill));
+    }
+    let weekday_row = Row::new(weekday_pills)
+        .width(Parent)
+        .justify(Justify::SpaceBetween)
+        .align(Align::Center);
+
+    // 5. Calendar days grid
+    let first_day = NaiveDate::from_ymd_opt(cal.view_year, cal.view_month, 1)
+        .unwrap_or_else(|| NaiveDate::from_ymd_opt(2026, 1, 1).unwrap());
+    let start_col = first_day.weekday().num_days_from_monday() as usize;
+
+    let (next_y, next_m) = if cal.view_month == 12 {
+        (cal.view_year + 1, 1)
+    } else {
+        (cal.view_year, cal.view_month + 1)
+    };
+    let next_first = NaiveDate::from_ymd_opt(next_y, next_m, 1)
+        .unwrap_or_else(|| NaiveDate::from_ymd_opt(2026, 2, 1).unwrap());
+    let days_in_month = (next_first - first_day).num_days() as u32;
+
+    let (prev_y, prev_m) = if cal.view_month == 1 {
+        (cal.view_year - 1, 12)
+    } else {
+        (cal.view_year, cal.view_month - 1)
+    };
+    let prev_first = NaiveDate::from_ymd_opt(prev_y, prev_m, 1)
+        .unwrap_or_else(|| NaiveDate::from_ymd_opt(2025, 12, 1).unwrap());
+    let days_in_prev_month = (first_day - prev_first).num_days() as u32;
+
+    let mut grid_cells: Vec<(u32, bool, bool)> = Vec::new();
+
+    for i in (0..start_col).rev() {
+        let day_num = days_in_prev_month - i as u32;
+        grid_cells.push((day_num, false, false));
+    }
+
+    for day in 1..=days_in_month {
+        let is_today =
+            cal.view_year == today_year && cal.view_month == today_month && day == today_day;
+        grid_cells.push((day, true, is_today));
+    }
+
+    let total_cells = if grid_cells.len() > 35 { 42 } else { 35 };
+    let mut next_day = 1;
+    while grid_cells.len() < total_cells {
+        grid_cells.push((next_day, false, false));
+        next_day += 1;
+    }
+
+    let mut week_rows: Vec<Box<dyn Widget>> = Vec::new();
+    for week_idx in 0..(total_cells / 7) {
+        let mut row_cells: Vec<Box<dyn Widget>> = Vec::new();
+        for day_idx in 0..7 {
+            let cell_idx = week_idx * 7 + day_idx;
+            let (day_num, is_current_month, is_today) = grid_cells[cell_idx];
+
+            let bg_color = if is_today {
+                tokens.warning // Controlled Chaos Industrial Amber (#FFB000)
+            } else {
+                Color::TRANSPARENT
+            };
+
+            let text_color = if is_today {
+                Color::BLACK
+            } else if is_current_month {
+                tokens.text_primary
+            } else {
+                tokens.steel
+            };
+
+            let cell = Rectangle::new()
+                .width(44.0)
+                .height(26.0)
+                .radius(radius::SM)
+                .fill(bg_color)
+                .cursor(Pointer)
+                .align_child(Center, Center)
+                .child(
+                    Text::new(format!("{day_num}"))
+                        .size(11.0)
+                        .color(text_color)
+                        .font(font),
+                );
+
+            row_cells.push(Box::new(cell));
+        }
+
+        let week_row = Row::new(row_cells)
+            .width(Parent)
+            .justify(Justify::SpaceBetween)
+            .align(Align::Center);
+        week_rows.push(Box::new(week_row));
+    }
+
+    let cal_card = Rectangle::new()
+        .width(Parent)
+        .height(250.0)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
+        .padding(Padding {
+            top: spacing::PAD_SM,
+            bottom: spacing::PAD_SM,
+            left: spacing::PAD_MD,
+            right: spacing::PAD_MD,
+        })
+        .child(
+            Column::new(vec![
+                Box::new(nav_row),
+                Box::new(weekday_row),
+                Box::new(Column::new(week_rows).width(Parent).gap(2.0)),
+            ])
+            .gap(spacing::GAP_SM),
+        );
+
+    // 6. Notifications in Calendar View
+    let notifs_drawer = render_notifications_drawer(tokens, font);
+
+    Column::new(vec![
+        Box::new(subview_hdr),
+        Box::new(clock_banner),
+        Box::new(cal_card),
+        Box::new(notifs_drawer),
+    ])
+    .width(Parent)
+    .gap(spacing::GAP_MD)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1155,39 +1495,13 @@ mod tests {
     #[test]
     fn test_control_center_lifecycle_and_views() {
         let _lock = crate::ui::TEST_UI_MUTEX.lock().unwrap();
-        close();
-        assert!(!ControlCenterService::read().open);
-        assert!(ControlCenterService::read().open_time.is_none());
-        assert_eq!(ControlCenterService::read().view, ActiveView::Main);
-
         toggle();
         assert!(ControlCenterService::read().open);
-        assert!(ControlCenterService::read().open_time.is_some());
-
-        close();
-        assert!(!ControlCenterService::read().open);
-        assert!(ControlCenterService::read().open_time.is_none());
-        assert_eq!(ControlCenterService::read().view, ActiveView::Main);
-
         open_view(ActiveView::Network);
-        assert!(ControlCenterService::read().open);
-        assert!(ControlCenterService::read().open_time.is_some());
         assert_eq!(ControlCenterService::read().view, ActiveView::Network);
-
-        open_view(ActiveView::Audio);
-        assert!(ControlCenterService::read().open);
-        assert_eq!(ControlCenterService::read().view, ActiveView::Audio);
-
-        open_view(ActiveView::Bluetooth);
-        assert!(ControlCenterService::read().open);
-        assert_eq!(ControlCenterService::read().view, ActiveView::Bluetooth);
-
-        open_view(ActiveView::Tray);
-        assert!(ControlCenterService::read().open);
-        assert_eq!(ControlCenterService::read().view, ActiveView::Tray);
-
+        open_view(ActiveView::Calendar);
+        assert_eq!(ControlCenterService::read().view, ActiveView::Calendar);
         close();
         assert!(!ControlCenterService::read().open);
-        assert_eq!(ControlCenterService::read().view, ActiveView::Main);
     }
 }

@@ -1,23 +1,24 @@
-/* Dotfield Controlled Chaos Theme — GTK 3.0 CSS Overrides
- * Void Black (#0A0A0C) · Obsidian (#121216) · Graphite (#1C1C23)
- * Industrial Amber (#FFB000) · Crimson (#E63946) · Iron (#34343D)
+/* Dotfield Modern Fluent & Controlled Chaos Theme — GTK 3.0 CSS
+ * Void Black (#0A0A0C) · Dark Mica (#16161C) · Graphite (#1C1C23)
+ * Fluent Accent (#60CDFF) · Industrial Amber (#FFB000) · Crimson (#E63946) · Iron (#34343D)
  */
 
-@define-color accent_color #FFB000;
-@define-color accent_bg_color #FFB000;
-@define-color accent_fg_color #0A0A0C;
+@define-color accent_color #60CDFF;
+@define-color accent_bg_color #60CDFF;
+@define-color accent_fg_color #000000;
 
+@define-color secondary_accent #FFB000;
 @define-color destructive_color #E63946;
 @define-color destructive_bg_color #E63946;
 @define-color destructive_fg_color #FFFFFF;
 
-@define-color success_color #2A9D8F;
-@define-color success_bg_color #2A9D8F;
-@define-color success_fg_color #0A0A0C;
+@define-color success_color #7BC47F;
+@define-color success_bg_color #7BC47F;
+@define-color success_fg_color #000000;
 
 @define-color warning_color #FFD166;
 @define-color warning_bg_color #FFD166;
-@define-color warning_fg_color #0A0A0C;
+@define-color warning_fg_color #000000;
 
 @define-color error_color #E63946;
 @define-color error_bg_color #E63946;
@@ -29,16 +30,16 @@
 @define-color view_bg_color #121216;
 @define-color view_fg_color #E8E6E3;
 
-@define-color headerbar_bg_color #121216;
+@define-color headerbar_bg_color #16161C;
 @define-color headerbar_fg_color #E8E6E3;
-@define-color headerbar_border_color #34343D;
+@define-color headerbar_border_color rgba(255, 255, 255, 0.08);
 @define-color headerbar_backdrop_color #0A0A0C;
 
 @define-color card_bg_color #1C1C23;
 @define-color card_fg_color #E8E6E3;
 @define-color card_border_color #34343D;
 
-@define-color dialog_bg_color #121216;
+@define-color dialog_bg_color #16161C;
 @define-color dialog_fg_color #E8E6E3;
 
 @define-color popover_bg_color #1C1C23;
@@ -47,8 +48,8 @@
 @define-color theme_base_color #121216;
 @define-color theme_bg_color #0A0A0C;
 @define-color theme_fg_color #E8E6E3;
-@define-color theme_selected_bg_color #FFB000;
-@define-color theme_selected_fg_color #0A0A0C;
+@define-color theme_selected_bg_color #60CDFF;
+@define-color theme_selected_fg_color #000000;
 
 @define-color borders #34343D;
 
@@ -58,12 +59,13 @@ window, .background {
     color: @window_fg_color;
 }
 
-/* Headerbar & Titlebar */
+/* Headerbar & Titlebar (Mica look) */
 headerbar {
     background-color: @headerbar_bg_color;
     color: @headerbar_fg_color;
     border-bottom: 1px solid @headerbar_border_color;
     box-shadow: none;
+    padding: 4px 8px;
 }
 
 headerbar:backdrop {
@@ -75,7 +77,8 @@ entry, textview text {
     background-color: @view_bg_color;
     color: @view_fg_color;
     border: 1px solid @borders;
-    border-radius: 4px;
+    border-radius: 8px;
+    padding: 6px 10px;
 }
 
 entry:focus, textview text:focus {
@@ -88,39 +91,84 @@ button {
     background-color: #1C1C23;
     color: @window_fg_color;
     border: 1px solid @borders;
-    border-radius: 4px;
+    border-radius: 8px;
+    padding: 6px 14px;
+    transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 button:hover {
-    background-color: #26262F;
+    background-color: #262630;
     border-color: @accent_color;
 }
 
 button:active, button:checked {
     background-color: @accent_color;
     color: @accent_fg_color;
+    border-color: @accent_color;
 }
 
 button.suggested-action {
     background-color: @accent_color;
     color: @accent_fg_color;
-    border-color: #FFD166;
+    border-color: @accent_color;
+}
+
+button.suggested-action:hover {
+    background-color: #72d6ff;
 }
 
 button.destructive-action {
     background-color: @destructive_color;
     color: @destructive_fg_color;
-    border-color: #FF6B76;
+    border-color: @destructive_color;
 }
 
-/* Scrollbars */
+/* Cards & Frames */
+.card, frame > border {
+    background-color: @card_bg_color;
+    border: 1px solid @card_border_color;
+    border-radius: 8px;
+}
+
+/* Menus & Popovers */
+popover, menu, .menu {
+    background-color: @popover_bg_color;
+    color: @popover_fg_color;
+    border: 1px solid @borders;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    padding: 6px;
+}
+
+menuitem:hover, modelbutton:hover {
+    background-color: #262630;
+    color: @accent_color;
+    border-radius: 6px;
+}
+
+/* Scrollbars (Modern subtle pill) */
+scrollbar {
+    background-color: transparent;
+    transition: all 200ms ease;
+}
+
 scrollbar slider {
-    background-color: #34343D;
-    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
     min-width: 6px;
     min-height: 6px;
+    border: 2px solid transparent;
 }
 
 scrollbar slider:hover {
     background-color: @accent_color;
+}
+
+/* Tooltips */
+tooltip {
+    background-color: #1C1C23;
+    color: @window_fg_color;
+    border: 1px solid @borders;
+    border-radius: 6px;
+    padding: 4px 8px;
 }

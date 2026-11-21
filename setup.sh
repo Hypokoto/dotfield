@@ -601,8 +601,12 @@ deploy_network_stability() {
     fi
 
     if [[ "${nm_applied}" == true ]]; then
+        local details="NetworkManager drop-in active; Wi-Fi powersave disabled"
+        if [[ "${modprobe_applied}" == true ]]; then
+            details+="; MT7921 ASPM fix active"
+        fi
         LAYER_STATUS["network"]="PASS"
-        LAYER_DETAILS["network"]="NetworkManager drop-in active; Wi-Fi powersave disabled"
+        LAYER_DETAILS["network"]="${details}"
         return 0
     else
         LAYER_STATUS["network"]="WARN"

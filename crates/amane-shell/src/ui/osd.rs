@@ -117,14 +117,14 @@ pub fn osd_overlay() -> LayerWindow {
                     Text::new(icon)
                         .size(crate::ui::tokens::typography::DISPLAY)
                         .color(fill_color)
-                        .font(&tokens.font_family),
+                        .font(&tokens.font_mono),
                 ),
                 Box::new(gauge),
                 Box::new(
                     Text::new(label)
                         .size(crate::ui::tokens::typography::BODY)
                         .color(tokens.text_primary)
-                        .font(&tokens.font_family),
+                        .font(&tokens.font_mono),
                 ),
             ])
             .gap(12.0)

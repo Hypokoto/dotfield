@@ -1,13 +1,14 @@
 use amane::{
-    Align, Audio, Center, Color, Column, Justify, Padding, Parent, Pointer, Rectangle, Row, Scroll,
-    Service, SinkType, Text, Widget,
+    Align, Audio, Column, Justify, Padding, Parent, Pointer, Rectangle, Row, Service, SinkType,
+    Text, Widget,
 };
 
 use crate::config::ShellManifest;
+use crate::ui::components;
 use crate::ui::tokens::{ThemeTokens, radius, spacing, typography};
 
 /// Renders the PipeWire Audio interactive widget.
-pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widget> {
+pub fn render_audio_widget(manifest: &ShellManifest, _font: &str) -> Box<dyn Widget> {
     let tokens = ThemeTokens::from_manifest(manifest);
 
     let audio = Audio::read();
@@ -18,25 +19,25 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
 
     let mut elements: Vec<Box<dyn Widget>> = Vec::new();
 
-    // Master Output Section (Speaker / Headphones)
+    // 1. Master Output Section (Speaker / Headphones)
     let output_header = Row::new(vec![
         Box::new(
             Row::new(vec![
                 Box::new(
                     Text::new(if is_muted { "󰖁" } else { "󰕾" })
-                        .size(typography::TITLE_SM)
+                        .size(typography::BODY_LG)
                         .color(if is_muted {
                             tokens.danger
                         } else {
                             tokens.accent
                         })
-                        .font(font),
+                        .font(&tokens.font_mono),
                 ),
                 Box::new(
-                    Text::new("PIPEWIRE OUTPUT")
-                        .size(typography::BADGE)
-                        .color(tokens.accent)
-                        .font(font),
+                    Text::new("Output Volume")
+                        .size(typography::BODY)
+                        .color(tokens.text_primary)
+                        .font(&tokens.font_sans),
                 ),
             ])
             .gap(spacing::GAP_SM)
@@ -44,7 +45,7 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
         ),
         Box::new(
             Text::new(if is_muted {
-                "MUTED".to_string()
+                "Muted".to_string()
             } else {
                 format!("{vol}%")
             })
@@ -52,9 +53,9 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
             .color(if is_muted {
                 tokens.danger
             } else {
-                tokens.accent_hover
+                tokens.accent
             })
-            .font(font),
+            .font(&tokens.font_mono),
         ),
     ])
     .width(Parent)
@@ -63,127 +64,27 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
 
     elements.push(Box::new(output_header));
 
-    // Master Output Volume Track & Interactive Slider
-    let slider_w: f32 = 352.0;
-    let fill_w: f32 = (slider_w * (vol as f32 / 100.0)).clamp(0.0_f32, slider_w);
-
-    let output_slider_card = Rectangle::new()
-        .width(Parent)
-        .height(38.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_track)
-        .border(
-            1.0,
-            if is_muted {
-                tokens.border_danger
-            } else {
-                tokens.border_subtle
-            },
-        )
-        .cursor(Pointer)
-        .on_scroll(|scroll: Scroll| {
-            let step = if scroll.y < 0.0 { 5 } else { -5 };
+    // Master Output Fluent Pill Slider (356px width with interactive mute button)
+    let output_slider = components::fluent_slider(
+        vol as f32 / 100.0,
+        356.0,
+        36.0,
+        if is_muted { "󰖁" } else { "󰕾" },
+        "Master Volume",
+        is_muted,
+        &tokens,
+        |step| {
             let current = Audio::read().volume() as i32;
             let target = (current + step).clamp(0, 100) as u8;
             Audio::set_volume(target);
-        })
-        .child(Row::new(vec![
-            // Visual progress bar inside track
-            Box::new(
-                Rectangle::new()
-                    .width(fill_w)
-                    .height(38.0)
-                    .radius(radius::SM)
-                    .fill(if is_muted {
-                        tokens.danger_subtle
-                    } else {
-                        tokens.accent_subtle
-                    }),
-            ),
-        ]));
-
-    elements.push(Box::new(output_slider_card));
-
-    // Output Controls: Mute toggle, Presets (25%, 50%, 75%, 100%)
-    let mute_btn = Rectangle::new()
-        .width(80.0)
-        .height(28.0)
-        .radius(radius::SM)
-        .fill(if is_muted {
-            tokens.danger
-        } else {
-            tokens.surface_elevated
-        })
-        .border(
-            1.0,
-            if is_muted {
-                tokens.border_danger
-            } else {
-                tokens.border_subtle
-            },
-        )
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
+        },
+        Some(|| {
             Audio::toggle_mute();
-        })
-        .child(
-            Text::new(if is_muted { "󰖁 Unmute" } else { "󰕾 Mute" })
-                .size(typography::BADGE)
-                .color(if is_muted {
-                    Color::WHITE
-                } else {
-                    tokens.text_primary
-                })
-                .font(font),
-        );
+        }),
+    );
+    elements.push(Box::new(output_slider));
 
-    let mut preset_btns: Vec<Box<dyn Widget>> = vec![Box::new(mute_btn)];
-    for preset in [25, 50, 75, 100] {
-        let is_selected = !is_muted && (vol as i32 - preset as i32).abs() <= 5;
-        let btn = Rectangle::new()
-            .width(58.0)
-            .height(28.0)
-            .radius(radius::SM)
-            .fill(if is_selected {
-                tokens.accent
-            } else {
-                tokens.surface_elevated
-            })
-            .border(
-                1.0,
-                if is_selected {
-                    tokens.border_focus
-                } else {
-                    tokens.border_subtle
-                },
-            )
-            .cursor(Pointer)
-            .align_child(Center, Center)
-            .on_click(move |_| {
-                Audio::set_volume(preset);
-            })
-            .child(
-                Text::new(format!("{preset}%"))
-                    .size(typography::BADGE)
-                    .color(if is_selected {
-                        Color::BLACK
-                    } else {
-                        tokens.text_primary
-                    })
-                    .font(font),
-            );
-        preset_btns.push(Box::new(btn));
-    }
-
-    elements.push(Box::new(
-        Row::new(preset_btns)
-            .width(Parent)
-            .justify(Justify::SpaceBetween)
-            .align(Align::Center),
-    ));
-
-    // Output sinks (devices) selection section
+    // 2. Output sinks (devices) selection section
     let sinks = audio.sinks();
     if !sinks.is_empty() {
         let sinks_header = Row::new(vec![
@@ -191,25 +92,25 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
                 Row::new(vec![
                     Box::new(
                         Text::new("󰓃")
-                            .size(typography::BODY_LG)
+                            .size(typography::BODY)
                             .color(tokens.accent)
-                            .font(font),
+                            .font(&tokens.font_mono),
                     ),
                     Box::new(
-                        Text::new("OUTPUT DEVICES")
-                            .size(typography::BADGE)
-                            .color(tokens.accent)
-                            .font(font),
+                        Text::new("Output Devices")
+                            .size(typography::BODY)
+                            .color(tokens.text_primary)
+                            .font(&tokens.font_sans),
                     ),
                 ])
                 .gap(spacing::GAP_SM)
                 .align(Align::Center),
             ),
             Box::new(
-                Text::new(format!("{} AVAILABLE", sinks.len()))
+                Text::new(format!("{} available", sinks.len()))
                     .size(typography::CAPTION)
                     .color(tokens.text_secondary)
-                    .font(font),
+                    .font(&tokens.font_mono),
             ),
         ])
         .width(Parent)
@@ -232,7 +133,6 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
                 SinkType::Speaker => "󰌢",
             };
 
-            // Format friendly name: clean up alsa suffixes or display names
             let display_name = if sink_desc.chars().count() > 32 {
                 format!("{}…", sink_desc.chars().take(31).collect::<String>())
             } else {
@@ -244,7 +144,7 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
                 .height(34.0)
                 .radius(radius::SM)
                 .fill(if is_default {
-                    tokens.surface_selected
+                    tokens.accent_tint
                 } else {
                     tokens.surface_elevated
                 })
@@ -301,33 +201,29 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
                                         .color(if is_default {
                                             tokens.accent
                                         } else {
-                                            tokens.text_primary
+                                            tokens.text_secondary
                                         })
-                                        .font(font),
+                                        .font(&tokens.font_mono),
                                 ),
                                 Box::new(
                                     Text::new(display_name)
-                                        .size(typography::BADGE)
-                                        .color(if is_default {
-                                            tokens.text_primary
-                                        } else {
-                                            tokens.text_secondary
-                                        })
-                                        .font(font),
+                                        .size(typography::SECONDARY)
+                                        .color(tokens.text_primary)
+                                        .font(&tokens.font_sans),
                                 ),
                             ])
                             .gap(spacing::GAP_SM)
                             .align(Align::Center),
                         ),
                         Box::new(
-                            Text::new(if is_default { "ACTIVE" } else { "SELECT" })
+                            Text::new(if is_default { "󰄬 Active" } else { "Select" })
                                 .size(typography::CAPTION)
                                 .color(if is_default {
                                     tokens.accent
                                 } else {
-                                    tokens.text_secondary
+                                    tokens.text_muted
                                 })
-                                .font(font),
+                                .font(&tokens.font_sans),
                         ),
                     ])
                     .width(Parent)
@@ -343,25 +239,25 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
         ));
     }
 
-    // Microphone input section
+    // 3. Microphone input section
     let mic_header = Row::new(vec![
         Box::new(
             Row::new(vec![
                 Box::new(
                     Text::new(if is_mic_muted { "󰍭" } else { "󰍬" })
-                        .size(typography::TITLE_SM)
+                        .size(typography::BODY_LG)
                         .color(if is_mic_muted {
                             tokens.danger
                         } else {
                             tokens.accent
                         })
-                        .font(font),
+                        .font(&tokens.font_mono),
                 ),
                 Box::new(
-                    Text::new("PIPEWIRE MICROPHONE")
-                        .size(typography::BADGE)
-                        .color(tokens.accent)
-                        .font(font),
+                    Text::new("Microphone Input")
+                        .size(typography::BODY)
+                        .color(tokens.text_primary)
+                        .font(&tokens.font_sans),
                 ),
             ])
             .gap(spacing::GAP_SM)
@@ -369,7 +265,7 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
         ),
         Box::new(
             Text::new(if is_mic_muted {
-                "MUTED".to_string()
+                "Muted".to_string()
             } else {
                 format!("{mic_vol}%")
             })
@@ -377,9 +273,9 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
             .color(if is_mic_muted {
                 tokens.danger
             } else {
-                tokens.accent_hover
+                tokens.accent
             })
-            .font(font),
+            .font(&tokens.font_mono),
         ),
     ])
     .width(Parent)
@@ -388,132 +284,27 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
 
     elements.push(Box::new(mic_header));
 
-    // Microphone Slider Card
-    let mic_fill_w: f32 = (slider_w * (mic_vol as f32 / 100.0)).clamp(0.0_f32, slider_w);
-    let mic_slider_card = Rectangle::new()
-        .width(Parent)
-        .height(38.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_track)
-        .border(
-            1.0,
-            if is_mic_muted {
-                tokens.border_danger
-            } else {
-                tokens.border_subtle
-            },
-        )
-        .cursor(Pointer)
-        .on_scroll(|scroll: Scroll| {
-            let step = if scroll.y < 0.0 { 5 } else { -5 };
+    // Microphone Fluent Pill Slider (356px width with interactive mute button)
+    let mic_slider = components::fluent_slider(
+        mic_vol as f32 / 100.0,
+        356.0,
+        36.0,
+        if is_mic_muted { "󰍭" } else { "󰍬" },
+        "Input Gain",
+        is_mic_muted,
+        &tokens,
+        |step| {
             let current = Audio::read().microphone_volume() as i32;
             let target = (current + step).clamp(0, 100) as u8;
             Audio::set_microphone_volume(target);
-        })
-        .child(Row::new(vec![Box::new(
-            Rectangle::new()
-                .width(mic_fill_w)
-                .height(38.0)
-                .radius(radius::SM)
-                .fill(if is_mic_muted {
-                    tokens.danger_subtle
-                } else {
-                    tokens.accent_subtle
-                }),
-        )]));
-
-    elements.push(Box::new(mic_slider_card));
-
-    // Mic Controls: Mic Mute toggle, Step -5%, Step +5%
-    let mic_mute_btn = Rectangle::new()
-        .width(110.0)
-        .height(28.0)
-        .radius(radius::SM)
-        .fill(if is_mic_muted {
-            tokens.danger
-        } else {
-            tokens.surface_elevated
-        })
-        .border(
-            1.0,
-            if is_mic_muted {
-                tokens.border_danger
-            } else {
-                tokens.border_subtle
-            },
-        )
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
+        },
+        Some(|| {
             Audio::toggle_microphone_mute();
-        })
-        .child(
-            Text::new(if is_mic_muted {
-                "󰍭 Mic Unmute"
-            } else {
-                "󰍬 Mic Mute"
-            })
-            .size(typography::BADGE)
-            .color(if is_mic_muted {
-                Color::WHITE
-            } else {
-                tokens.text_primary
-            })
-            .font(font),
-        );
+        }),
+    );
+    elements.push(Box::new(mic_slider));
 
-    let mic_minus_btn = Rectangle::new()
-        .width(110.0)
-        .height(28.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            let cur = Audio::read().microphone_volume() as i32;
-            let target = (cur - 5).clamp(0, 100) as u8;
-            Audio::set_microphone_volume(target);
-        })
-        .child(
-            Text::new("󰍬 -5% Gain")
-                .size(typography::BADGE)
-                .color(tokens.text_primary)
-                .font(font),
-        );
-
-    let mic_plus_btn = Rectangle::new()
-        .width(110.0)
-        .height(28.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            let cur = Audio::read().microphone_volume() as i32;
-            let target = (cur + 5).clamp(0, 100) as u8;
-            Audio::set_microphone_volume(target);
-        })
-        .child(
-            Text::new("󰍬 +5% Gain")
-                .size(typography::BADGE)
-                .color(tokens.text_primary)
-                .font(font),
-        );
-
-    elements.push(Box::new(
-        Row::new(vec![
-            Box::new(mic_mute_btn),
-            Box::new(mic_minus_btn),
-            Box::new(mic_plus_btn),
-        ])
-        .width(Parent)
-        .justify(Justify::SpaceBetween)
-        .align(Align::Center),
-    ));
-
-    // Audio subsystem telemetry badge
+    // 4. Audio subsystem telemetry badge
     let info_card = Rectangle::new()
         .width(Parent)
         .height(34.0)
@@ -532,13 +323,13 @@ pub fn render_audio_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Widg
                     Text::new("󰓃")
                         .size(typography::BODY_LG)
                         .color(tokens.accent)
-                        .font(font),
+                        .font(&tokens.font_mono),
                 ),
                 Box::new(
                     Text::new("PipeWire Audio Server • Low-Latency Stream")
                         .size(typography::BADGE)
                         .color(tokens.text_secondary)
-                        .font(font),
+                        .font(&tokens.font_sans),
                 ),
             ])
             .gap(spacing::GAP_SM)

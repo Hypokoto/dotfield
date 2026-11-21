@@ -466,7 +466,6 @@ pub fn display_config_overlay() -> LayerWindow {
     let hover_idx = svc.hover_index;
 
     let tokens = ThemeTokens::from_manifest(&manifest);
-    let font = manifest.theme.font_family.clone();
 
     // Preset options
     let total_presets = PRESETS.len();
@@ -508,7 +507,7 @@ pub fn display_config_overlay() -> LayerWindow {
                         } else {
                             tokens.text_secondary
                         })
-                        .font(&font),
+                        .font(&tokens.font_mono),
                 ),
         );
 

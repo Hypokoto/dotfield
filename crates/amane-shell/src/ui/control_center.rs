@@ -118,7 +118,6 @@ pub fn control_center_panel() -> LayerWindow {
                 Box::new(render_header(&tokens)),
                 Box::new(render_system_overview(&tokens, &font)),
                 Box::new(render_quick_toggles(&tokens, cc.dnd, &font)),
-                Box::new(render_widget_shortcuts(&tokens, &font)),
                 Box::new(render_sliders(&tokens, &font)),
             ];
 
@@ -174,12 +173,19 @@ pub fn control_center_panel() -> LayerWindow {
     };
 
     let panel_height = match cc.view {
-        ActiveView::Main => 680.0,
-        ActiveView::Calendar => 520.0,
-        ActiveView::Network => 480.0,
-        ActiveView::Audio => 380.0,
-        ActiveView::Bluetooth => 420.0,
-        ActiveView::Tray => 340.0,
+        ActiveView::Main => {
+            let media_h = if Media::read().playing() || !Media::read().title().is_empty() {
+                76.0
+            } else {
+                36.0
+            };
+            24.0 + 28.0 + 48.0 + 142.0 + 76.0 + media_h + 34.0 + 56.0 + 30.0 + 70.0
+        }
+        ActiveView::Calendar => 480.0,
+        ActiveView::Network => adaptive_network_height(),
+        ActiveView::Audio => adaptive_audio_height(),
+        ActiveView::Bluetooth => adaptive_bluetooth_height(),
+        ActiveView::Tray => adaptive_tray_height(),
     };
 
     let panel = Rectangle::new()
@@ -238,7 +244,7 @@ fn render_header(tokens: &ThemeTokens) -> Rectangle {
     components::modal_header("󰒓", "Control Center", Some("Niri+Amane"), tokens, close)
 }
 
-fn render_system_overview(tokens: &ThemeTokens, font: &str) -> Rectangle {
+fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     let cpu = Cpu::read().percent();
     let mem = Memory::read();
     let mem_pct = mem.percent();
@@ -276,13 +282,13 @@ fn render_system_overview(tokens: &ThemeTokens, font: &str) -> Rectangle {
                     Text::new("󰍛 CPU")
                         .size(typography::BADGE)
                         .color(cpu_color)
-                        .font(font),
+                        .font(&tokens.font_sans),
                 ),
                 Box::new(
                     Text::new(format!("{cpu}%"))
                         .size(typography::TITLE_SM)
                         .color(tokens.text_primary)
-                        .font(font),
+                        .font(&tokens.font_mono),
                 ),
             ])
             .gap(2.0),
@@ -316,13 +322,13 @@ fn render_system_overview(tokens: &ThemeTokens, font: &str) -> Rectangle {
                     Text::new("󰘚 RAM")
                         .size(typography::BADGE)
                         .color(ram_color)
-                        .font(font),
+                        .font(&tokens.font_sans),
                 ),
                 Box::new(
                     Text::new(format!("{mem_pct}% ({used_gib:.1}/{total_gib:.0}G)"))
-                        .size(typography::SECONDARY)
+                        .size(typography::CAPTION)
                         .color(tokens.text_primary)
-                        .font(font),
+                        .font(&tokens.font_mono),
                 ),
             ])
             .gap(2.0),
@@ -351,16 +357,16 @@ fn render_system_overview(tokens: &ThemeTokens, font: &str) -> Rectangle {
         .child(
             Column::new(vec![
                 Box::new(
-                    Text::new("POWER")
+                    Text::new("󰚥 Power")
                         .size(typography::BADGE)
                         .color(tokens.accent)
-                        .font(font),
+                        .font(&tokens.font_sans),
                 ),
                 Box::new(
                     Text::new(bat_text)
                         .size(typography::SECONDARY)
                         .color(tokens.text_primary)
-                        .font(font),
+                        .font(&tokens.font_mono),
                 ),
             ])
             .gap(2.0),
@@ -375,286 +381,329 @@ fn render_system_overview(tokens: &ThemeTokens, font: &str) -> Rectangle {
     )
 }
 
-fn render_quick_toggles(tokens: &ThemeTokens, dnd: bool, font: &str) -> Rectangle {
+fn adaptive_network_height() -> f32 {
+    let network = Network::read();
+    let ap_count = network.access_points().len().min(6);
+    if ap_count == 0 {
+        270.0
+    } else {
+        (200.0 + ap_count as f32 * 38.0).clamp(270.0, 480.0)
+    }
+}
+
+fn adaptive_audio_height() -> f32 {
+    let audio = Audio::read();
+    let sinks_count = audio.sinks().len().min(4);
+    (270.0 + sinks_count as f32 * 38.0).clamp(320.0, 500.0)
+}
+
+fn adaptive_bluetooth_height() -> f32 {
+    let bluetooth = Bluetooth::read();
+    let dev_count = bluetooth.devices().len();
+    if dev_count == 0 {
+        260.0
+    } else {
+        let count = dev_count.min(5);
+        (190.0 + count as f32 * 42.0).clamp(260.0, 460.0)
+    }
+}
+
+fn adaptive_tray_height() -> f32 {
+    let tray = crate::services::tray::TrayService::read();
+    let count = tray.items.len().min(6);
+    (170.0 + count as f32 * 42.0).clamp(240.0, 420.0)
+}
+
+fn render_split_tile<F1, F2>(
+    icon: &'static str,
+    label: &str,
+    is_active: bool,
+    tokens: &ThemeTokens,
+    on_toggle: F1,
+    on_details: F2,
+) -> Rectangle
+where
+    F1: Fn() + Send + Sync + 'static,
+    F2: Fn() + Send + Sync + 'static,
+{
+    let tile_w = 172.0;
+    let tile_h = 42.0;
+
+    let (bg_color, border_color, icon_color, text_color) = if is_active {
+        (
+            tokens.accent_tint,
+            tokens.border_focus,
+            tokens.accent,
+            tokens.text_primary,
+        )
+    } else {
+        (
+            tokens.surface_elevated,
+            tokens.border_subtle,
+            tokens.text_muted,
+            tokens.text_secondary,
+        )
+    };
+
+    let left_btn = Rectangle::new()
+        .width(132.0)
+        .height(tile_h)
+        .cursor(Pointer)
+        .padding(Padding {
+            top: 2.0,
+            bottom: 2.0,
+            left: 10.0,
+            right: 4.0,
+        })
+        .align_child(Align::Start, Align::Center)
+        .on_click(move |_| on_toggle())
+        .child(
+            Row::new(vec![
+                Box::new(
+                    Text::new(icon)
+                        .size(16.0)
+                        .color(icon_color)
+                        .font(&tokens.font_mono),
+                ),
+                Box::new(
+                    Text::new(label)
+                        .size(typography::SECONDARY)
+                        .color(text_color)
+                        .font(&tokens.font_sans),
+                ),
+            ])
+            .gap(spacing::GAP_SM)
+            .align(Align::Center),
+        );
+
+    let divider = Rectangle::new()
+        .width(1.0)
+        .height(18.0)
+        .fill(Color::from("#ffffff14"));
+
+    let right_btn = Rectangle::new()
+        .width(38.0)
+        .height(tile_h)
+        .cursor(Pointer)
+        .align_child(Center, Center)
+        .on_click(move |_| on_details())
+        .child(
+            Text::new("󰅂")
+                .size(14.0)
+                .color(if is_active {
+                    tokens.accent
+                } else {
+                    tokens.text_muted
+                })
+                .font(&tokens.font_mono),
+        );
+
+    Rectangle::new()
+        .width(tile_w)
+        .height(tile_h)
+        .radius(radius::MD)
+        .fill(bg_color)
+        .border(1.0, border_color)
+        .child(
+            Row::new(vec![
+                Box::new(left_btn),
+                Box::new(divider),
+                Box::new(right_btn),
+            ])
+            .align(Align::Center),
+        )
+}
+
+fn render_action_tile<F>(
+    icon: &'static str,
+    label: &str,
+    is_active: bool,
+    is_danger: bool,
+    tokens: &ThemeTokens,
+    on_click: F,
+) -> Rectangle
+where
+    F: Fn() + Send + Sync + 'static,
+{
+    let tile_w = 172.0;
+    let tile_h = 42.0;
+
+    let (bg_color, border_color, icon_color, text_color) = if is_danger && is_active {
+        (
+            tokens.danger_subtle,
+            tokens.border_danger,
+            tokens.danger,
+            tokens.text_primary,
+        )
+    } else if is_active {
+        (
+            tokens.accent_tint,
+            tokens.border_focus,
+            tokens.accent,
+            tokens.text_primary,
+        )
+    } else {
+        (
+            tokens.surface_elevated,
+            tokens.border_subtle,
+            tokens.text_muted,
+            tokens.text_secondary,
+        )
+    };
+
+    Rectangle::new()
+        .width(tile_w)
+        .height(tile_h)
+        .radius(radius::MD)
+        .fill(bg_color)
+        .border(1.0, border_color)
+        .cursor(Pointer)
+        .padding(Padding {
+            top: 2.0,
+            bottom: 2.0,
+            left: 10.0,
+            right: 10.0,
+        })
+        .align_child(Align::Start, Align::Center)
+        .on_click(move |_| on_click())
+        .child(
+            Row::new(vec![
+                Box::new(
+                    Text::new(icon)
+                        .size(16.0)
+                        .color(icon_color)
+                        .font(&tokens.font_mono),
+                ),
+                Box::new(
+                    Text::new(label)
+                        .size(typography::SECONDARY)
+                        .color(text_color)
+                        .font(&tokens.font_sans),
+                ),
+            ])
+            .gap(spacing::GAP_SM)
+            .align(Align::Center),
+        )
+}
+
+fn render_quick_toggles(tokens: &ThemeTokens, dnd: bool, _font: &str) -> Rectangle {
     let network = Network::read();
     let bluetooth = Bluetooth::read();
     let is_presenting = crate::services::presentation::PresentationService::global().is_active();
-
-    // Row 1: Wi-Fi, Bluetooth, DND
-    let wifi_active = network.connected();
-    let wifi_btn = Rectangle::new()
-        .width(112.0)
-        .height(36.0)
-        .radius(radius::SM)
-        .fill(if wifi_active {
-            tokens.accent
-        } else {
-            tokens.surface_elevated
-        })
-        .border(
-            1.0,
-            if wifi_active {
-                tokens.border_focus
-            } else {
-                tokens.border_subtle
-            },
-        )
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            let net = Network::read();
-            Network::set_wifi(!net.wifi_enabled());
-        })
-        .child(
-            Text::new(if wifi_active {
-                "󰤨 Wi-Fi"
-            } else {
-                "󰤭 Wi-Fi"
-            })
-            .size(typography::SECONDARY)
-            .color(if wifi_active {
-                Color::BLACK
-            } else {
-                tokens.text_primary
-            })
-            .font(font),
-        );
-
-    let bt_active = bluetooth.powered();
-    let bt_btn = Rectangle::new()
-        .width(112.0)
-        .height(36.0)
-        .radius(radius::SM)
-        .fill(if bt_active {
-            tokens.accent
-        } else {
-            tokens.surface_elevated
-        })
-        .border(
-            1.0,
-            if bt_active {
-                tokens.border_focus
-            } else {
-                tokens.border_subtle
-            },
-        )
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(move |_| {
-            Bluetooth::set_powered(!bt_active);
-        })
-        .child(
-            Text::new(if bt_active {
-                "󰂯 BT On"
-            } else {
-                "󰂲 BT Off"
-            })
-            .size(typography::SECONDARY)
-            .color(if bt_active {
-                Color::BLACK
-            } else {
-                tokens.text_primary
-            })
-            .font(font),
-        );
-
-    let dnd_btn = Rectangle::new()
-        .width(112.0)
-        .height(36.0)
-        .radius(radius::SM)
-        .fill(if dnd {
-            tokens.danger
-        } else {
-            tokens.surface_elevated
-        })
-        .border(
-            1.0,
-            if dnd {
-                tokens.border_danger
-            } else {
-                tokens.border_subtle
-            },
-        )
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            let mut cc = ControlCenterService::write();
-            cc.dnd = !cc.dnd;
-        })
-        .child(
-            Text::new(if dnd { "󰂛 DND" } else { "󰂚 DND" })
-                .size(typography::SECONDARY)
-                .color(if dnd {
-                    Color::WHITE
-                } else {
-                    tokens.text_primary
-                })
-                .font(font),
-        );
-
-    let row1 = Row::new(vec![
-        Box::new(wifi_btn),
-        Box::new(bt_btn),
-        Box::new(dnd_btn),
-    ])
-    .width(Parent)
-    .justify(Justify::SpaceBetween)
-    .align(Align::Center);
-
-    // Row 2: Display, Record, Present
-    let disp_btn = Rectangle::new()
-        .width(112.0)
-        .height(36.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            crate::ui::display_config::toggle();
-        })
-        .child(
-            Text::new("󰍹 Display")
-                .size(typography::SECONDARY)
-                .color(tokens.text_primary)
-                .font(font),
-        );
-
     let rec_active = crate::ui::screen_record::ScreenRecordService::read().is_recording;
-    let rec_btn = Rectangle::new()
-        .width(112.0)
-        .height(36.0)
-        .radius(radius::SM)
-        .fill(if rec_active {
-            tokens.danger
+
+    let wifi_active = network.connected();
+    let wifi_label = if wifi_active && !network.ssid().is_empty() {
+        let ssid = network.ssid();
+        if ssid.len() > 10 {
+            format!("{}…", &ssid[..9])
         } else {
-            tokens.surface_elevated
-        })
-        .border(
-            1.0,
-            if rec_active {
-                tokens.border_danger
-            } else {
-                tokens.border_subtle
-            },
-        )
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            crate::ui::screen_record::toggle();
-        })
-        .child(
-            Text::new(if rec_active {
-                "󰑋 REC"
-            } else {
-                "󰑋 Record"
-            })
-            .size(typography::SECONDARY)
-            .color(if rec_active {
-                Color::WHITE
-            } else {
-                tokens.text_primary
-            })
-            .font(font),
-        );
-
-    let present_btn = Rectangle::new()
-        .width(112.0)
-        .height(36.0)
-        .radius(radius::SM)
-        .fill(if is_presenting {
-            tokens.accent
-        } else {
-            tokens.surface_elevated
-        })
-        .border(
-            1.0,
-            if is_presenting {
-                tokens.border_focus
-            } else {
-                tokens.border_subtle
-            },
-        )
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            let _ = crate::services::presentation::PresentationService::global().toggle();
-        })
-        .child(
-            Text::new(if is_presenting {
-                "󰐩 Present"
-            } else {
-                "󰐩 Normal"
-            })
-            .size(typography::SECONDARY)
-            .color(if is_presenting {
-                Color::BLACK
-            } else {
-                tokens.text_primary
-            })
-            .font(font),
-        );
-
-    let row2 = Row::new(vec![
-        Box::new(disp_btn),
-        Box::new(rec_btn),
-        Box::new(present_btn),
-    ])
-    .width(Parent)
-    .justify(Justify::SpaceBetween)
-    .align(Align::Center);
-
-    Rectangle::new().width(Parent).height(80.0).child(
-        Column::new(vec![Box::new(row1), Box::new(row2)])
-            .width(Parent)
-            .gap(8.0),
-    )
-}
-
-fn render_widget_shortcuts(tokens: &ThemeTokens, font: &str) -> Rectangle {
-    let make_shortcut = |icon: &'static str, label: &'static str, view: ActiveView| {
-        Rectangle::new()
-            .width(66.0)
-            .height(28.0)
-            .radius(radius::SM)
-            .fill(tokens.surface_elevated)
-            .border(1.0, tokens.border_subtle)
-            .cursor(Pointer)
-            .align_child(Center, Center)
-            .on_click(move |_| {
-                open_view(view);
-            })
-            .child(
-                Row::new(vec![
-                    Box::new(
-                        Text::new(icon)
-                            .size(typography::BODY)
-                            .color(tokens.accent)
-                            .font(font),
-                    ),
-                    Box::new(
-                        Text::new(label)
-                            .size(typography::CAPTION)
-                            .color(tokens.text_secondary)
-                            .font(font),
-                    ),
-                ])
-                .gap(2.0)
-                .align(Align::Center),
-            )
+            ssid.to_string()
+        }
+    } else if wifi_active {
+        "Wi-Fi On".to_string()
+    } else {
+        "Wi-Fi Off".to_string()
     };
 
-    Rectangle::new().width(Parent).height(28.0).child(
-        Row::new(vec![
-            Box::new(make_shortcut("󰤨", "Net", ActiveView::Network)),
-            Box::new(make_shortcut("󰕾", "Audio", ActiveView::Audio)),
-            Box::new(make_shortcut("󰂯", "BlueZ", ActiveView::Bluetooth)),
-            Box::new(make_shortcut("󰸗", "Cal", ActiveView::Calendar)),
-            Box::new(make_shortcut("󰀻", "Tray", ActiveView::Tray)),
-        ])
+    let wifi_tile = render_split_tile(
+        if wifi_active { "󰤨" } else { "󰤭" },
+        &wifi_label,
+        wifi_active,
+        tokens,
+        || {
+            let net = Network::read();
+            Network::set_wifi(!net.wifi_enabled());
+        },
+        || {
+            open_view(ActiveView::Network);
+        },
+    );
+
+    let bt_active = bluetooth.powered();
+    let bt_label = if bt_active {
+        "Bluetooth"
+    } else {
+        "Bluetooth Off"
+    };
+    let bt_tile = render_split_tile(
+        if bt_active { "󰂯" } else { "󰂲" },
+        bt_label,
+        bt_active,
+        tokens,
+        move || {
+            Bluetooth::set_powered(!bt_active);
+        },
+        || {
+            open_view(ActiveView::Bluetooth);
+        },
+    );
+
+    let row1 = Row::new(vec![Box::new(wifi_tile), Box::new(bt_tile)])
         .width(Parent)
         .justify(Justify::SpaceBetween)
-        .align(Align::Center),
+        .align(Align::Center);
+
+    let dnd_tile = render_action_tile(
+        if dnd { "󰂛" } else { "󰂚" },
+        "Do Not Disturb",
+        dnd,
+        true,
+        tokens,
+        || {
+            let mut cc = ControlCenterService::write();
+            cc.dnd = !cc.dnd;
+        },
+    );
+
+    let disp_tile = render_action_tile("󰍹", "Display Profiles", false, false, tokens, || {
+        crate::ui::display_config::toggle();
+    });
+
+    let row2 = Row::new(vec![Box::new(dnd_tile), Box::new(disp_tile)])
+        .width(Parent)
+        .justify(Justify::SpaceBetween)
+        .align(Align::Center);
+
+    let rec_tile = render_action_tile(
+        "󰑋",
+        if rec_active {
+            "Recording"
+        } else {
+            "Record Screen"
+        },
+        rec_active,
+        true,
+        tokens,
+        || {
+            crate::ui::screen_record::toggle();
+        },
+    );
+
+    let pres_tile = render_action_tile(
+        "󰐩",
+        if is_presenting {
+            "Presenting"
+        } else {
+            "Presentation"
+        },
+        is_presenting,
+        false,
+        tokens,
+        || {
+            let _ = crate::services::presentation::PresentationService::global().toggle();
+        },
+    );
+
+    let row3 = Row::new(vec![Box::new(rec_tile), Box::new(pres_tile)])
+        .width(Parent)
+        .justify(Justify::SpaceBetween)
+        .align(Align::Center);
+
+    Rectangle::new().width(Parent).height(142.0).child(
+        Column::new(vec![Box::new(row1), Box::new(row2), Box::new(row3)])
+            .width(Parent)
+            .gap(8.0),
     )
 }
 
@@ -716,20 +765,19 @@ fn render_subview_header(title: &str, icon: &str, tokens: &ThemeTokens, font: &s
     )
 }
 
-fn render_sliders(tokens: &ThemeTokens, font: &str) -> Rectangle {
+fn render_sliders(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     let audio = Audio::read();
     let vol = audio.volume();
     let is_muted = audio.muted();
     let brightness = Brightness::read();
     let bright = brightness.percent();
 
-    let mut rows: Vec<Box<dyn Widget>> = Vec::new();
+    let slider_w = 356.0;
 
-    // Volume Slider Row with Mute Button using WinUI 3 fluent_slider
-    let vol_slider_w = 280.0;
+    // Volume Slider: full-width 356px with interactive leading mute toggle icon
     let vol_slider = components::fluent_slider(
         vol as f32 / 100.0,
-        vol_slider_w,
+        slider_w,
         34.0,
         if is_muted { "󰖁" } else { "󰕾" },
         &format!("Volume {vol}%"),
@@ -740,52 +788,15 @@ fn render_sliders(tokens: &ThemeTokens, font: &str) -> Rectangle {
             let target = (current + step).clamp(0, 100) as u8;
             Audio::set_volume(target);
         },
+        Some(|| {
+            Audio::toggle_mute();
+        }),
     );
 
-    let mute_btn = Rectangle::new()
-        .width(66.0)
-        .height(34.0)
-        .radius(radius::SM)
-        .fill(if is_muted {
-            tokens.danger
-        } else {
-            tokens.surface_elevated
-        })
-        .border(
-            1.0,
-            if is_muted {
-                tokens.border_danger
-            } else {
-                tokens.border_subtle
-            },
-        )
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            Audio::toggle_mute();
-        })
-        .child(
-            Text::new(if is_muted { "Muted" } else { "Mute" })
-                .size(typography::BADGE)
-                .color(if is_muted {
-                    Color::WHITE
-                } else {
-                    tokens.text_primary
-                })
-                .font(font),
-        );
-
-    let vol_row = Row::new(vec![Box::new(vol_slider), Box::new(mute_btn)])
-        .width(Parent)
-        .justify(Justify::SpaceBetween)
-        .align(Align::Center);
-    rows.push(Box::new(vol_row));
-
-    // Brightness Slider Row using WinUI 3 fluent_slider
-    let bright_slider_w = 356.0;
+    // Brightness Slider: full-width 356px
     let bright_slider = components::fluent_slider(
         bright as f32 / 100.0,
-        bright_slider_w,
+        slider_w,
         34.0,
         "󰃠",
         &format!("Brightness {bright}%"),
@@ -796,26 +807,63 @@ fn render_sliders(tokens: &ThemeTokens, font: &str) -> Rectangle {
             let target = (current + step).clamp(1, 100) as u8;
             Brightness::set(target);
         },
+        None::<fn()>,
     );
-    rows.push(Box::new(bright_slider));
 
-    Rectangle::new()
-        .width(Parent)
-        .height(76.0)
-        .child(Column::new(rows).gap(spacing::GAP_SM))
+    Rectangle::new().width(Parent).height(76.0).child(
+        Column::new(vec![Box::new(vol_slider), Box::new(bright_slider)]).gap(spacing::GAP_SM),
+    )
 }
 
 fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
     let media = Media::read();
     let playing = media.playing();
+    let has_media = !media.title().is_empty();
+
+    let play_pause_icon = if playing { "󰏤" } else { "󰐊" };
+
+    if !has_media && !playing {
+        // Minimal idle status card
+        return Rectangle::new()
+            .width(Parent)
+            .height(36.0)
+            .radius(radius::SM)
+            .fill(tokens.surface_elevated)
+            .border(1.0, tokens.border_subtle)
+            .padding(Padding {
+                top: 2.0,
+                bottom: 2.0,
+                left: 12.0,
+                right: 12.0,
+            })
+            .align_child(Align::Start, Align::Center)
+            .child(
+                Row::new(vec![
+                    Box::new(
+                        Text::new("󰎆")
+                            .size(typography::BODY_LG)
+                            .color(tokens.text_muted)
+                            .font(&tokens.font_mono),
+                    ),
+                    Box::new(
+                        Text::new("Idle • No media playing")
+                            .size(typography::SECONDARY)
+                            .color(tokens.text_muted)
+                            .font(&tokens.font_sans),
+                    ),
+                ])
+                .gap(spacing::GAP_SM)
+                .align(Align::Center),
+            );
+    }
 
     let title_text = if media.title().is_empty() {
-        "No media playing".to_string()
+        "Audio playback active".to_string()
+    } else if media.artist().is_empty() {
+        media.title().to_string()
     } else {
         format!("{} - {}", media.artist(), media.title())
     };
-
-    let play_pause_icon = if playing { "󰏤" } else { "󰐊" };
 
     // CAVA Audio Spectrum Visualizer integrated directly into the media card
     let spectrum = crate::services::cava::CavaService::spectrum();
@@ -854,20 +902,32 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
                 Box::new(
                     Row::new(vec![
                         Box::new(
-                            Text::new(title_text)
-                                .size(typography::SECONDARY)
-                                .color(tokens.text_primary)
-                                .font(font),
+                            Row::new(vec![
+                                Box::new(
+                                    Text::new("󰎆")
+                                        .size(typography::BODY)
+                                        .color(tokens.accent)
+                                        .font(&tokens.font_mono),
+                                ),
+                                Box::new(
+                                    Text::new(title_text)
+                                        .size(typography::SECONDARY)
+                                        .color(tokens.text_primary)
+                                        .font(&tokens.font_sans),
+                                ),
+                            ])
+                            .gap(spacing::GAP_XS)
+                            .align(Align::Center),
                         ),
                         Box::new(
-                            Text::new(if playing { "● PLAYING" } else { "● IDLE" })
+                            Text::new(if playing { "Playing" } else { "Paused" })
                                 .size(typography::CAPTION)
                                 .color(if playing {
                                     tokens.success
                                 } else {
                                     tokens.steel
                                 })
-                                .font(font),
+                                .font(&tokens.font_sans),
                         ),
                     ])
                     .width(Parent)

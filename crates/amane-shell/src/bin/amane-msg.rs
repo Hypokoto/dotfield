@@ -113,6 +113,7 @@ fn main() {
         eprintln!("amane-msg: failed to send text command");
         std::process::exit(3);
     }
+    let _ = stream.shutdown(std::net::Shutdown::Write);
 
     // Read and print any response
     let mut response = String::new();

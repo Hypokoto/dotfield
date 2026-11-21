@@ -1,6 +1,6 @@
 use amane::{
-    Align, Bluetooth, Center, Color, Column, Justify, Padding, Parent, Pointer, Rectangle, Row,
-    Service, Text, Widget,
+    Align, Bluetooth, Center, Column, Justify, Padding, Parent, Pointer, Rectangle, Row, Service,
+    Text, Widget,
 };
 
 use crate::config::ShellManifest;
@@ -23,14 +23,14 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
         .height(30.0)
         .radius(radius::SM)
         .fill(if is_powered {
-            tokens.accent
+            tokens.accent_tint
         } else {
             tokens.surface_elevated
         })
         .border(
             1.0,
             if is_powered {
-                tokens.accent_hover
+                tokens.border_focus
             } else {
                 tokens.border_subtle
             },
@@ -48,11 +48,11 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
             })
             .size(typography::SECONDARY)
             .color(if is_powered {
-                Color::BLACK
+                tokens.accent
             } else {
                 tokens.text_primary
             })
-            .font(font),
+            .font(&tokens.font_sans),
         );
 
     let scan_btn = Rectangle::new()
@@ -60,14 +60,14 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
         .height(30.0)
         .radius(radius::SM)
         .fill(if is_scanning {
-            tokens.accent
+            tokens.accent_tint
         } else {
             tokens.surface_elevated
         })
         .border(
             1.0,
             if is_scanning {
-                tokens.accent_hover
+                tokens.border_focus
             } else {
                 tokens.border_subtle
             },
@@ -88,12 +88,8 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
                 "󰑐 Scan Devices"
             })
             .size(typography::SECONDARY)
-            .color(if is_scanning {
-                Color::BLACK
-            } else {
-                tokens.accent
-            })
-            .font(font),
+            .color(tokens.accent)
+            .font(&tokens.font_sans),
         );
 
     let status_summary = Rectangle::new()
@@ -113,7 +109,7 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
             })
             .size(typography::SECONDARY)
             .color(tokens.text_secondary)
-            .font(font),
+            .font(&tokens.font_sans),
         );
 
     elements.push(Box::new(
@@ -216,27 +212,52 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
         dev_cards.push(Box::new(
             Rectangle::new()
                 .width(Parent)
-                .height(44.0)
-                .radius(radius::SM)
+                .height(108.0)
+                .radius(radius::MD)
                 .fill(tokens.surface_elevated)
                 .border(1.0, tokens.border_subtle)
                 .align_child(Center, Center)
                 .child(
-                    Row::new(vec![
+                    Column::new(vec![
                         Box::new(
-                            Text::new("󰑐")
-                                .size(typography::TITLE_SM)
-                                .color(tokens.text_secondary)
-                                .font(font),
+                            Text::new("󰂯")
+                                .size(28.0)
+                                .color(tokens.accent)
+                                .font(&tokens.font_mono),
                         ),
                         Box::new(
-                            Text::new("No devices found • Click Scan to search")
-                                .size(typography::BADGE)
-                                .color(tokens.text_secondary)
-                                .font(font),
+                            Text::new("No Bluetooth Devices Found")
+                                .size(typography::BODY)
+                                .color(tokens.text_primary)
+                                .font(&tokens.font_sans),
+                        ),
+                        Box::new(
+                            Text::new("Set your device to pairing mode to discover it")
+                                .size(typography::CAPTION)
+                                .color(tokens.text_muted)
+                                .font(&tokens.font_sans),
+                        ),
+                        Box::new(
+                            Rectangle::new()
+                                .width(140.0)
+                                .height(26.0)
+                                .radius(radius::SM)
+                                .fill(tokens.accent_tint)
+                                .border(1.0, tokens.border_focus)
+                                .cursor(Pointer)
+                                .align_child(Center, Center)
+                                .on_click(|_| {
+                                    Bluetooth::start_scan();
+                                })
+                                .child(
+                                    Text::new("󰑐 Scan for Devices")
+                                        .size(typography::CAPTION)
+                                        .color(tokens.accent)
+                                        .font(&tokens.font_sans),
+                                ),
                         ),
                     ])
-                    .gap(spacing::GAP_SM)
+                    .gap(4.0)
                     .align(Align::Center),
                 ),
         ));
@@ -272,9 +293,9 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
                 .height(26.0)
                 .radius(radius::SM)
                 .fill(if is_connected {
-                    tokens.danger
+                    tokens.danger_subtle
                 } else if is_paired {
-                    tokens.accent
+                    tokens.accent_tint
                 } else {
                     tokens.surface_elevated
                 })
@@ -309,13 +330,13 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
                     })
                     .size(typography::BADGE)
                     .color(if is_connected {
-                        Color::WHITE
+                        tokens.danger
                     } else if is_paired {
-                        Color::BLACK
+                        tokens.accent
                     } else {
                         tokens.text_primary
                     })
-                    .font(font),
+                    .font(&tokens.font_sans),
                 );
 
             let row = Rectangle::new()
@@ -323,7 +344,7 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
                 .height(36.0)
                 .radius(radius::SM)
                 .fill(if is_connected {
-                    tokens.surface_selected
+                    tokens.accent_tint
                 } else {
                     tokens.surface_elevated
                 })
@@ -353,7 +374,7 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
                                         } else {
                                             tokens.text_secondary
                                         })
-                                        .font(font),
+                                        .font(&tokens.font_mono),
                                 ),
                                 Box::new(
                                     Text::new(dev_name)
@@ -363,7 +384,7 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
                                         } else {
                                             tokens.text_primary
                                         })
-                                        .font(font),
+                                        .font(&tokens.font_sans),
                                 ),
                                 Box::new(
                                     Text::new(if let Some(bat) = device.battery() {
@@ -372,8 +393,8 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
                                         String::new()
                                     })
                                     .size(typography::CAPTION)
-                                    .color(tokens.accent_hover)
-                                    .font(font),
+                                    .color(tokens.accent)
+                                    .font(&tokens.font_mono),
                                 ),
                             ])
                             .gap(spacing::GAP_SM)

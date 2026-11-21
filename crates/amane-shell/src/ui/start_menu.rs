@@ -980,12 +980,17 @@ pub fn start_menu_overlay() -> LayerWindow {
                     .align_child(Center, Center)
                     .child(
                         Column::new(vec![
-                            Box::new(Text::new("󰤱").size(28.0).color(tokens.steel).font(font)),
+                            Box::new(
+                                Text::new("󰤱")
+                                    .size(32.0)
+                                    .color(tokens.accent)
+                                    .font(&tokens.font_mono),
+                            ),
                             Box::new(
                                 Text::new("No pinned applications")
                                     .size(typography::BODY)
                                     .color(tokens.text_primary)
-                                    .font(font),
+                                    .font(&tokens.font_sans),
                             ),
                             Box::new(
                                 Text::new(
@@ -993,15 +998,15 @@ pub fn start_menu_overlay() -> LayerWindow {
                                 )
                                 .size(typography::CAPTION)
                                 .color(tokens.text_muted)
-                                .font(font),
+                                .font(&tokens.font_sans),
                             ),
                             Box::new(
                                 Rectangle::new()
-                                    .width(160.0)
-                                    .height(28.0)
+                                    .width(170.0)
+                                    .height(30.0)
                                     .radius(radius::SM)
-                                    .fill(tokens.surface_elevated)
-                                    .border(1.0, tokens.accent)
+                                    .fill(tokens.accent_tint)
+                                    .border(1.0, tokens.border_focus)
                                     .cursor(Pointer)
                                     .align_child(Center, Center)
                                     .on_click(|_| {
@@ -1012,9 +1017,9 @@ pub fn start_menu_overlay() -> LayerWindow {
                                     })
                                     .child(
                                         Text::new("Browse All Apps ❯")
-                                            .size(typography::CAPTION)
+                                            .size(typography::SECONDARY)
                                             .color(tokens.accent)
-                                            .font(font),
+                                            .font(&tokens.font_sans),
                                     ),
                             ),
                         ])

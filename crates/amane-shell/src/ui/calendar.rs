@@ -117,7 +117,6 @@ pub fn calendar_overlay() -> LayerWindow {
     }
 
     let tokens = ThemeTokens::from_manifest(&manifest);
-    let font = manifest.theme.font_family.clone();
 
     let now = Local::now();
     let today_year = now.year();
@@ -148,13 +147,13 @@ pub fn calendar_overlay() -> LayerWindow {
                             Text::new(time_str)
                                 .size(typography::DISPLAY)
                                 .color(tokens.accent)
-                                .font(&font),
+                                .font(&tokens.font_mono),
                         ),
                         Box::new(
                             Text::new(full_date_str)
                                 .size(typography::BADGE)
                                 .color(tokens.text_secondary)
-                                .font(&font),
+                                .font(&tokens.font_sans),
                         ),
                     ])
                     .gap(2.0),
@@ -199,13 +198,18 @@ pub fn calendar_overlay() -> LayerWindow {
                         .on_click(|_| {
                             prev_month();
                         })
-                        .child(Text::new("❮").size(11.0).color(tokens.accent).font(&font)),
+                        .child(
+                            Text::new("❮")
+                                .size(11.0)
+                                .color(tokens.accent)
+                                .font(&tokens.font_mono),
+                        ),
                 ),
                 Box::new(
                     Text::new(month_label)
                         .size(typography::BODY)
                         .color(tokens.text_primary)
-                        .font(&font),
+                        .font(&tokens.font_sans),
                 ),
                 Box::new(
                     Rectangle::new()
@@ -219,7 +223,12 @@ pub fn calendar_overlay() -> LayerWindow {
                         .on_click(|_| {
                             next_month();
                         })
-                        .child(Text::new("❯").size(11.0).color(tokens.accent).font(&font)),
+                        .child(
+                            Text::new("❯")
+                                .size(11.0)
+                                .color(tokens.accent)
+                                .font(&tokens.font_mono),
+                        ),
                 ),
             ])
             .gap(spacing::GAP_MD)
@@ -241,7 +250,7 @@ pub fn calendar_overlay() -> LayerWindow {
                     Text::new("Today")
                         .size(typography::BADGE)
                         .color(tokens.accent)
-                        .font(&font),
+                        .font(&tokens.font_sans),
                 ),
         ),
     ])
@@ -261,7 +270,7 @@ pub fn calendar_overlay() -> LayerWindow {
                 Text::new(label)
                     .size(typography::BADGE)
                     .color(tokens.text_muted)
-                    .font(&font),
+                    .font(&tokens.font_sans),
             );
         weekday_pills.push(Box::new(pill));
     }
@@ -362,7 +371,7 @@ pub fn calendar_overlay() -> LayerWindow {
                     Text::new(format!("{day_num}"))
                         .size(10.5)
                         .color(text_color)
-                        .font(&font),
+                        .font(&tokens.font_mono),
                 );
 
             row_cells.push(Box::new(cell));

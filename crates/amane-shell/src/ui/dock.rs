@@ -189,8 +189,8 @@ fn render_dock_trigger<F>(
     icon_size: f32,
     icon_color: Color,
     _tooltip: &'static str,
-    font: &str,
-    _tokens: &ThemeTokens,
+    _font: &str,
+    tokens: &ThemeTokens,
     on_click: F,
 ) -> Rectangle
 where
@@ -205,10 +205,15 @@ where
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(move |_| on_click())
-        .child(Text::new(icon).size(icon_size).color(icon_color).font(font))
+        .child(
+            Text::new(icon)
+                .size(icon_size)
+                .color(icon_color)
+                .font(&tokens.font_mono),
+        )
 }
 
-fn render_search_pill<F>(font: &str, tokens: &ThemeTokens, on_click: F) -> Rectangle
+fn render_search_pill<F>(_font: &str, tokens: &ThemeTokens, on_click: F) -> Rectangle
 where
     F: Fn() + Send + Sync + 'static,
 {
@@ -233,13 +238,13 @@ where
                     Text::new("")
                         .size(14.0)
                         .color(tokens.text_secondary)
-                        .font(font),
+                        .font(&tokens.font_mono),
                 ),
                 Box::new(
                     Text::new("Search")
                         .size(typography::BODY)
                         .color(tokens.text_secondary)
-                        .font(font),
+                        .font(&tokens.font_sans),
                 ),
             ])
             .gap(spacing::GAP_SM)

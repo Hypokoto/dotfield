@@ -267,13 +267,13 @@ pub fn powermenu_overlay() -> LayerWindow {
                         Text::new(action.icon)
                             .size(28.0)
                             .color(icon_color)
-                            .font(&tokens.font_family),
+                            .font(&tokens.font_mono),
                     ),
                     Box::new(
                         Text::new(action.title)
                             .size(crate::ui::tokens::typography::SECONDARY)
                             .color(title_color)
-                            .font(&tokens.font_family),
+                            .font(&tokens.font_sans),
                     ),
                     Box::new(key_chip),
                 ])
@@ -296,33 +296,33 @@ pub fn powermenu_overlay() -> LayerWindow {
             Text::new("Navigate")
                 .size(crate::ui::tokens::typography::BADGE)
                 .color(tokens.text_secondary)
-                .font(&tokens.font_family),
+                .font(&tokens.font_sans),
         ),
         Box::new(
             Text::new("•")
                 .size(crate::ui::tokens::typography::BADGE)
                 .color(tokens.text_muted)
-                .font(&tokens.font_family),
+                .font(&tokens.font_sans),
         ),
         Box::new(crate::ui::components::keycap("Enter", &tokens)),
         Box::new(
             Text::new("Execute")
                 .size(crate::ui::tokens::typography::BADGE)
                 .color(tokens.text_secondary)
-                .font(&tokens.font_family),
+                .font(&tokens.font_sans),
         ),
         Box::new(
             Text::new("•")
                 .size(crate::ui::tokens::typography::BADGE)
                 .color(tokens.text_muted)
-                .font(&tokens.font_family),
+                .font(&tokens.font_sans),
         ),
         Box::new(crate::ui::components::keycap("Esc", &tokens)),
         Box::new(
             Text::new("Cancel")
                 .size(crate::ui::tokens::typography::BADGE)
                 .color(tokens.text_secondary)
-                .font(&tokens.font_family),
+                .font(&tokens.font_sans),
         ),
     ])
     .gap(6.0)

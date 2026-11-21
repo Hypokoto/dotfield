@@ -420,19 +420,19 @@ pub fn screen_record_overlay() -> LayerWindow {
                 Text::new("1080p @ 144Hz")
                     .size(typography::CAPTION)
                     .color(tokens.text_secondary)
-                    .font(&font),
+                    .font(&tokens.font_mono),
             ),
             Box::new(
                 Text::new("•")
                     .size(typography::CAPTION)
                     .color(tokens.text_muted)
-                    .font(&font),
+                    .font(&tokens.font_sans),
             ),
             Box::new(
                 Text::new("H.264 VAAPI")
                     .size(typography::CAPTION)
                     .color(tokens.text_muted)
-                    .font(&font),
+                    .font(&tokens.font_mono),
             ),
         ])
         .gap(6.0)

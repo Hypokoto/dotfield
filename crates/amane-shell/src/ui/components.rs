@@ -20,7 +20,7 @@ pub fn close_button(on_click_fn: impl Fn() + 'static, tokens: &ThemeTokens) -> R
             Text::new("󰅖")
                 .size(typography::BODY)
                 .color(tokens.text_secondary)
-                .font(&tokens.font_family)
+                .font(&tokens.font_mono)
                 .tight(),
         )
 }
@@ -38,22 +38,22 @@ pub fn modal_header(
             Text::new(icon)
                 .size(typography::TITLE_SM)
                 .color(tokens.accent)
-                .font(&tokens.font_family),
+                .font(&tokens.font_mono),
         ),
         Box::new(
             Text::new(title)
                 .size(typography::SECONDARY)
                 .color(tokens.text_primary)
-                .font(&tokens.font_family),
+                .font(&tokens.font_sans),
         ),
     ];
 
     if let Some(tag_text) = tag {
         title_elements.push(Box::new(
-            Text::new(format!("// {tag_text}"))
+            Text::new(format!("• {tag_text}"))
                 .size(typography::BADGE)
                 .color(tokens.text_secondary)
-                .font(&tokens.font_family),
+                .font(&tokens.font_sans),
         ));
     }
 
@@ -96,7 +96,7 @@ pub fn keycap(key_text: &str, tokens: &ThemeTokens) -> Rectangle {
             Text::new(key_text)
                 .size(typography::CAPTION)
                 .color(tokens.text_primary)
-                .font(&tokens.font_family)
+                .font(&tokens.font_mono)
                 .tight(),
         )
 }
@@ -532,9 +532,10 @@ pub fn toggle_switch_card(
         .child(content_row)
 }
 
-/// WinUI 3 Slider with stacked visual progress track, numeric label, and scroll interaction
+/// Modern Fluent Pill Slider with stacked visual progress track, leading status icon,
+/// trailing numeric readout, optional icon click action (e.g. mute toggle), and scroll interaction.
 #[allow(clippy::too_many_arguments)]
-pub fn fluent_slider(
+pub fn fluent_slider<F1, F2>(
     progress_frac: f32,
     slider_width: f32,
     slider_height: f32,
@@ -542,53 +543,114 @@ pub fn fluent_slider(
     label: &str,
     is_muted: bool,
     tokens: &ThemeTokens,
-    on_scroll_fn: impl Fn(i32) + 'static,
-) -> Rectangle {
+    on_scroll_fn: F1,
+    on_icon_click: Option<F2>,
+) -> Rectangle
+where
+    F1: Fn(i32) + 'static,
+    F2: Fn() + 'static,
+{
     let clamped_frac = progress_frac.clamp(0.0, 1.0);
     let fill_w = (slider_width * clamped_frac).clamp(0.0, slider_width);
-    let fill_color = if is_muted {
-        tokens.danger_subtle
+
+    let (icon_color, value_text) = if is_muted {
+        (tokens.danger, "Muted".to_string())
     } else {
-        tokens.accent_subtle
+        (tokens.accent, format!("{:.0}%", clamped_frac * 100.0))
     };
 
+    // 1. Base container track
     let bg_rect = Rectangle::new()
         .width(slider_width)
         .height(slider_height)
         .radius(radius::SM)
-        .fill(tokens.surface_track)
+        .fill(tokens.surface_elevated)
         .border(border::THIN, tokens.border_subtle);
 
+    // 2. Filled progress track with subtle highlight
     let fill_rect = Rectangle::new()
         .width(fill_w)
         .height(slider_height)
         .radius(radius::SM)
-        .fill(fill_color);
+        .fill(if is_muted {
+            tokens.danger_subtle
+        } else {
+            tokens.accent_tint
+        })
+        .border(
+            border::THIN,
+            if is_muted {
+                tokens.border_danger
+            } else {
+                tokens.accent
+            },
+        );
 
-    let label_row = Row::new(vec![
+    // 3. Leading icon: interactive button if on_icon_click is provided, or static icon
+    let icon_btn: Box<dyn Widget> = if let Some(on_click) = on_icon_click {
+        Box::new(
+            Rectangle::new()
+                .width(26.0)
+                .height(26.0)
+                .radius(radius::XS)
+                .fill(if is_muted {
+                    tokens.danger
+                } else {
+                    tokens.surface_elevated
+                })
+                .border(
+                    1.0,
+                    if is_muted {
+                        tokens.border_danger
+                    } else {
+                        tokens.border_subtle
+                    },
+                )
+                .cursor(Pointer)
+                .align_child(Center, Center)
+                .on_click(move |_| on_click())
+                .child(
+                    Text::new(icon)
+                        .size(typography::BODY_LG)
+                        .color(if is_muted { Color::WHITE } else { icon_color })
+                        .font(&tokens.font_mono),
+                ),
+        )
+    } else {
         Box::new(
             Text::new(icon)
                 .size(typography::BODY_LG)
-                .color(if is_muted {
-                    tokens.danger
-                } else {
-                    tokens.accent
-                })
-                .font(&tokens.font_family),
-        ),
+                .color(icon_color)
+                .font(&tokens.font_mono),
+        )
+    };
+
+    // 4. Content Row: Left (icon + label in sans-serif) | Right (value percentage in mono)
+    let left_items = Row::new(vec![
+        icon_btn,
         Box::new(
             Text::new(label)
                 .size(typography::SECONDARY)
-                .color(if is_muted {
-                    tokens.text_secondary
-                } else {
-                    tokens.text_primary
-                })
-                .font(&tokens.font_family),
+                .color(tokens.text_primary)
+                .font(&tokens.font_sans),
         ),
     ])
     .gap(spacing::GAP_SM)
     .align(Align::Center);
+
+    let right_badge = Text::new(value_text)
+        .size(typography::BADGE)
+        .color(if is_muted {
+            tokens.danger
+        } else {
+            tokens.accent
+        })
+        .font(&tokens.font_mono);
+
+    let label_row = Row::new(vec![Box::new(left_items), Box::new(right_badge)])
+        .width(Parent)
+        .justify(Justify::SpaceBetween)
+        .align(Align::Center);
 
     let content_rect = Rectangle::new()
         .width(slider_width)
@@ -597,7 +659,7 @@ pub fn fluent_slider(
             top: 2.0,
             bottom: 2.0,
             left: 10.0,
-            right: 10.0,
+            right: 12.0,
         })
         .align_child(Align::Start, Align::Center)
         .child(label_row);
@@ -1007,7 +1069,17 @@ mod tests {
     #[test]
     fn test_fluent_slider_renders() {
         let tokens = test_tokens();
-        let _slider = fluent_slider(0.75, 200.0, 32.0, "󰕾", "Volume 75%", false, &tokens, |_| {});
+        let _slider = fluent_slider(
+            0.75,
+            200.0,
+            32.0,
+            "󰕾",
+            "Volume 75%",
+            false,
+            &tokens,
+            |_| {},
+            None::<fn()>,
+        );
     }
 
     #[test]

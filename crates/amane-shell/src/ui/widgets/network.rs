@@ -1,5 +1,5 @@
 use amane::{
-    Align, Center, Color, Column, Justify, Link, Network, Padding, Parent, Pointer, Rectangle, Row,
+    Align, Center, Column, Justify, Link, Network, Padding, Parent, Pointer, Rectangle, Row,
     Service, Text, Widget,
 };
 
@@ -22,14 +22,14 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
         .height(30.0)
         .radius(radius::SM)
         .fill(if is_wifi_enabled {
-            tokens.accent
+            tokens.accent_tint
         } else {
             tokens.surface_elevated
         })
         .border(
             1.0,
             if is_wifi_enabled {
-                tokens.accent_hover
+                tokens.border_focus
             } else {
                 tokens.border_subtle
             },
@@ -47,11 +47,11 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
             })
             .size(typography::SECONDARY)
             .color(if is_wifi_enabled {
-                Color::BLACK
+                tokens.accent
             } else {
                 tokens.text_primary
             })
-            .font(font),
+            .font(&tokens.font_sans),
         );
 
     let scan_btn = Rectangle::new()
@@ -69,7 +69,7 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
             Text::new("󰑐 Scan")
                 .size(typography::SECONDARY)
                 .color(tokens.accent)
-                .font(font),
+                .font(&tokens.font_sans),
         );
 
     let disconnect_btn = Rectangle::new()
@@ -77,7 +77,7 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
         .height(30.0)
         .radius(radius::SM)
         .fill(if is_connected {
-            tokens.danger
+            tokens.danger_subtle
         } else {
             tokens.surface_elevated
         })
@@ -98,11 +98,11 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
             Text::new("󰅙 Disconnect")
                 .size(typography::SECONDARY)
                 .color(if is_connected {
-                    Color::WHITE
+                    tokens.danger
                 } else {
                     tokens.text_muted
                 })
-                .font(font),
+                .font(&tokens.font_sans),
         );
 
     elements.push(Box::new(
@@ -157,7 +157,11 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
         .width(Parent)
         .height(52.0)
         .radius(radius::SM)
-        .fill(tokens.surface_elevated)
+        .fill(if is_connected {
+            tokens.accent_tint
+        } else {
+            tokens.surface_elevated
+        })
         .border(
             1.0,
             if is_connected {
@@ -182,7 +186,7 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
                         } else {
                             tokens.danger
                         })
-                        .font(font),
+                        .font(&tokens.font_mono),
                 ),
                 Box::new(
                     Column::new(vec![
@@ -190,13 +194,13 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
                             Text::new(status_title)
                                 .size(typography::BODY)
                                 .color(tokens.text_primary)
-                                .font(font),
+                                .font(&tokens.font_sans),
                         ),
                         Box::new(
                             Text::new(status_sub)
                                 .size(typography::BADGE)
                                 .color(tokens.text_secondary)
-                                .font(font),
+                                .font(&tokens.font_mono),
                         ),
                     ])
                     .gap(2.0),
@@ -214,13 +218,13 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
             Text::new("Available Access Points")
                 .size(typography::BADGE)
                 .color(tokens.accent)
-                .font(font),
+                .font(&tokens.font_sans),
         ),
         Box::new(
             Text::new(format!("{} visible", network.access_points().len()))
                 .size(typography::BADGE)
                 .color(tokens.text_secondary)
-                .font(font),
+                .font(&tokens.font_mono),
         ),
     ])
     .width(Parent)
@@ -327,7 +331,7 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
                 .height(34.0)
                 .radius(radius::SM)
                 .fill(if is_active {
-                    tokens.surface_selected
+                    tokens.accent_tint
                 } else {
                     tokens.surface_elevated
                 })
@@ -363,7 +367,7 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
                                         } else {
                                             tokens.text_primary
                                         })
-                                        .font(font),
+                                        .font(&tokens.font_mono),
                                 ),
                                 Box::new(
                                     Text::new(display_ssid)
@@ -373,7 +377,7 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
                                         } else {
                                             tokens.text_primary
                                         })
-                                        .font(font),
+                                        .font(&tokens.font_sans),
                                 ),
                             ])
                             .gap(spacing::GAP_SM)
@@ -385,7 +389,7 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
                                     Text::new(lock_badge)
                                         .size(typography::SECONDARY)
                                         .color(tokens.text_secondary)
-                                        .font(font),
+                                        .font(&tokens.font_mono),
                                 ),
                                 Box::new(
                                     Text::new(format!("{strength}%"))
@@ -395,7 +399,7 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
                                         } else {
                                             tokens.text_secondary
                                         })
-                                        .font(font),
+                                        .font(&tokens.font_mono),
                                 ),
                                 Box::new(
                                     Text::new(if is_active { "󰄬" } else { "󰁔" })
@@ -405,7 +409,7 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
                                         } else {
                                             tokens.text_secondary
                                         })
-                                        .font(font),
+                                        .font(&tokens.font_mono),
                                 ),
                             ])
                             .gap(spacing::GAP_SM)

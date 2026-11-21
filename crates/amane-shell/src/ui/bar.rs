@@ -112,7 +112,7 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
 }
 
 /// Compact weather/telemetry pill reading persistent /proc pread descriptors
-fn render_compact_telemetry(tokens: &ThemeTokens, font: &str) -> Rectangle {
+fn render_compact_telemetry(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     let telem = TelemetryService::read();
     let cpu = telem.cpu_percent;
     let mem = telem.mem_percent;
@@ -147,19 +147,29 @@ fn render_compact_telemetry(tokens: &ThemeTokens, font: &str) -> Rectangle {
     };
 
     let content_row = Row::new(vec![
-        Box::new(Text::new("󰍛").size(14.5).color(glyph_color).font(font)),
+        Box::new(
+            Text::new("󰍛")
+                .size(14.5)
+                .color(glyph_color)
+                .font(&tokens.font_mono),
+        ),
         Box::new(
             Text::new(format!("{cpu}%"))
                 .size(typography::BODY)
                 .color(text_color)
-                .font(font),
+                .font(&tokens.font_mono),
         ),
-        Box::new(Text::new("󰘚").size(14.5).color(glyph_color).font(font)),
+        Box::new(
+            Text::new("󰘚")
+                .size(14.5)
+                .color(glyph_color)
+                .font(&tokens.font_mono),
+        ),
         Box::new(
             Text::new(format!("{mem}%"))
                 .size(typography::BODY)
                 .color(text_color)
-                .font(font),
+                .font(&tokens.font_mono),
         ),
     ])
     .gap(6.0)
@@ -189,12 +199,11 @@ fn render_compact_telemetry(tokens: &ThemeTokens, font: &str) -> Rectangle {
 }
 
 fn render_workspaces(
-    manifest: &ShellManifest,
+    _manifest: &ShellManifest,
     tokens: &ThemeTokens,
     monitor_name: Option<&str>,
 ) -> (Row, f32) {
     let workspaces = Workspaces::read();
-    let font = &manifest.theme.font_family;
 
     let mut buttons: Vec<Box<dyn Widget>> = Vec::new();
 
@@ -306,7 +315,7 @@ fn render_workspaces(
                 Text::new(format!("{num}"))
                     .size(typography::BODY)
                     .color(text_color)
-                    .font(font),
+                    .font(&tokens.font_mono),
             );
 
         buttons.push(Box::new(tile));
@@ -331,7 +340,7 @@ fn render_workspaces(
                 Text::new("1")
                     .size(typography::BODY)
                     .color(tokens.accent)
-                    .font(font),
+                    .font(&tokens.font_mono),
             );
 
         buttons.push(Box::new(tile));
@@ -464,7 +473,7 @@ fn render_right_cluster(
 }
 
 /// Unified Quick Settings pill combining Wi-Fi, Volume, and Battery status
-fn render_quick_settings_pill(tokens: &ThemeTokens, font: &str) -> Rectangle {
+fn render_quick_settings_pill(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     let network = Network::read();
     let net_icon = if network.connected() {
         if network.ssid().is_empty() {
@@ -521,9 +530,24 @@ fn render_quick_settings_pill(tokens: &ThemeTokens, font: &str) -> Rectangle {
     };
 
     let content_row = Row::new(vec![
-        Box::new(Text::new(net_icon).size(16.0).color(net_color).font(font)),
-        Box::new(Text::new(vol_icon).size(16.0).color(vol_color).font(font)),
-        Box::new(Text::new(bat_icon).size(16.0).color(bat_color).font(font)),
+        Box::new(
+            Text::new(net_icon)
+                .size(16.0)
+                .color(net_color)
+                .font(&tokens.font_mono),
+        ),
+        Box::new(
+            Text::new(vol_icon)
+                .size(16.0)
+                .color(vol_color)
+                .font(&tokens.font_mono),
+        ),
+        Box::new(
+            Text::new(bat_icon)
+                .size(16.0)
+                .color(bat_color)
+                .font(&tokens.font_mono),
+        ),
     ])
     .gap(10.0)
     .align(Align::Center);
@@ -555,7 +579,7 @@ fn render_quick_settings_pill(tokens: &ThemeTokens, font: &str) -> Rectangle {
 }
 
 /// Two-line stacked clock and notification center pill (HH:MM / DD/MM/YYYY)
-fn render_stacked_clock_pill(tokens: &ThemeTokens, font: &str) -> Rectangle {
+fn render_stacked_clock_pill(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     let clock = crate::services::clock::ClockService::read();
     let time_str = clock.time();
     let date_str = clock.date();
@@ -568,13 +592,13 @@ fn render_stacked_clock_pill(tokens: &ThemeTokens, font: &str) -> Rectangle {
             Text::new(time_str)
                 .size(typography::BODY_LG)
                 .color(tokens.text_primary)
-                .font(font),
+                .font(&tokens.font_mono),
         ),
         Box::new(
             Text::new(date_str)
                 .size(typography::SECONDARY)
                 .color(tokens.text_secondary)
-                .font(font),
+                .font(&tokens.font_sans),
         ),
     ])
     .align(Center)
@@ -593,7 +617,7 @@ fn render_stacked_clock_pill(tokens: &ThemeTokens, font: &str) -> Rectangle {
                 Text::new(format!("{notifs_count}"))
                     .size(typography::CAPTION - 1.0)
                     .color(Color::WHITE)
-                    .font(font),
+                    .font(&tokens.font_mono),
             );
         row_items.push(Box::new(notif_badge));
     }

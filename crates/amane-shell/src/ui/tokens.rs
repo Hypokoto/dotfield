@@ -115,6 +115,9 @@ pub struct ThemeTokens {
     pub indicator_active: Color,
 
     pub font_family: String,
+    pub font_sans: String,
+    pub font_mono: String,
+    pub accent_tint: Color,
 }
 
 impl Default for ThemeTokens {
@@ -246,7 +249,10 @@ impl ThemeTokens {
             card_bg,
             card_border,
             indicator_active,
-            font_family: manifest.theme.font_family.clone(),
+            font_family: "Inter".to_string(),
+            font_sans: "Inter".to_string(),
+            font_mono: "JetBrainsMono Nerd Font".to_string(),
+            accent_tint: Color::from("#f59e0b24"),
         }
     }
 }

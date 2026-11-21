@@ -293,13 +293,13 @@ fi
 
 # Fix USB tethering connections to prevent default route hijack
 if command -v nmcli >/dev/null 2>&1; then
-    for conn in $(nmcli -t -f NAME,TYPE connection show | awk -F':' '$2=="ethernet" {print $1}'); do
-        if [[ "${conn}" =~ (Wired|tether|usb) ]]; then
-            info "Demoting potential tethering connection '${conn}' to metric 1000..."
-            nmcli connection modify "${conn}" ipv4.route-metric 1000 ipv6.route-metric 1000 2>/dev/null || true
-            success "Connection '${conn}' route metric demoted."
+    while IFS=':' read -r conn_name conn_type; do
+        if [[ "${conn_type}" == "ethernet" && "${conn_name}" =~ (Wired|tether|usb) ]]; then
+            info "Demoting potential tethering connection '${conn_name}' to metric 1000..."
+            nmcli connection modify "${conn_name}" ipv4.route-metric 1000 ipv6.route-metric 1000 2>/dev/null || true
+            success "Connection '${conn_name}' route metric demoted."
         fi
-    done
+    done < <(nmcli -t -f NAME,TYPE connection show 2>/dev/null || true)
 fi
 
 # Deploy system drop-ins if /etc is writable or sudo available

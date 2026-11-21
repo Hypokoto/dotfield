@@ -37,15 +37,39 @@ impl IpcCall {
 
     // reads until the sender closes its side, which marks the end of the call
     pub(crate) fn read(reader: impl Read) -> io::Result<Self> {
-        let mut lines = BufReader::new(reader).lines();
+        // Enforce 64 KiB ceiling to protect against unbounded memory allocation
+        let limited = reader.take(65536);
+        let mut lines = BufReader::new(limited).lines();
 
         let Some(name) = lines.next() else {
             return Err(io::ErrorKind::UnexpectedEof.into());
         };
 
         let name = name?;
+        if name.len() > 1024 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "IPC command name exceeds length limit",
+            ));
+        }
 
-        let arguments = lines.collect::<io::Result<Vec<String>>>()?;
+        let mut arguments = Vec::new();
+        for line in lines {
+            let arg = line?;
+            if arg.len() > 4096 {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "IPC argument exceeds length limit",
+                ));
+            }
+            if arguments.len() >= 64 {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "Too many IPC arguments",
+                ));
+            }
+            arguments.push(arg);
+        }
 
         Ok(Self { name, arguments })
     }
@@ -208,5 +232,26 @@ mod tests {
             handlers.run_name_and_args("missing", &[]),
             "no handler named missing"
         );
+    }
+
+    #[test]
+    fn test_ipc_call_read_limits() {
+        // Valid small command
+        let input = b"launcher\narg1\narg2\n";
+        let call = IpcCall::read(&input[..]).unwrap();
+        assert_eq!(call.name, "launcher");
+        assert_eq!(call.arguments, vec!["arg1", "arg2"]);
+
+        // Oversized argument (>4096 bytes) rejected
+        let large_arg = "a".repeat(5000);
+        let oversized = format!("command\n{large_arg}\n");
+        assert!(IpcCall::read(oversized.as_bytes()).is_err());
+
+        // Too many arguments (>64 arguments) rejected
+        let mut many_args = "command\n".to_string();
+        for i in 0..70 {
+            many_args.push_str(&format!("arg{i}\n"));
+        }
+        assert!(IpcCall::read(many_args.as_bytes()).is_err());
     }
 }

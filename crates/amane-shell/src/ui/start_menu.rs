@@ -3,8 +3,8 @@
 //! Features:
 //! - Pinned Apps Grid (6 columns x 3 rows) with smart multi-line label formatting (no ugly 10-char chop)
 //! - Universal Instant-Focus Search with live matching
-//! - Terminal Command Mode (": <cmd>") for direct CLI execution
-//! - System Action Mode ("> <action>") for display, power, calendar, record, lock controls
+//! - Terminal Command Mode (`": <cmd>"`) for direct CLI execution
+//! - System Action Mode (`"> <action>"`) for display, power, calendar, record, lock controls
 //! - Full Alphabetical All-Apps View (2-column scrollable cards)
 //! - 4 Curated Quick Actions in Recommended section (Terminal, Yazi, Neovim, Btop)
 //! - User Profile & One-Click Power Controls (Lock, Sleep, Reboot, Shutdown)

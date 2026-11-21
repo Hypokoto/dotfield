@@ -173,6 +173,33 @@ fn classify(handle: *mut c_void, code: c_int) -> PamResult {
     }
 }
 
+fn wipe_string(s: &mut str) {
+    let bytes = unsafe { s.as_bytes_mut() };
+    for b in bytes.iter_mut() {
+        unsafe { std::ptr::write_volatile(b, 0) };
+    }
+    std::sync::atomic::compiler_fence(std::sync::atomic::Ordering::SeqCst);
+}
+
+fn wipe_cstring(s: CString) {
+    let mut bytes = s.into_bytes_with_nul();
+    for b in bytes.iter_mut() {
+        unsafe { std::ptr::write_volatile(b, 0) };
+    }
+    std::sync::atomic::compiler_fence(std::sync::atomic::Ordering::SeqCst);
+}
+
+unsafe fn libc_strlen(mut s: *const c_char) -> usize {
+    let mut len = 0;
+    unsafe {
+        while *s != 0 {
+            len += 1;
+            s = s.add(1);
+        }
+    }
+    len
+}
+
 // responses use the C allocator because the PAM module frees them after a successful callback
 struct Answers {
     pointer: *mut Response,
@@ -192,7 +219,15 @@ impl Drop for Answers {
         }
         unsafe {
             for index in 0..self.count {
-                free((*self.pointer.add(index)).text.cast());
+                let text_ptr = (*self.pointer.add(index)).text;
+                if !text_ptr.is_null() {
+                    let len = libc_strlen(text_ptr);
+                    for i in 0..len {
+                        std::ptr::write_volatile(text_ptr.add(i) as *mut u8, 0);
+                    }
+                    std::sync::atomic::compiler_fence(std::sync::atomic::Ordering::SeqCst);
+                    free(text_ptr.cast());
+                }
             }
             free(self.pointer.cast());
         }
@@ -255,11 +290,16 @@ unsafe fn answer(
         let Ok(response) = super::message(context.session, text, kind, context.password) else {
             return PAM_CONV_ERR;
         };
-        if let Some(response) = response {
-            let Ok(response) = CString::new(response) else {
+        if let Some(mut response) = response {
+            let Ok(c_response) = CString::new(response.as_str()) else {
+                wipe_string(response.as_mut_str());
                 return PAM_CONV_ERR;
             };
-            let text = unsafe { strdup(response.as_ptr()) };
+            wipe_string(response.as_mut_str());
+
+            let text = unsafe { strdup(c_response.as_ptr()) };
+            wipe_cstring(c_response);
+
             if text.is_null() {
                 return PAM_BUF_ERR;
             }

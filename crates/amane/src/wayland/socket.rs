@@ -42,6 +42,12 @@ fn listen() -> UnixListener {
 
     let listener = UnixListener::bind(&path).expect("failed to create ipc socket");
 
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(&path, fs::Permissions::from_mode(0o600));
+    }
+
     // the event loop only wakes this up when a client is waiting, so accept must never block
     listener
         .set_nonblocking(true)
@@ -50,9 +56,60 @@ fn listen() -> UnixListener {
     listener
 }
 
+#[cfg(target_os = "linux")]
+fn verify_peer_uid(stream: &UnixStream) -> bool {
+    use std::os::unix::io::AsRawFd;
+
+    #[repr(C)]
+    struct UCred {
+        pid: i32,
+        uid: u32,
+        gid: u32,
+    }
+
+    unsafe extern "C" {
+        fn getsockopt(
+            sockfd: std::ffi::c_int,
+            level: std::ffi::c_int,
+            optname: std::ffi::c_int,
+            optval: *mut std::ffi::c_void,
+            optlen: *mut u32,
+        ) -> std::ffi::c_int;
+        fn getuid() -> u32;
+    }
+
+    let mut cred = UCred {
+        pid: 0,
+        uid: 0,
+        gid: 0,
+    };
+    let mut len = std::mem::size_of::<UCred>() as u32;
+    // SOL_SOCKET = 1, SO_PEERCRED = 17 on Linux
+    let ret = unsafe {
+        getsockopt(
+            stream.as_raw_fd(),
+            1,
+            17,
+            std::ptr::from_mut(&mut cred).cast(),
+            &mut len,
+        )
+    };
+    if ret == 0 {
+        cred.uid == unsafe { getuid() }
+    } else {
+        false
+    }
+}
+
 fn answer(mut stream: UnixStream, handlers: &IpcHandlers) {
-    // a client that never finishes sending must not freeze the shell
-    let timeout = Some(Duration::from_millis(500));
+    #[cfg(target_os = "linux")]
+    if !verify_peer_uid(&stream) {
+        return;
+    }
+
+    // A client that never finishes sending must not freeze the shell.
+    // Local Unix socket data transfers in microseconds; 25ms protects the event loop from stalling.
+    let timeout = Some(Duration::from_millis(25));
 
     if stream.set_read_timeout(timeout).is_err() {
         return;

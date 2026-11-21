@@ -27,11 +27,14 @@ profile dotfield-daemon /{usr/{,local/}bin,@{HOME}/.local/bin}/amane flags=(atta
   # Allow reading/writing to dotfield state and cache
   owner @{HOME}/.dotfield/** rwk,
   owner @{HOME}/.config/dotfield/** rwk,
+  owner @{HOME}/.cache/dotfield/** rwk,
+  owner @{HOME}/.config/amane/** rwk,
   owner @{HOME}/.config/{sway/config.d,niri/config.kdl.d,fuzzel,foot,mako}/ rw,
   owner @{HOME}/.config/{sway/config.d,niri/config.kdl.d,fuzzel,foot,mako}/** rwl,
   @{PROC}/ r,
   @{PROC}/*/{stat,cmdline,comm,status} r,
-  owner @{run}/user/*/{sway-ipc.*,niri.*,wayland-*,mako*} rw,
+  @{PROC}/pressure/{cpu,memory,io} r,
+  owner @{run}/user/*/{amane.sock*,amane-*,pipewire-*,sway-ipc.*,niri.*,wayland-*,mako*} rwk,
   owner /tmp/dotfield-* rwk,
 
   # Wayland GUI, GPU & Display acceleration

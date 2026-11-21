@@ -28,8 +28,46 @@ EOF
     exit "${1:-0}"
 }
 
+validate_port() {
+    local val="$1"
+    if [[ "${val}" =~ ^([0-9]{1,5})-([0-9]{1,5})$ ]]; then
+        local p_min="${BASH_REMATCH[1]}"
+        local p_max="${BASH_REMATCH[2]}"
+        if (( p_min >= 1 && p_min <= 65535 && p_max >= 1 && p_max <= 65535 && p_min <= p_max )); then
+            return 0
+        fi
+    elif [[ "${val}" =~ ^[0-9]{1,5}$ ]]; then
+        if (( val >= 1 && val <= 65535 )); then
+            return 0
+        fi
+    fi
+    return 1
+}
+
 if [[ $# -eq 0 ]]; then
     usage 1
+fi
+
+if [[ "$1" == "--help" || "$1" == "-h" ]]; then
+    usage 0
+fi
+
+if [[ "$1" == "--remove" || "$1" == "-r" ]]; then
+    if [[ $# -lt 2 || -z "${2:-}" ]]; then
+        echo "Error: Missing port number or range to remove." >&2
+        exit 1
+    fi
+    PORT="$2"
+    if ! validate_port "${PORT}"; then
+        echo "Error: Invalid port or range '${PORT}'. Ports must be between 1 and 65535 with min <= max." >&2
+        exit 1
+    fi
+elif [[ "$1" != "--list" && "$1" != "-l" ]]; then
+    PORT="$1"
+    if ! validate_port "${PORT}"; then
+        echo "Error: Invalid port or range '${PORT}'. Ports must be between 1 and 65535 with min <= max." >&2
+        exit 1
+    fi
 fi
 
 if ! command -v nft >/dev/null 2>&1; then
@@ -59,6 +97,10 @@ case "$1" in
             exit 1
         fi
         PORT="$2"
+        if ! validate_port "${PORT}"; then
+            echo "Error: Invalid port or range '${PORT}'. Ports must be between 1 and 65535 with min <= max." >&2
+            exit 1
+        fi
         echo "Removing port ${PORT} from ${TABLE_FAMILY} ${TABLE_NAME} ${SET}..."
         sudo nft delete element "${TABLE_FAMILY}" "${TABLE_NAME}" "${SET}" "{ ${PORT} }"
         echo "Port ${PORT} removed successfully."
@@ -66,9 +108,8 @@ case "$1" in
         ;;
     *)
         PORT="$1"
-        # Validate port format (single port 1-65535 or range min-max)
-        if [[ ! "${PORT}" =~ ^[0-9]+(-[0-9]+)?$ ]]; then
-            echo "Error: Invalid port format '${PORT}'. Expected numeric port (e.g. 8080) or range (e.g. 3000-3010)." >&2
+        if ! validate_port "${PORT}"; then
+            echo "Error: Invalid port or range '${PORT}'. Ports must be between 1 and 65535 with min <= max." >&2
             exit 1
         fi
         echo "Adding port ${PORT} to ${TABLE_FAMILY} ${TABLE_NAME} ${SET}..."

@@ -30,6 +30,10 @@ main() {
 
     read -r capacity status <<<"$(get_battery_status)"
 
+    if [[ ! "${capacity}" =~ ^[0-9]+$ ]]; then
+        capacity=100
+    fi
+
     if [[ "$status" == "Charging" || "$status" == "Full" ]]; then
         exit 0
     fi

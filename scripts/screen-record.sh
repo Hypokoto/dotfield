@@ -12,12 +12,19 @@ TARGET_DIR="${HOME}/Videos/Recordings"
 
 mkdir -p "${TARGET_DIR}"
 
+LOCK_FILE="${XDG_RUNTIME_DIR}/dotfield-recording.lock"
+
 is_recording() {
     if [[ -f "${PID_FILE}" ]]; then
         local pid
         pid="$(cat "${PID_FILE}" 2>/dev/null || true)"
-        if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
-            return 0
+        if [[ -n "${pid}" && "${pid}" =~ ^[0-9]+$ ]] && kill -0 "${pid}" 2>/dev/null; then
+            # Verify process name actually matches wf-recorder to prevent PID collision/recycling
+            local comm
+            comm="$(ps -p "${pid}" -o comm= 2>/dev/null || true)"
+            if [[ "${comm}" == "wf-recorder" ]]; then
+                return 0
+            fi
         fi
         rm -f "${PID_FILE}" "${META_FILE}" 2>/dev/null || true
     fi
@@ -25,13 +32,30 @@ is_recording() {
 }
 
 stop_recording() {
+    exec 200>"${LOCK_FILE}"
+    flock -w 2 200 || true
+
     if ! is_recording; then
         echo "No recording in progress." >&2
         return 0
     fi
 
     local pid
-    pid="$(cat "${PID_FILE}")"
+    pid="$(cat "${PID_FILE}" 2>/dev/null || true)"
+    if [[ -z "${pid}" || ! "${pid}" =~ ^[0-9]+$ ]]; then
+        rm -f "${PID_FILE}" "${META_FILE}" 2>/dev/null || true
+        return 0
+    fi
+
+    # Verify process name before sending signals
+    local comm
+    comm="$(ps -p "${pid}" -o comm= 2>/dev/null || true)"
+    if [[ "${comm}" != "wf-recorder" ]]; then
+        echo "Stale recording PID file detected; process is not wf-recorder. Cleaned up." >&2
+        rm -f "${PID_FILE}" "${META_FILE}" 2>/dev/null || true
+        return 0
+    fi
+
     echo "Stopping screen recording (PID: ${pid})..."
 
     # Send SIGINT to wf-recorder so it can finalize and write MP4 trailer cleanly
@@ -67,6 +91,12 @@ stop_recording() {
 }
 
 start_recording() {
+    exec 200>"${LOCK_FILE}"
+    if ! flock -n 200; then
+        echo "A recording operation is already in progress." >&2
+        exit 1
+    fi
+
     local mode="${1:---area}"
     local with_audio=false
 

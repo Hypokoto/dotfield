@@ -61,12 +61,12 @@ pub fn render_dock(manifest: &ShellManifest, tokens: &ThemeTokens) -> (Box<dyn W
     let mut dock_items: Vec<Box<dyn Widget>> = Vec::new();
     let mut total_width = 0.0;
 
-    // 1. Start Button (Arch Linux logo, bold & elevated in Fluent / Arch Blue)
+    // 1. Start Button (Smooth Clay App Launcher trigger)
     let start_btn = render_dock_trigger(
         "󰣇",
-        22.0,
+        20.0,
         tokens.accent,
-        "Start Menu (Super)",
+        "Applications (Super)",
         font,
         tokens,
         || {
@@ -76,7 +76,7 @@ pub fn render_dock(manifest: &ShellManifest, tokens: &ThemeTokens) -> (Box<dyn W
     dock_items.push(Box::new(start_btn));
     total_width += 40.0 + spacing::GAP_SM;
 
-    // 2. Search Quick-Launch Pill (Windows 11 style)
+    // 2. Search Quick-Launch Pill (Smooth Clay pill style)
     let search_btn = render_search_pill(font, tokens, || {
         crate::ui::start_menu::toggle();
     });
@@ -86,8 +86,8 @@ pub fn render_dock(manifest: &ShellManifest, tokens: &ThemeTokens) -> (Box<dyn W
     // 3. Task View Button (Niri Overview)
     let task_view_btn = render_dock_trigger(
         "󱂬",
-        19.0,
-        tokens.text_secondary,
+        18.0,
+        tokens.accent,
         "Task View (Super+Tab)",
         font,
         tokens,
@@ -102,7 +102,7 @@ pub fn render_dock(manifest: &ShellManifest, tokens: &ThemeTokens) -> (Box<dyn W
     let divider = Rectangle::new()
         .width(1.0)
         .height(18.0)
-        .fill(Color::from("#ffffff1f"));
+        .fill(tokens.border_subtle);
     dock_items.push(Box::new(divider));
     total_width += 1.0 + spacing::GAP_MD;
 
@@ -200,8 +200,8 @@ where
         .width(40.0)
         .height(40.0)
         .radius(radius::MD)
-        .fill(Color::TRANSPARENT)
-        .border(1.0, Color::TRANSPARENT)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(move |_| on_click())
@@ -209,7 +209,8 @@ where
             Text::new(icon)
                 .size(icon_size)
                 .color(icon_color)
-                .font(&tokens.font_mono),
+                .font(&tokens.font_mono)
+                .tight(),
         )
 }
 
@@ -221,7 +222,7 @@ where
         .width(112.0)
         .height(34.0)
         .radius(radius::PILL)
-        .fill(tokens.surface)
+        .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .padding(Padding {
@@ -231,25 +232,26 @@ where
             right: 10.0,
         })
         .align_child(Align::Start, Align::Center)
-        .on_click(move |_| on_click())
         .child(
             Row::new(vec![
                 Box::new(
                     Text::new("")
-                        .size(14.0)
-                        .color(tokens.text_secondary)
-                        .font(&tokens.font_mono),
+                        .size(13.0)
+                        .color(tokens.accent)
+                        .font(&tokens.font_mono)
+                        .tight(),
                 ),
                 Box::new(
                     Text::new("Search")
                         .size(typography::BODY)
-                        .color(tokens.text_secondary)
+                        .color(tokens.text_primary)
                         .font(&tokens.font_sans),
                 ),
             ])
             .gap(spacing::GAP_SM)
             .align(Align::Center),
         )
+        .on_click(move |_| on_click())
 }
 
 fn render_app_tile<F>(
@@ -265,21 +267,24 @@ where
     F: Fn() + Send + Sync + 'static,
 {
     let bg_color = if is_focused {
-        Color::from("#ffffff14")
+        tokens.surface_active
     } else {
         Color::TRANSPARENT
     };
 
-    let border_color = Color::TRANSPARENT;
+    let border_color = if is_focused {
+        tokens.border_focus
+    } else {
+        Color::TRANSPARENT
+    };
 
     let icon_color = if is_focused || is_running {
         tokens.text_primary
     } else {
-        tokens.text_secondary
+        tokens.text_muted
     };
 
-    // Windows 11 Active indicator:
-    // 3px height pill: 16px wide when active/focused, 6px dot when running in background, transparent when closed
+    // Smooth Clay Pill indicator for running / focused app
     let pip_width = if is_focused {
         16.0
     } else if is_running {
@@ -291,7 +296,7 @@ where
     let pip_color = if is_focused {
         tokens.accent
     } else if is_running {
-        tokens.steel
+        tokens.accent_tint
     } else {
         Color::TRANSPARENT
     };
@@ -314,7 +319,8 @@ where
             Text::new(fallback_icon)
                 .size(20.0)
                 .color(icon_color)
-                .font(font),
+                .font(font)
+                .tight(),
         )
     };
 

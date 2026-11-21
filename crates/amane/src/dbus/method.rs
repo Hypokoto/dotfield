@@ -12,6 +12,12 @@ pub struct Method {
 
     pub(crate) name: String,
 
+    pub(crate) sender: Option<String>,
+
+    pub(crate) interface: Option<String>,
+
+    pub(crate) path: Option<String>,
+
     pub(crate) arguments: Vec<Value>,
 }
 
@@ -25,6 +31,18 @@ pub struct Methods {
 impl Method {
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn sender(&self) -> Option<&str> {
+        self.sender.as_deref()
+    }
+
+    pub fn interface(&self) -> Option<&str> {
+        self.interface.as_deref()
+    }
+
+    pub fn path(&self) -> Option<&str> {
+        self.path.as_deref()
     }
 
     pub fn arguments(&self) -> &[Value] {
@@ -71,6 +89,27 @@ impl Bus {
             messages,
         }
     }
+
+    /*
+     * waits for each call to this path across any interface,
+     * so a service can handle properties, introspection, and multiple interfaces
+     */
+    pub fn methods_for_path(&self, path: &str) -> Methods {
+        let rule = MatchRule::builder()
+            .msg_type(Type::MethodCall)
+            .path(path)
+            .expect("failed to watch method calls: bad path")
+            .build();
+
+        let messages = self
+            .connection
+            .and_then(|connection| MessageIterator::for_match_rule(rule, connection, None).ok());
+
+        Methods {
+            connection: self.connection,
+            messages,
+        }
+    }
 }
 
 impl Iterator for Methods {
@@ -90,11 +129,17 @@ impl Iterator for Methods {
             };
 
             let name = message.header().member().map(|name| name.to_string());
+            let sender = message.header().sender().map(|s| s.to_string());
+            let interface = message.header().interface().map(|i| i.to_string());
+            let path = message.header().path().map(|p| p.to_string());
 
             let method = Method {
                 connection,
 
                 name: name.unwrap_or_default(),
+                sender,
+                interface,
+                path,
                 arguments: convert::arguments(&message),
 
                 message,

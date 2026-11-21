@@ -49,6 +49,7 @@ ENABLE_HARDENING=false
 HARDEN_APPARMOR=false
 HARDEN_FLATPAK=false
 HARDEN_NFT=false
+ENABLE_NETWORK=false
 USE_SYMLINKS=true
 CLEAN_BUILD=false
 declare -A LAYER_STATUS=()
@@ -74,6 +75,7 @@ Options:
   --apparmor             Deploy & activate AppArmor daemon confinement profile
   --flatpak              Apply baseline restrictive Flatpak permission overrides
   --nft                  Deploy & activate NFTables workstation stateful filter
+  --network              Deploy NetworkManager Wi-Fi stability drop-in & kernel modprobe configs
   -f, --force            Force replacement of existing configs (backed up to .bak.<timestamp>)
   --copy                 Deploy files as copies instead of Stow-style symlinks
   --prefix <dir>         Directory to install binaries into (default: ~/.local/bin)
@@ -142,6 +144,10 @@ while [[ $# -gt 0 ]]; do
         --nft)
             ENABLE_HARDENING=true
             HARDEN_NFT=true
+            shift
+            ;;
+        --network)
+            ENABLE_NETWORK=true
             shift
             ;;
         -f|--force)
@@ -547,6 +553,64 @@ deploy_nftables() {
     fi
 }
 
+deploy_network_stability() {
+    step "Deploying NetworkManager stability drop-ins and kernel modprobe configs..."
+    local nm_src="${SCRIPT_DIR}/network/NetworkManager/conf.d/default-wifi-powersave-off.conf"
+    local nm_dest="/etc/NetworkManager/conf.d/default-wifi-powersave-off.conf"
+    local modprobe_src="${SCRIPT_DIR}/network/modprobe.d/mt7921e.conf"
+    local modprobe_dest="/etc/modprobe.d/mt7921e.conf"
+
+    if [[ "${DRY_RUN}" == true ]]; then
+        info "[dry-run] sudo install -m 0644 -D ${nm_src} ${nm_dest}"
+        if [[ -d "/sys/module/mt7921e" ]] || (command -v lsmod >/dev/null 2>&1 && lsmod | grep -q "mt7921e"); then
+            info "[dry-run] sudo install -m 0644 -D ${modprobe_src} ${modprobe_dest}"
+        fi
+        LAYER_STATUS["network"]="DRY_RUN"
+        LAYER_DETAILS["network"]="Dry-run preview (not applied)"
+        return 0
+    fi
+
+    local nm_applied=false
+    if [[ -f "${nm_src}" ]]; then
+        if run_sudo mkdir -p /etc/NetworkManager/conf.d && run_sudo cp "${nm_src}" "${nm_dest}"; then
+            run_sudo chmod 0644 "${nm_dest}"
+            run_sudo systemctl reload NetworkManager 2>/dev/null || true
+            success "Installed ${nm_dest} (Wi-Fi power saving disabled globally)"
+            nm_applied=true
+        else
+            warn "Could not install ${nm_dest} (sudo permissions required)"
+        fi
+    fi
+
+    local modprobe_applied=false
+    if [[ -d "/sys/module/mt7921e" ]] || (command -v lsmod >/dev/null 2>&1 && lsmod | grep -q "mt7921e"); then
+        if [[ -f "${modprobe_src}" ]]; then
+            if run_sudo mkdir -p /etc/modprobe.d && run_sudo cp "${modprobe_src}" "${modprobe_dest}"; then
+                run_sudo chmod 0644 "${modprobe_dest}"
+                success "Installed ${modprobe_dest} (MediaTek MT7921/MT7922 ASPM sleep desync prevented)"
+                modprobe_applied=true
+            else
+                warn "Could not install ${modprobe_dest} (sudo permissions required)"
+            fi
+        fi
+    fi
+
+    # Tune active connections using network-doctor.sh --fix
+    if [[ -x "${SCRIPT_DIR}/scripts/network-doctor.sh" ]]; then
+        "${SCRIPT_DIR}/scripts/network-doctor.sh" --fix || true
+    fi
+
+    if [[ "${nm_applied}" == true ]]; then
+        LAYER_STATUS["network"]="PASS"
+        LAYER_DETAILS["network"]="NetworkManager drop-in active; Wi-Fi powersave disabled"
+        return 0
+    else
+        LAYER_STATUS["network"]="WARN"
+        LAYER_DETAILS["network"]="Active connections tuned via nmcli, but system drop-in not installed"
+        return 0
+    fi
+}
+
 # 1b. Hardening Deployment
 if [[ "${ENABLE_HARDENING}" == true ]]; then
     # Interactive selection if no individual flag was specified
@@ -631,6 +695,11 @@ if [[ "${ENABLE_HARDENING}" == true ]]; then
             exit 0
         fi
     fi
+fi
+
+# 1c. Network Stability Deployment
+if [[ "${ENABLE_NETWORK}" == true ]]; then
+    deploy_network_stability || true
 fi
 
 # 2. Build amane binary (if enabled)

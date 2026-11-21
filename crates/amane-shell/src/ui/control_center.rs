@@ -1,7 +1,5 @@
 use std::time::{Duration, Instant};
 
-use chrono::{Datelike, Local, NaiveDate};
-
 use amane::{
     Align, Audio, Battery, Bluetooth, Brightness, Center, Color, Column, Cpu, Horizontal, Justify,
     Key, Keyboard, Layer, LayerWindow, Margin, Media, Memory, Network, Notifications, OutputTarget,
@@ -20,7 +18,6 @@ pub enum ActiveView {
     Network,
     Audio,
     Bluetooth,
-    Calendar,
     Tray,
 }
 
@@ -131,7 +128,6 @@ pub fn control_center_panel() -> LayerWindow {
 
             Column::new(sections).width(Parent).gap(spacing::GAP_MD)
         }
-        ActiveView::Calendar => render_calendar_subview(&manifest, &tokens, &font),
         ActiveView::Network => {
             let sections: Vec<Box<dyn Widget>> = vec![
                 Box::new(render_subview_header("NetworkManager", "󰤨", &tokens, &font)),
@@ -179,28 +175,15 @@ pub fn control_center_panel() -> LayerWindow {
             } else {
                 36.0
             };
-            24.0 + 28.0 + 48.0 + 142.0 + 76.0 + media_h + 34.0 + 56.0 + 30.0 + 70.0
+            548.0 + media_h
         }
-        ActiveView::Calendar => 480.0,
         ActiveView::Network => adaptive_network_height(),
         ActiveView::Audio => adaptive_audio_height(),
         ActiveView::Bluetooth => adaptive_bluetooth_height(),
         ActiveView::Tray => adaptive_tray_height(),
     };
 
-    let panel = Rectangle::new()
-        .width(380.0)
-        .height(panel_height)
-        .radius(radius::XL)
-        .fill(tokens.acrylic_bg)
-        .border(1.0, tokens.acrylic_border)
-        .padding(Padding {
-            top: spacing::PAD_MD,
-            bottom: spacing::PAD_MD,
-            left: spacing::PAD_MD,
-            right: spacing::PAD_MD,
-        })
-        .child(content);
+    let panel = components::clay_modal_frame(380.0, panel_height, content, &tokens);
 
     let transition = crate::ui::animation::ModalTransition::compute(
         cc.open_time,
@@ -241,7 +224,7 @@ pub fn control_center_panel() -> LayerWindow {
 }
 
 fn render_header(tokens: &ThemeTokens) -> Rectangle {
-    components::modal_header("󰒓", "Control Center", Some("Niri+Amane"), tokens, close)
+    components::modal_header("󰒓", "Control Center", None, tokens, close)
 }
 
 fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
@@ -259,22 +242,22 @@ fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     let cpu_color = if cpu > 80 {
         tokens.danger
     } else if cpu > 50 {
-        tokens.border_focus
+        tokens.warning
     } else {
         tokens.accent
     };
 
     let cpu_card = Rectangle::new()
         .width(112.0)
-        .height(48.0)
-        .radius(radius::SM)
+        .height(50.0)
+        .radius(radius::MD)
         .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .padding(Padding {
-            top: 4.0,
-            bottom: 4.0,
-            left: 8.0,
-            right: 8.0,
+            top: 6.0,
+            bottom: 6.0,
+            left: 10.0,
+            right: 10.0,
         })
         .child(
             Column::new(vec![
@@ -288,7 +271,7 @@ fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
                     Text::new(format!("{cpu}%"))
                         .size(typography::TITLE_SM)
                         .color(tokens.text_primary)
-                        .font(&tokens.font_mono),
+                        .font(&tokens.font_sans),
                 ),
             ])
             .gap(2.0),
@@ -299,22 +282,22 @@ fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     let ram_color = if mem_pct > 85 {
         tokens.danger
     } else if mem_pct > 70 {
-        tokens.border_focus
+        tokens.warning
     } else {
         tokens.accent
     };
 
     let ram_card = Rectangle::new()
         .width(112.0)
-        .height(48.0)
-        .radius(radius::SM)
+        .height(50.0)
+        .radius(radius::MD)
         .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .padding(Padding {
-            top: 4.0,
-            bottom: 4.0,
-            left: 8.0,
-            right: 8.0,
+            top: 6.0,
+            bottom: 6.0,
+            left: 10.0,
+            right: 10.0,
         })
         .child(
             Column::new(vec![
@@ -328,7 +311,7 @@ fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
                     Text::new(format!("{mem_pct}% ({used_gib:.1}/{total_gib:.0}G)"))
                         .size(typography::CAPTION)
                         .color(tokens.text_primary)
-                        .font(&tokens.font_mono),
+                        .font(&tokens.font_sans),
                 ),
             ])
             .gap(2.0),
@@ -344,15 +327,15 @@ fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     };
     let bat_card = Rectangle::new()
         .width(112.0)
-        .height(48.0)
-        .radius(radius::SM)
+        .height(50.0)
+        .radius(radius::MD)
         .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .padding(Padding {
-            top: 4.0,
-            bottom: 4.0,
-            left: 8.0,
-            right: 8.0,
+            top: 6.0,
+            bottom: 6.0,
+            left: 10.0,
+            right: 10.0,
         })
         .child(
             Column::new(vec![
@@ -366,14 +349,14 @@ fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
                     Text::new(bat_text)
                         .size(typography::SECONDARY)
                         .color(tokens.text_primary)
-                        .font(&tokens.font_mono),
+                        .font(&tokens.font_sans),
                 ),
             ])
             .gap(2.0),
         );
     metrics.push(Box::new(bat_card));
 
-    Rectangle::new().width(Parent).height(48.0).child(
+    Rectangle::new().width(Parent).height(50.0).child(
         Row::new(metrics)
             .width(Parent)
             .justify(Justify::SpaceBetween)
@@ -427,11 +410,11 @@ where
     F2: Fn() + Send + Sync + 'static,
 {
     let tile_w = 172.0;
-    let tile_h = 42.0;
+    let tile_h = 44.0;
 
     let (bg_color, border_color, icon_color, text_color) = if is_active {
         (
-            tokens.accent_tint,
+            tokens.surface_active,
             tokens.border_focus,
             tokens.accent,
             tokens.text_primary,
@@ -479,7 +462,7 @@ where
     let divider = Rectangle::new()
         .width(1.0)
         .height(18.0)
-        .fill(Color::from("#ffffff14"));
+        .fill(tokens.border_subtle);
 
     let right_btn = Rectangle::new()
         .width(38.0)
@@ -526,18 +509,18 @@ where
     F: Fn() + Send + Sync + 'static,
 {
     let tile_w = 172.0;
-    let tile_h = 42.0;
+    let tile_h = 44.0;
 
     let (bg_color, border_color, icon_color, text_color) = if is_danger && is_active {
         (
-            tokens.danger_subtle,
-            tokens.border_danger,
             tokens.danger,
+            tokens.border_subtle,
+            tokens.text_primary,
             tokens.text_primary,
         )
     } else if is_active {
         (
-            tokens.accent_tint,
+            tokens.surface_active,
             tokens.border_focus,
             tokens.accent,
             tokens.text_primary,
@@ -700,18 +683,18 @@ fn render_quick_toggles(tokens: &ThemeTokens, dnd: bool, _font: &str) -> Rectang
         .justify(Justify::SpaceBetween)
         .align(Align::Center);
 
-    Rectangle::new().width(Parent).height(142.0).child(
+    Rectangle::new().width(Parent).height(148.0).child(
         Column::new(vec![Box::new(row1), Box::new(row2), Box::new(row3)])
             .width(Parent)
             .gap(8.0),
     )
 }
 
-fn render_subview_header(title: &str, icon: &str, tokens: &ThemeTokens, font: &str) -> Rectangle {
+fn render_subview_header(title: &str, icon: &str, tokens: &ThemeTokens, _font: &str) -> Rectangle {
     let back_btn = Rectangle::new()
-        .width(82.0)
+        .width(86.0)
         .height(28.0)
-        .radius(radius::SM)
+        .radius(radius::PILL)
         .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
@@ -722,12 +705,17 @@ fn render_subview_header(title: &str, icon: &str, tokens: &ThemeTokens, font: &s
         })
         .child(
             Row::new(vec![
-                Box::new(Text::new("❮").size(11.0).color(tokens.accent).font(font)),
+                Box::new(
+                    Text::new("󰅁")
+                        .size(11.0)
+                        .color(tokens.accent)
+                        .font(&tokens.font_mono),
+                ),
                 Box::new(
                     Text::new("Overview")
                         .size(typography::SECONDARY)
                         .color(tokens.text_primary)
-                        .font(font),
+                        .font(&tokens.font_sans),
                 ),
             ])
             .gap(spacing::GAP_XS)
@@ -739,13 +727,13 @@ fn render_subview_header(title: &str, icon: &str, tokens: &ThemeTokens, font: &s
             Text::new(icon)
                 .size(typography::BODY)
                 .color(tokens.accent)
-                .font(font),
+                .font(&tokens.font_mono),
         ),
         Box::new(
             Text::new(title)
                 .size(typography::BODY)
                 .color(tokens.text_primary)
-                .font(font),
+                .font(&tokens.font_sans),
         ),
     ])
     .gap(spacing::GAP_SM)
@@ -827,7 +815,7 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
         return Rectangle::new()
             .width(Parent)
             .height(36.0)
-            .radius(radius::SM)
+            .radius(radius::MD)
             .fill(tokens.surface_elevated)
             .border(1.0, tokens.border_subtle)
             .padding(Padding {
@@ -842,13 +830,13 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
                     Box::new(
                         Text::new("󰎆")
                             .size(typography::BODY_LG)
-                            .color(tokens.text_muted)
+                            .color(tokens.accent)
                             .font(&tokens.font_mono),
                     ),
                     Box::new(
                         Text::new("Idle • No media playing")
                             .size(typography::SECONDARY)
-                            .color(tokens.text_muted)
+                            .color(tokens.text_secondary)
                             .font(&tokens.font_sans),
                     ),
                 ])
@@ -875,11 +863,11 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
             .height(bar_h)
             .radius(radius::XS)
             .fill(if val > 0.6 {
-                tokens.accent_hover
-            } else if val > 0.1 {
                 tokens.accent
+            } else if val > 0.1 {
+                tokens.accent_hover
             } else {
-                tokens.steel
+                tokens.border_subtle
             });
         bar_widgets.push(Box::new(bar));
     }
@@ -888,7 +876,7 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
     Rectangle::new()
         .width(Parent)
         .height(76.0)
-        .radius(radius::SM)
+        .radius(radius::MD)
         .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .padding(Padding {
@@ -923,9 +911,9 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
                             Text::new(if playing { "Playing" } else { "Paused" })
                                 .size(typography::CAPTION)
                                 .color(if playing {
-                                    tokens.success
+                                    tokens.accent
                                 } else {
-                                    tokens.steel
+                                    tokens.text_muted
                                 })
                                 .font(&tokens.font_sans),
                         ),
@@ -940,7 +928,7 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
                             Rectangle::new()
                                 .width(140.0)
                                 .height(28.0)
-                                .fill(tokens.surface_track)
+                                .fill(tokens.surface)
                                 .radius(radius::XS)
                                 .padding(Padding {
                                     top: 2.0,
@@ -957,8 +945,8 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
                                     Rectangle::new()
                                         .width(32.0)
                                         .height(26.0)
-                                        .radius(radius::SM)
-                                        .fill(tokens.surface_track)
+                                        .radius(radius::PILL)
+                                        .fill(tokens.surface_active)
                                         .border(1.0, tokens.border_subtle)
                                         .cursor(Pointer)
                                         .align_child(Center, Center)
@@ -974,16 +962,16 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
                                     Rectangle::new()
                                         .width(32.0)
                                         .height(26.0)
-                                        .radius(radius::SM)
-                                        .fill(tokens.accent)
-                                        .border(1.0, tokens.accent_hover)
+                                        .radius(radius::PILL)
+                                        .fill(tokens.surface_active)
+                                        .border(1.0, tokens.border_focus)
                                         .cursor(Pointer)
                                         .align_child(Center, Center)
                                         .on_click(|_| Media::play_pause())
                                         .child(
                                             Text::new(play_pause_icon)
                                                 .size(typography::BODY_LG)
-                                                .color(Color::BLACK)
+                                                .color(tokens.accent)
                                                 .font(font),
                                         ),
                                 ),
@@ -991,8 +979,8 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
                                     Rectangle::new()
                                         .width(32.0)
                                         .height(26.0)
-                                        .radius(radius::SM)
-                                        .fill(tokens.surface_track)
+                                        .radius(radius::PILL)
+                                        .fill(tokens.surface_active)
                                         .border(1.0, tokens.border_subtle)
                                         .cursor(Pointer)
                                         .align_child(Center, Center)
@@ -1018,19 +1006,19 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
         )
 }
 
-fn render_appearance(tokens: &ThemeTokens, font: &str) -> Rectangle {
+fn render_appearance(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     let theme_badge = Row::new(vec![
         Box::new(
-            Text::new("󰔎")
+            Text::new("󰏘")
                 .size(typography::BODY_LG)
                 .color(tokens.accent)
-                .font(font),
+                .font(&tokens.font_mono),
         ),
         Box::new(
-            Text::new("Controlled Chaos Theme")
+            Text::new("Smooth Clay")
                 .size(typography::SECONDARY)
                 .color(tokens.text_primary)
-                .font(font),
+                .font(&tokens.font_sans),
         ),
     ])
     .gap(spacing::GAP_SM)
@@ -1039,9 +1027,9 @@ fn render_appearance(tokens: &ThemeTokens, font: &str) -> Rectangle {
     let wallpaper_btn = Rectangle::new()
         .width(110.0)
         .height(26.0)
-        .radius(radius::SM)
-        .fill(tokens.accent)
-        .border(1.0, tokens.accent_hover)
+        .radius(radius::PILL)
+        .fill(tokens.surface_active)
+        .border(1.0, tokens.border_focus)
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(|_| {
@@ -1052,8 +1040,8 @@ fn render_appearance(tokens: &ThemeTokens, font: &str) -> Rectangle {
         .child(
             Text::new("󰸉 Next Wall")
                 .size(typography::BADGE)
-                .color(Color::BLACK)
-                .font(font),
+                .color(tokens.text_primary)
+                .font(&tokens.font_sans),
         );
 
     let row = Row::new(vec![Box::new(theme_badge), Box::new(wallpaper_btn)])
@@ -1064,7 +1052,7 @@ fn render_appearance(tokens: &ThemeTokens, font: &str) -> Rectangle {
     Rectangle::new()
         .width(Parent)
         .height(34.0)
-        .radius(radius::SM)
+        .radius(radius::MD)
         .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .padding(Padding {
@@ -1077,22 +1065,16 @@ fn render_appearance(tokens: &ThemeTokens, font: &str) -> Rectangle {
         .child(row)
 }
 
-fn render_notifications_drawer(tokens: &ThemeTokens, font: &str) -> Rectangle {
+fn render_notifications_drawer(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     let notifications = Notifications::read();
     let notifs_count = notifications.list().len();
 
-    let header_row = Row::new(vec![
-        Box::new(
-            Text::new(format!("Notifications ({notifs_count})"))
-                .size(typography::SECONDARY)
-                .color(tokens.text_primary)
-                .font(font),
-        ),
+    let clear_btn: Box<dyn Widget> = if notifs_count > 0 {
         Box::new(
             Rectangle::new()
-                .width(56.0)
-                .height(20.0)
-                .radius(radius::SM)
+                .width(54.0)
+                .height(22.0)
+                .radius(radius::PILL)
                 .fill(tokens.danger)
                 .border(1.0, tokens.border_danger)
                 .cursor(Pointer)
@@ -1102,9 +1084,54 @@ fn render_notifications_drawer(tokens: &ThemeTokens, font: &str) -> Rectangle {
                     Text::new("Clear")
                         .size(typography::BADGE)
                         .color(Color::WHITE)
-                        .font(font),
+                        .font(&tokens.font_sans)
+                        .tight(),
                 ),
+        )
+    } else {
+        Box::new(
+            Rectangle::new()
+                .width(44.0)
+                .height(20.0)
+                .radius(radius::PILL)
+                .fill(tokens.surface)
+                .border(1.0, tokens.border_subtle)
+                .align_child(Center, Center)
+                .child(
+                    Text::new("Idle")
+                        .size(typography::BADGE)
+                        .color(tokens.text_muted)
+                        .font(&tokens.font_sans)
+                        .tight(),
+                ),
+        )
+    };
+
+    let header_row = Row::new(vec![
+        Box::new(
+            Row::new(vec![
+                Box::new(
+                    Text::new("󰂚")
+                        .size(13.0)
+                        .color(if notifs_count > 0 {
+                            tokens.accent
+                        } else {
+                            tokens.text_muted
+                        })
+                        .font(&tokens.font_mono)
+                        .tight(),
+                ),
+                Box::new(
+                    Text::new(format!("Notifications ({notifs_count})"))
+                        .size(typography::SECONDARY)
+                        .color(tokens.text_primary)
+                        .font(&tokens.font_sans),
+                ),
+            ])
+            .gap(spacing::GAP_SM)
+            .align(Align::Center),
         ),
+        clear_btn,
     ])
     .width(Parent)
     .justify(Justify::SpaceBetween)
@@ -1113,7 +1140,7 @@ fn render_notifications_drawer(tokens: &ThemeTokens, font: &str) -> Rectangle {
     Rectangle::new()
         .width(Parent)
         .height(56.0)
-        .radius(radius::SM)
+        .radius(radius::MD)
         .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .padding(Padding {
@@ -1133,412 +1160,135 @@ fn render_notifications_drawer(tokens: &ThemeTokens, font: &str) -> Rectangle {
                     })
                     .size(typography::BADGE)
                     .color(tokens.text_muted)
-                    .font(font),
+                    .font(&tokens.font_sans),
                 ),
             ])
             .gap(spacing::GAP_XS),
         )
 }
 
-fn render_power_actions(tokens: &ThemeTokens, font: &str) -> Rectangle {
-    let mut btns: Vec<Box<dyn Widget>> = Vec::new();
-
-    // Lock
-    let lock_btn = Rectangle::new()
+fn render_power_button<F>(
+    glyph: &'static str,
+    label: &'static str,
+    icon_col: Color,
+    border_col: Color,
+    bg_col: Color,
+    tokens: &ThemeTokens,
+    callback: F,
+) -> Box<dyn Widget>
+where
+    F: Fn() + Send + Sync + 'static,
+{
+    let btn = Rectangle::new()
         .width(66.0)
-        .height(30.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
+        .height(32.0)
+        .radius(radius::PILL)
+        .fill(bg_col)
+        .border(1.0, border_col)
         .cursor(Pointer)
         .align_child(Center, Center)
-        .on_click(|_| {
-            let _ = std::process::Command::new("sh")
-                .args(["-c", "~/.config/dotfield/scripts/lock.sh"])
-                .spawn();
-            close();
-        })
+        .on_click(move |_| callback())
         .child(
-            Text::new("󰌾 Lock")
-                .size(typography::BADGE)
-                .color(tokens.text_primary)
-                .font(font),
+            Row::new(vec![
+                Box::new(
+                    Text::new(glyph)
+                        .size(12.0)
+                        .color(icon_col)
+                        .font(&tokens.font_mono)
+                        .tight(),
+                ),
+                Box::new(
+                    Text::new(label)
+                        .size(typography::BADGE)
+                        .color(tokens.text_primary)
+                        .font(&tokens.font_sans)
+                        .tight(),
+                ),
+            ])
+            .gap(4.0)
+            .align(Align::Center),
         );
-    btns.push(Box::new(lock_btn));
+    Box::new(btn)
+}
 
-    // Suspend
-    let suspend_btn = Rectangle::new()
-        .width(66.0)
-        .height(30.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            let _ = std::process::Command::new("systemctl")
-                .arg("suspend")
-                .spawn();
-            close();
-        })
-        .child(
-            Text::new("󰒲 Sleep")
-                .size(typography::BADGE)
-                .color(tokens.text_primary)
-                .font(font),
-        );
-    btns.push(Box::new(suspend_btn));
+fn render_power_actions(tokens: &ThemeTokens, _font: &str) -> Rectangle {
+    let btns: Vec<Box<dyn Widget>> = vec![
+        render_power_button(
+            "󰌾",
+            "Lock",
+            tokens.text_secondary,
+            tokens.border_subtle,
+            tokens.surface_elevated,
+            tokens,
+            || {
+                let _ = std::process::Command::new("sh")
+                    .args(["-c", "~/.config/dotfield/scripts/lock.sh"])
+                    .spawn();
+                close();
+            },
+        ),
+        render_power_button(
+            "󰒲",
+            "Sleep",
+            tokens.text_secondary,
+            tokens.border_subtle,
+            tokens.surface_elevated,
+            tokens,
+            || {
+                let _ = std::process::Command::new("systemctl")
+                    .arg("suspend")
+                    .spawn();
+                close();
+            },
+        ),
+        render_power_button(
+            "󰜉",
+            "Reboot",
+            tokens.text_secondary,
+            tokens.border_subtle,
+            tokens.surface_elevated,
+            tokens,
+            || {
+                let _ = std::process::Command::new("systemctl")
+                    .arg("reboot")
+                    .spawn();
+                close();
+            },
+        ),
+        render_power_button(
+            "󰐥",
+            "Power",
+            tokens.danger,
+            tokens.border_danger,
+            tokens.surface_active,
+            tokens,
+            || {
+                let _ = std::process::Command::new("systemctl")
+                    .arg("poweroff")
+                    .spawn();
+                close();
+            },
+        ),
+        render_power_button(
+            "󰗽",
+            "Quit",
+            tokens.text_secondary,
+            tokens.border_subtle,
+            tokens.surface_elevated,
+            tokens,
+            || {
+                let _ = NiriService::quit(false);
+                close();
+            },
+        ),
+    ];
 
-    // Reboot
-    let reboot_btn = Rectangle::new()
-        .width(66.0)
-        .height(30.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            let _ = std::process::Command::new("systemctl")
-                .arg("reboot")
-                .spawn();
-            close();
-        })
-        .child(
-            Text::new("󰜉 Reboot")
-                .size(typography::BADGE)
-                .color(tokens.text_primary)
-                .font(font),
-        );
-    btns.push(Box::new(reboot_btn));
-
-    // Poweroff
-    let poweroff_btn = Rectangle::new()
-        .width(66.0)
-        .height(30.0)
-        .radius(radius::SM)
-        .fill(tokens.danger)
-        .border(1.0, tokens.border_danger)
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            let _ = std::process::Command::new("systemctl")
-                .arg("poweroff")
-                .spawn();
-            close();
-        })
-        .child(
-            Text::new("󰐥 Power")
-                .size(typography::BADGE)
-                .color(Color::WHITE)
-                .font(font),
-        );
-    btns.push(Box::new(poweroff_btn));
-
-    // Logout
-    let logout_btn = Rectangle::new()
-        .width(66.0)
-        .height(30.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(|_| {
-            let _ = NiriService::quit(false);
-            close();
-        })
-        .child(
-            Text::new("󰗽 Quit")
-                .size(typography::BADGE)
-                .color(tokens.text_primary)
-                .font(font),
-        );
-    btns.push(Box::new(logout_btn));
-
-    Rectangle::new().width(Parent).height(30.0).child(
+    Rectangle::new().width(Parent).height(32.0).child(
         Row::new(btns)
             .width(Parent)
             .justify(Justify::SpaceBetween)
             .align(Align::Center),
     )
-}
-
-fn render_calendar_subview(
-    _manifest: &crate::config::ShellManifest,
-    tokens: &ThemeTokens,
-    font: &str,
-) -> Column {
-    let cal = crate::ui::calendar::CalendarService::read();
-    let now = Local::now();
-    let today_year = now.year();
-    let today_month = now.month();
-    let today_day = now.day();
-
-    let time_str = now.format("%H:%M:%S").to_string();
-    let full_date_str = now.format("%A, %B %d, %Y").to_string();
-
-    // 1. Subview Header
-    let subview_hdr = render_subview_header("Calendar & Events", "󰸗", tokens, font);
-
-    // 2. Hero Digital Clock Banner
-    let clock_banner = Rectangle::new()
-        .width(Parent)
-        .height(56.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .padding(Padding {
-            top: spacing::PAD_XS,
-            bottom: spacing::PAD_XS,
-            left: spacing::PAD_MD,
-            right: spacing::PAD_MD,
-        })
-        .child(
-            Row::new(vec![Box::new(
-                Column::new(vec![
-                    Box::new(
-                        Text::new(time_str)
-                            .size(typography::DISPLAY)
-                            .color(tokens.accent)
-                            .font(font),
-                    ),
-                    Box::new(
-                        Text::new(full_date_str)
-                            .size(typography::BADGE)
-                            .color(tokens.text_secondary)
-                            .font(font),
-                    ),
-                ])
-                .gap(2.0),
-            )])
-            .align(Align::Center),
-        );
-
-    // 3. Month navigation
-    let month_name = match cal.view_month {
-        1 => "January",
-        2 => "February",
-        3 => "March",
-        4 => "April",
-        5 => "May",
-        6 => "June",
-        7 => "July",
-        8 => "August",
-        9 => "September",
-        10 => "October",
-        11 => "November",
-        12 => "December",
-        _ => "Unknown",
-    };
-    let month_label = format!("{} {}", month_name, cal.view_year);
-
-    let nav_row = Row::new(vec![
-        Box::new(
-            Row::new(vec![
-                Box::new(
-                    Rectangle::new()
-                        .width(28.0)
-                        .height(26.0)
-                        .radius(radius::SM)
-                        .fill(tokens.surface_elevated)
-                        .border(1.0, tokens.border_subtle)
-                        .cursor(Pointer)
-                        .align_child(Center, Center)
-                        .on_click(|_| {
-                            crate::ui::calendar::prev_month();
-                        })
-                        .child(Text::new("❮").size(11.0).color(tokens.accent).font(font)),
-                ),
-                Box::new(
-                    Text::new(month_label)
-                        .size(typography::BODY)
-                        .color(tokens.text_primary)
-                        .font(font),
-                ),
-                Box::new(
-                    Rectangle::new()
-                        .width(28.0)
-                        .height(26.0)
-                        .radius(radius::SM)
-                        .fill(tokens.surface_elevated)
-                        .border(1.0, tokens.border_subtle)
-                        .cursor(Pointer)
-                        .align_child(Center, Center)
-                        .on_click(|_| {
-                            crate::ui::calendar::next_month();
-                        })
-                        .child(Text::new("❯").size(11.0).color(tokens.accent).font(font)),
-                ),
-            ])
-            .gap(spacing::GAP_MD)
-            .align(Align::Center),
-        ),
-        Box::new(
-            Rectangle::new()
-                .width(52.0)
-                .height(26.0)
-                .radius(radius::SM)
-                .fill(tokens.surface_elevated)
-                .border(1.0, tokens.border_subtle)
-                .cursor(Pointer)
-                .align_child(Center, Center)
-                .on_click(|_| {
-                    crate::ui::calendar::reset_today();
-                })
-                .child(
-                    Text::new("Today")
-                        .size(typography::BADGE)
-                        .color(tokens.accent)
-                        .font(font),
-                ),
-        ),
-    ])
-    .width(Parent)
-    .justify(Justify::SpaceBetween)
-    .align(Align::Center);
-
-    // 4. Weekday headers
-    let weekday_labels = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-    let mut weekday_pills: Vec<Box<dyn Widget>> = Vec::new();
-    for label in weekday_labels {
-        let pill = Rectangle::new()
-            .width(44.0)
-            .height(20.0)
-            .align_child(Center, Center)
-            .child(
-                Text::new(label)
-                    .size(typography::BADGE)
-                    .color(tokens.text_muted)
-                    .font(font),
-            );
-        weekday_pills.push(Box::new(pill));
-    }
-    let weekday_row = Row::new(weekday_pills)
-        .width(Parent)
-        .justify(Justify::SpaceBetween)
-        .align(Align::Center);
-
-    // 5. Calendar days grid
-    let first_day = NaiveDate::from_ymd_opt(cal.view_year, cal.view_month, 1)
-        .unwrap_or_else(|| NaiveDate::from_ymd_opt(2026, 1, 1).unwrap());
-    let start_col = first_day.weekday().num_days_from_monday() as usize;
-
-    let (next_y, next_m) = if cal.view_month == 12 {
-        (cal.view_year + 1, 1)
-    } else {
-        (cal.view_year, cal.view_month + 1)
-    };
-    let next_first = NaiveDate::from_ymd_opt(next_y, next_m, 1)
-        .unwrap_or_else(|| NaiveDate::from_ymd_opt(2026, 2, 1).unwrap());
-    let days_in_month = (next_first - first_day).num_days() as u32;
-
-    let (prev_y, prev_m) = if cal.view_month == 1 {
-        (cal.view_year - 1, 12)
-    } else {
-        (cal.view_year, cal.view_month - 1)
-    };
-    let prev_first = NaiveDate::from_ymd_opt(prev_y, prev_m, 1)
-        .unwrap_or_else(|| NaiveDate::from_ymd_opt(2025, 12, 1).unwrap());
-    let days_in_prev_month = (first_day - prev_first).num_days() as u32;
-
-    let mut grid_cells: Vec<(u32, bool, bool)> = Vec::new();
-
-    for i in (0..start_col).rev() {
-        let day_num = days_in_prev_month - i as u32;
-        grid_cells.push((day_num, false, false));
-    }
-
-    for day in 1..=days_in_month {
-        let is_today =
-            cal.view_year == today_year && cal.view_month == today_month && day == today_day;
-        grid_cells.push((day, true, is_today));
-    }
-
-    let total_cells = if grid_cells.len() > 35 { 42 } else { 35 };
-    let mut next_day = 1;
-    while grid_cells.len() < total_cells {
-        grid_cells.push((next_day, false, false));
-        next_day += 1;
-    }
-
-    let mut week_rows: Vec<Box<dyn Widget>> = Vec::new();
-    for week_idx in 0..(total_cells / 7) {
-        let mut row_cells: Vec<Box<dyn Widget>> = Vec::new();
-        for day_idx in 0..7 {
-            let cell_idx = week_idx * 7 + day_idx;
-            let (day_num, is_current_month, is_today) = grid_cells[cell_idx];
-
-            let bg_color = if is_today {
-                tokens.warning // Controlled Chaos Industrial Amber (#FFB000)
-            } else {
-                Color::TRANSPARENT
-            };
-
-            let text_color = if is_today {
-                Color::BLACK
-            } else if is_current_month {
-                tokens.text_primary
-            } else {
-                tokens.steel
-            };
-
-            let cell = Rectangle::new()
-                .width(44.0)
-                .height(26.0)
-                .radius(radius::SM)
-                .fill(bg_color)
-                .cursor(Pointer)
-                .align_child(Center, Center)
-                .child(
-                    Text::new(format!("{day_num}"))
-                        .size(11.0)
-                        .color(text_color)
-                        .font(font),
-                );
-
-            row_cells.push(Box::new(cell));
-        }
-
-        let week_row = Row::new(row_cells)
-            .width(Parent)
-            .justify(Justify::SpaceBetween)
-            .align(Align::Center);
-        week_rows.push(Box::new(week_row));
-    }
-
-    let cal_card = Rectangle::new()
-        .width(Parent)
-        .height(250.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .padding(Padding {
-            top: spacing::PAD_SM,
-            bottom: spacing::PAD_SM,
-            left: spacing::PAD_MD,
-            right: spacing::PAD_MD,
-        })
-        .child(
-            Column::new(vec![
-                Box::new(nav_row),
-                Box::new(weekday_row),
-                Box::new(Column::new(week_rows).width(Parent).gap(2.0)),
-            ])
-            .gap(spacing::GAP_SM),
-        );
-
-    // 6. Notifications in Calendar View
-    let notifs_drawer = render_notifications_drawer(tokens, font);
-
-    Column::new(vec![
-        Box::new(subview_hdr),
-        Box::new(clock_banner),
-        Box::new(cal_card),
-        Box::new(notifs_drawer),
-    ])
-    .width(Parent)
-    .gap(spacing::GAP_MD)
 }
 
 #[cfg(test)]
@@ -1559,8 +1309,8 @@ mod tests {
         assert!(ControlCenterService::read().open);
         open_view(ActiveView::Network);
         assert_eq!(ControlCenterService::read().view, ActiveView::Network);
-        open_view(ActiveView::Calendar);
-        assert_eq!(ControlCenterService::read().view, ActiveView::Calendar);
+        open_view(ActiveView::Audio);
+        assert_eq!(ControlCenterService::read().view, ActiveView::Audio);
         close();
         assert!(!ControlCenterService::read().open);
     }

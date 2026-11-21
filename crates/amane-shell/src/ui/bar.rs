@@ -86,12 +86,12 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
     .height(Parent)
     .align(Align::Center);
 
-    // Translucent dark acrylic/mica background with subtle 1px border outline from PALETTE tokens
+    // Smooth Clay Matte Dark Clay background with subtle Clay Lip border outline
     let background_container = Rectangle::new()
         .width(Parent)
         .height(Parent)
-        .fill(tokens.acrylic_bg)
-        .border(1.0, tokens.acrylic_border)
+        .fill(tokens.surface)
+        .border(1.0, tokens.border_subtle)
         .padding(Padding {
             top: 0.0,
             bottom: 0.0,
@@ -123,9 +123,9 @@ fn render_compact_telemetry(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     let bg_color = if is_crit {
         tokens.danger
     } else if is_anom {
-        tokens.surface_elevated
+        tokens.surface_active
     } else {
-        tokens.surface
+        tokens.surface_elevated
     };
 
     let border_color = if is_crit {
@@ -261,17 +261,17 @@ fn render_workspaces(
         let pill_width = 34.0;
 
         let fill = if is_focused {
-            tokens.surface_elevated
+            tokens.surface_active
         } else if is_urgent {
             tokens.danger
         } else if is_occupied {
-            tokens.surface
+            tokens.surface_elevated
         } else {
             Color::TRANSPARENT
         };
 
         let tile_border = if is_focused {
-            tokens.accent
+            tokens.border_focus
         } else if is_urgent {
             tokens.border_danger
         } else if is_occupied {
@@ -287,7 +287,7 @@ fn render_workspaces(
         } else if is_occupied {
             tokens.text_primary
         } else {
-            tokens.steel
+            tokens.text_muted
         };
 
         let target_name = if num <= CANONICAL_WORKSPACES.len() {
@@ -329,8 +329,8 @@ fn render_workspaces(
             .width(pill_width)
             .height(34.0)
             .radius(radius::MD)
-            .fill(tokens.surface_elevated)
-            .border(1.0, tokens.accent)
+            .fill(tokens.surface_active)
+            .border(1.0, tokens.border_focus)
             .cursor(Pointer)
             .align_child(Center, Center)
             .on_click(move |_| {
@@ -376,8 +376,8 @@ fn render_right_cluster(
             .width(pill_w)
             .height(34.0)
             .radius(radius::MD)
-            .fill(tokens.surface_elevated)
-            .border(1.0, tokens.border_focus)
+            .fill(tokens.surface_active)
+            .border(1.0, tokens.border_subtle)
             .cursor(Pointer)
             .padding(Padding {
                 top: 2.0,
@@ -393,7 +393,7 @@ fn render_right_cluster(
                 Text::new(pres_label)
                     .size(typography::SECONDARY)
                     .color(tokens.accent)
-                    .font(font),
+                    .font(&tokens.font_sans),
             );
         pills.push(Box::new(pres_pill));
     }
@@ -428,8 +428,8 @@ fn render_right_cluster(
             .child(
                 Text::new(rec_text)
                     .size(typography::SECONDARY)
-                    .color(Color::WHITE)
-                    .font(font),
+                    .color(tokens.text_primary)
+                    .font(&tokens.font_sans),
             );
         pills.push(Box::new(rec_pill));
     }
@@ -441,7 +441,7 @@ fn render_right_cluster(
         monitor_name,
     ));
 
-    // 5. Quick Settings Pill: Unified cluster for Wi-Fi, Volume, Battery (Windows 11 style)
+    // 5. Quick Settings Pill: Unified cluster for Wi-Fi, Volume, Battery
     let qs_pill = render_quick_settings_pill(tokens, font);
     pills.push(Box::new(qs_pill));
 
@@ -449,7 +449,7 @@ fn render_right_cluster(
     let clock_pill = render_stacked_clock_pill(tokens, font);
     pills.push(Box::new(clock_pill));
 
-    // 7. Windows 11 Far-Right "Show Desktop" / Task View sliver
+    // 7. Far-Right "Show Desktop" / Task View sliver
     let show_desktop_sliver = Rectangle::new()
         .width(8.0)
         .height(34.0)
@@ -465,7 +465,7 @@ fn render_right_cluster(
                 .width(3.0)
                 .height(22.0)
                 .radius(radius::PILL)
-                .fill(Color::from("#ffffff26")),
+                .fill(tokens.accent),
         );
     pills.push(Box::new(show_desktop_sliver));
 
@@ -508,25 +508,25 @@ fn render_quick_settings_pill(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     };
 
     let net_color = if network.connected() {
-        tokens.text_primary
+        tokens.accent
     } else {
-        tokens.steel
+        tokens.text_muted
     };
 
     let vol_color = if audio.muted() {
-        tokens.steel
+        tokens.text_muted
     } else {
-        tokens.text_primary
+        tokens.accent
     };
 
     let bat_color = if battery.charging() {
-        tokens.success
+        tokens.accent_tint
     } else if battery.percent() <= 10 {
         tokens.danger
     } else if battery.percent() <= 20 {
-        Color::from("#FFB000") // Amber warning
+        tokens.accent_tint
     } else {
-        tokens.text_primary
+        tokens.accent
     };
 
     let content_row = Row::new(vec![
@@ -556,7 +556,7 @@ fn render_quick_settings_pill(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         .width(90.0)
         .height(34.0)
         .radius(radius::MD)
-        .fill(tokens.surface)
+        .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .padding(Padding {
@@ -578,7 +578,7 @@ fn render_quick_settings_pill(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         .child(content_row)
 }
 
-/// Two-line stacked clock and notification center pill (HH:MM / DD/MM/YYYY)
+/// Two-line stacked clock and notification center pill (HH:MM / DD/MM/YYYY) with Smooth Clay styling
 fn render_stacked_clock_pill(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     let clock = crate::services::clock::ClockService::read();
     let time_str = clock.time();
@@ -591,7 +591,7 @@ fn render_stacked_clock_pill(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         Box::new(
             Text::new(time_str)
                 .size(typography::BODY_LG)
-                .color(tokens.text_primary)
+                .color(tokens.accent)
                 .font(&tokens.font_mono),
         ),
         Box::new(
@@ -612,6 +612,7 @@ fn render_stacked_clock_pill(tokens: &ThemeTokens, _font: &str) -> Rectangle {
             .height(18.0)
             .radius(radius::PILL)
             .fill(tokens.danger)
+            .border(1.0, tokens.border_danger)
             .align_child(Center, Center)
             .child(
                 Text::new(format!("{notifs_count}"))
@@ -626,7 +627,7 @@ fn render_stacked_clock_pill(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         .width(94.0)
         .height(34.0)
         .radius(radius::MD)
-        .fill(tokens.surface)
+        .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .padding(Padding {
@@ -637,7 +638,7 @@ fn render_stacked_clock_pill(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         })
         .align_child(Center, Center)
         .on_click(|_| {
-            crate::ui::control_center::open_view(crate::ui::control_center::ActiveView::Calendar);
+            crate::ui::calendar::toggle();
         })
         .child(Row::new(row_items).gap(6.0).align(Align::Center))
 }

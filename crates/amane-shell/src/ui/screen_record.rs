@@ -291,13 +291,13 @@ pub fn screen_record_overlay() -> LayerWindow {
     } else {
         // Idle view: Select Region vs Fullscreen with audio toggle
         let header =
-            components::modal_header("⏺", "Screen Recorder", Some("wf-recorder"), &tokens, close);
+            components::modal_header("󰑋", "Screen Recorder", Some("wf-recorder"), &tokens, close);
 
         // Action Cards: Region vs Fullscreen
         let region_card = Rectangle::new()
             .width(236.0)
             .height(84.0)
-            .radius(radius::SM)
+            .radius(radius::MD)
             .fill(tokens.surface_elevated)
             .border(1.0, tokens.border_subtle)
             .cursor(Pointer)
@@ -309,7 +309,7 @@ pub fn screen_record_overlay() -> LayerWindow {
                 Column::new(vec![
                     Box::new(
                         Row::new(vec![
-                            Box::new(Text::new("⛶").size(20.0).color(tokens.accent).font(&font)),
+                            Box::new(Text::new("󰩭").size(20.0).color(tokens.accent).font(&font)),
                             Box::new(
                                 Text::new("Region")
                                     .size(typography::BODY)
@@ -335,7 +335,7 @@ pub fn screen_record_overlay() -> LayerWindow {
         let full_card = Rectangle::new()
             .width(236.0)
             .height(84.0)
-            .radius(radius::SM)
+            .radius(radius::MD)
             .fill(tokens.surface_elevated)
             .border(1.0, tokens.border_subtle)
             .cursor(Pointer)

@@ -4,28 +4,43 @@
 
 # --- Theme & Colors ---
 theme = dotfield-theme
-background-opacity = 1.0
+background-opacity = 0.78
+background-opacity-cells = false
+background-blur = false
 
 # --- Typography & Font Rendering ---
 font-family = JetBrainsMono Nerd Font
+font-style = Regular
+font-style-bold = Bold
+font-style-italic = Italic
+font-style-bold-italic = Bold Italic
+font-synthetic-style = false
 font-size = 11
 font-feature = calt
 font-feature = liga
-font-thicken = true
 
 # --- Window Geometry & Presentation ---
 window-padding-x = 12
 window-padding-y = 12
+window-padding-balance = true
 window-theme = dark
 window-decoration = false
+window-show-tab-bar = auto
+gtk-wide-tabs = false
 
 # --- Cursor & Bell ---
 cursor-style = block
 cursor-style-blink = false
 
 # --- Scrollback & Pure Native Search ---
-scrollback-limit = 10000
+scrollback-limit-lines = 100000
+scrollback-limit-bytes = 104857600
 mouse-hide-while-typing = true
+mouse-scroll-multiplier = precision:1,discrete:3
+keybind = shift+page_up=scroll_page_up
+keybind = shift+page_down=scroll_page_down
+keybind = shift+home=scroll_to_top
+keybind = shift+end=scroll_to_bottom
 
 # --- Clipboard Integration ---
 clipboard-read = allow
@@ -39,8 +54,7 @@ shell-integration-features = cursor,sudo,title
 
 # --- Performance & Process Lifecycle ---
 auto-update = off
-gtk-single-instance = false
-
+gtk-single-instance = detect
 
 # --- Keybindings: Clipboard & Font Management ---
 keybind = ctrl+shift+c=copy_to_clipboard

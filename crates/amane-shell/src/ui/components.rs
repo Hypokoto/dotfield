@@ -5,14 +5,14 @@ use amane::{
 
 use crate::ui::tokens::{ThemeTokens, border, radius, spacing, typography};
 
-/// Standardized action button for closing overlays and modals
+/// Standardized action button for closing overlays and modals (Smooth Clay Pill)
 pub fn close_button(on_click_fn: impl Fn() + 'static, tokens: &ThemeTokens) -> Rectangle {
     Rectangle::new()
         .width(26.0)
         .height(26.0)
-        .radius(radius::SM)
+        .radius(radius::PILL)
         .fill(tokens.surface_elevated)
-        .border(border::THIN, tokens.border_subtle)
+        .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(move |_| on_click_fn())
@@ -25,7 +25,7 @@ pub fn close_button(on_click_fn: impl Fn() + 'static, tokens: &ThemeTokens) -> R
         )
 }
 
-/// Standardized modal header bar across all popover windows (Tactical Noir styling)
+/// Standardized modal header bar across all popover windows (Smooth Clay styling)
 pub fn modal_header(
     icon: &str,
     title: &str,
@@ -42,7 +42,7 @@ pub fn modal_header(
         ),
         Box::new(
             Text::new(title)
-                .size(typography::SECONDARY)
+                .size(typography::TITLE_SM)
                 .color(tokens.text_primary)
                 .font(&tokens.font_sans),
         ),
@@ -75,7 +75,7 @@ pub fn modal_header(
         .child(header_row)
 }
 
-/// Standardized keyboard shortcut keycap badge (Tactical Bracketed Keycap)
+/// Standardized keyboard shortcut keycap badge (Smooth Clay Pill Badge)
 pub fn keycap(key_text: &str, tokens: &ThemeTokens) -> Rectangle {
     let char_count = key_text.chars().count();
     let cap_width = (char_count as f32 * 7.5 + 14.0).max(22.0);
@@ -84,7 +84,7 @@ pub fn keycap(key_text: &str, tokens: &ThemeTokens) -> Rectangle {
         .height(20.0)
         .radius(radius::SM)
         .fill(tokens.surface_elevated)
-        .border(border::THIN, tokens.border_subtle)
+        .border(1.0, tokens.border_subtle)
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,
@@ -101,17 +101,50 @@ pub fn keycap(key_text: &str, tokens: &ThemeTokens) -> Rectangle {
         )
 }
 
+/// Smooth Clay Modal Shell Frame
+/// Continuous rounded ceramic surface with soft Clay Lip border and warm earthen bisque fill.
+pub fn clay_modal_frame(
+    width: f32,
+    height: f32,
+    content: impl Widget + 'static,
+    tokens: &ThemeTokens,
+) -> Rectangle {
+    Rectangle::new()
+        .width(width)
+        .height(height)
+        .radius(radius::LG)
+        .fill(tokens.surface)
+        .border(1.0, tokens.border_subtle)
+        .padding(Padding {
+            top: spacing::PAD_MD,
+            bottom: spacing::PAD_MD,
+            left: spacing::PAD_MD,
+            right: spacing::PAD_MD,
+        })
+        .child(content)
+}
+
+/// Compatibility alias for legacy callers
+pub fn victorian_panel_frame(
+    width: f32,
+    height: f32,
+    content: impl Widget + 'static,
+    tokens: &ThemeTokens,
+) -> Rectangle {
+    clay_modal_frame(width, height, content, tokens)
+}
+
 /// Status badge with dot indicator (Tactical Telemetry Badge)
 pub fn status_badge(label: &str, dot_color: Color, tokens: &ThemeTokens) -> Rectangle {
     let char_count = label.chars().count();
     let badge_width = (char_count as f32 * 7.5 + 24.0).max(64.0);
     let content = Row::new(vec![
         Box::new(
-            Text::new("●")
-                .size(6.5)
-                .color(dot_color)
-                .font(&tokens.font_family)
-                .tight(),
+            Rectangle::new()
+                .width(6.0)
+                .height(6.0)
+                .radius(radius::PILL)
+                .fill(dot_color),
         ),
         Box::new(
             Text::new(label)
@@ -223,19 +256,7 @@ pub fn modal_shell(
         .width(Parent)
         .height(Parent);
 
-    Rectangle::new()
-        .width(width)
-        .height(height)
-        .radius(radius::LG)
-        .fill(tokens.surface)
-        .border(border::THIN, tokens.border_subtle)
-        .padding(Padding {
-            top: spacing::PAD_MD,
-            bottom: spacing::PAD_MD,
-            left: spacing::PAD_MD,
-            right: spacing::PAD_MD,
-        })
-        .child(shell_column)
+    clay_modal_frame(width, height, shell_column, tokens)
 }
 
 /// Universal action card tile for App Launcher, Terminal Manager, and Display Presets
@@ -280,7 +301,7 @@ pub fn action_card(
         Text::new(title)
             .size(typography::BODY)
             .color(title_color)
-            .font(&tokens.font_family)
+            .font(&tokens.font_sans)
             .elide(),
     )];
 
@@ -296,7 +317,7 @@ pub fn action_card(
             Text::new(formatted_sub)
                 .size(typography::SECONDARY)
                 .color(tokens.text_secondary)
-                .font(&tokens.font_family)
+                .font(&tokens.font_sans)
                 .elide(),
         ));
     }
@@ -466,7 +487,7 @@ pub fn toggle_switch(
         .child(thumb_wrapper)
 }
 
-/// Windows 11 Settings / Quick Settings tile row with title, optional subtitle, and trailing ToggleSwitch
+/// Smooth Clay Settings / Quick Settings tile row with title, optional subtitle, and trailing ToggleSwitch
 pub fn toggle_switch_card(
     checked: bool,
     icon: &str,
@@ -479,7 +500,7 @@ pub fn toggle_switch_card(
         Text::new(title)
             .size(typography::BODY)
             .color(tokens.text_primary)
-            .font(&tokens.font_family),
+            .font(&tokens.font_sans),
     )];
 
     if let Some(sub) = subtitle {
@@ -487,7 +508,7 @@ pub fn toggle_switch_card(
             Text::new(sub)
                 .size(typography::SECONDARY)
                 .color(tokens.text_secondary)
-                .font(&tokens.font_family),
+                .font(&tokens.font_sans),
         ));
     }
 
@@ -500,9 +521,9 @@ pub fn toggle_switch_card(
                 .color(if checked {
                     tokens.accent
                 } else {
-                    tokens.text_secondary
+                    tokens.text_muted
                 })
-                .font(&tokens.font_family),
+                .font(&tokens.font_mono),
         ),
         Box::new(text_col),
     ])
@@ -516,12 +537,18 @@ pub fn toggle_switch_card(
         .justify(Justify::SpaceBetween)
         .align(Align::Center);
 
+    let (card_fill, card_border) = if checked {
+        (tokens.surface_active, tokens.border_focus)
+    } else {
+        (tokens.surface_elevated, tokens.border_subtle)
+    };
+
     Rectangle::new()
         .width(Parent)
         .height(if subtitle.is_some() { 48.0 } else { 40.0 })
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(border::THIN, tokens.border_subtle)
+        .radius(radius::MD)
+        .fill(card_fill)
+        .border(1.0, card_border)
         .padding(Padding {
             top: 4.0,
             bottom: 4.0,
@@ -532,8 +559,8 @@ pub fn toggle_switch_card(
         .child(content_row)
 }
 
-/// Modern Fluent Pill Slider with stacked visual progress track, leading status icon,
-/// trailing numeric readout, optional icon click action (e.g. mute toggle), and scroll interaction.
+/// Smooth Clay Tactile Gauge Slider with recessed clay track,
+/// glazed terracotta progress fill, circular pill icon button, and tactile scroll.
 #[allow(clippy::too_many_arguments)]
 pub fn fluent_slider<F1, F2>(
     progress_frac: f32,
@@ -559,40 +586,32 @@ where
         (tokens.accent, format!("{:.0}%", clamped_frac * 100.0))
     };
 
-    // 1. Base container track
+    // 1. Base container track: recessed clay surface with subtle border
     let bg_rect = Rectangle::new()
         .width(slider_width)
         .height(slider_height)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(border::THIN, tokens.border_subtle);
+        .radius(radius::MD)
+        .fill(tokens.surface_track)
+        .border(1.0, tokens.border_subtle);
 
-    // 2. Filled progress track with subtle highlight
+    // 2. Filled progress track with smooth clay active fill (no harsh outer border)
     let fill_rect = Rectangle::new()
         .width(fill_w)
         .height(slider_height)
-        .radius(radius::SM)
+        .radius(radius::MD)
         .fill(if is_muted {
-            tokens.danger_subtle
+            tokens.danger
         } else {
-            tokens.accent_tint
-        })
-        .border(
-            border::THIN,
-            if is_muted {
-                tokens.border_danger
-            } else {
-                tokens.accent
-            },
-        );
+            tokens.surface_active
+        });
 
-    // 3. Leading icon: interactive button if on_icon_click is provided, or static icon
+    // 3. Leading icon: smooth circular pill button
     let icon_btn: Box<dyn Widget> = if let Some(on_click) = on_icon_click {
         Box::new(
             Rectangle::new()
                 .width(26.0)
                 .height(26.0)
-                .radius(radius::XS)
+                .radius(radius::PILL)
                 .fill(if is_muted {
                     tokens.danger
                 } else {
@@ -625,12 +644,12 @@ where
         )
     };
 
-    // 4. Content Row: Left (icon + label in sans-serif) | Right (value percentage in mono)
+    // 4. Content Row: Left (icon + label) | Right (value percentage)
     let left_items = Row::new(vec![
         icon_btn,
         Box::new(
             Text::new(label)
-                .size(typography::SECONDARY)
+                .size(typography::BODY)
                 .color(tokens.text_primary)
                 .font(&tokens.font_sans),
         ),
@@ -950,26 +969,19 @@ pub fn expander(
         )
 }
 
-/// WinUI 3 Mica/Acrylic bounded card with translucent background and 1px border
+/// Smooth Clay acrylic framed panel
 pub fn acrylic_card(
     width: f32,
     height: f32,
     child: Box<dyn Widget>,
     tokens: &ThemeTokens,
 ) -> Rectangle {
-    Rectangle::new()
-        .width(width)
-        .height(height)
-        .radius(radius::XL)
-        .fill(tokens.acrylic_bg)
-        .border(border::THIN, tokens.acrylic_border)
-        .padding(Padding {
-            top: spacing::PAD_MD,
-            bottom: spacing::PAD_MD,
-            left: spacing::PAD_MD,
-            right: spacing::PAD_MD,
-        })
-        .child(Row::new(vec![child]).width(Parent).height(Parent))
+    clay_modal_frame(
+        width,
+        height,
+        Column::new(vec![child]).width(Parent).height(Parent),
+        tokens,
+    )
 }
 
 /// WinUI 3 SplitButton: primary click action on the left + dropdown arrow on the right

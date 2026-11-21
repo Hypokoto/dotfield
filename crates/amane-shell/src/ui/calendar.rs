@@ -123,7 +123,7 @@ pub fn calendar_overlay() -> LayerWindow {
     let today_month = now.month();
     let today_day = now.day();
 
-    // Digital Clock and Date Summary Header
+    // Digital Clock and Date Summary Header with Horology Pocket Watch aesthetic
     let time_str = now.format("%H:%M:%S").to_string();
     let full_date_str = now.format("%A, %B %d, %Y").to_string();
 
@@ -152,7 +152,7 @@ pub fn calendar_overlay() -> LayerWindow {
                         Box::new(
                             Text::new(full_date_str)
                                 .size(typography::BADGE)
-                                .color(tokens.text_secondary)
+                                .color(tokens.text_primary)
                                 .font(&tokens.font_sans),
                         ),
                     ])
@@ -190,18 +190,18 @@ pub fn calendar_overlay() -> LayerWindow {
                     Rectangle::new()
                         .width(28.0)
                         .height(26.0)
-                        .radius(radius::SM)
-                        .fill(tokens.surface_elevated)
-                        .border(1.0, tokens.border_subtle)
+                        .radius(radius::PILL)
+                        .fill(tokens.surface_active)
+                        .border(1.0, tokens.border_focus)
                         .cursor(Pointer)
                         .align_child(Center, Center)
                         .on_click(|_| {
                             prev_month();
                         })
                         .child(
-                            Text::new("❮")
-                                .size(11.0)
-                                .color(tokens.accent)
+                            Text::new("󰅁")
+                                .size(13.0)
+                                .color(tokens.text_primary)
                                 .font(&tokens.font_mono),
                         ),
                 ),
@@ -215,18 +215,18 @@ pub fn calendar_overlay() -> LayerWindow {
                     Rectangle::new()
                         .width(28.0)
                         .height(26.0)
-                        .radius(radius::SM)
-                        .fill(tokens.surface_elevated)
-                        .border(1.0, tokens.border_subtle)
+                        .radius(radius::PILL)
+                        .fill(tokens.surface_active)
+                        .border(1.0, tokens.border_focus)
                         .cursor(Pointer)
                         .align_child(Center, Center)
                         .on_click(|_| {
                             next_month();
                         })
                         .child(
-                            Text::new("❯")
-                                .size(11.0)
-                                .color(tokens.accent)
+                            Text::new("󰅂")
+                                .size(13.0)
+                                .color(tokens.text_primary)
                                 .font(&tokens.font_mono),
                         ),
                 ),
@@ -236,11 +236,11 @@ pub fn calendar_overlay() -> LayerWindow {
         ),
         Box::new(
             Rectangle::new()
-                .width(52.0)
+                .width(58.0)
                 .height(26.0)
-                .radius(radius::SM)
-                .fill(tokens.surface_elevated)
-                .border(1.0, tokens.border_subtle)
+                .radius(radius::PILL)
+                .fill(tokens.surface_active)
+                .border(1.0, tokens.border_focus)
                 .cursor(Pointer)
                 .align_child(Center, Center)
                 .on_click(|_| {
@@ -249,7 +249,7 @@ pub fn calendar_overlay() -> LayerWindow {
                 .child(
                     Text::new("Today")
                         .size(typography::BADGE)
-                        .color(tokens.accent)
+                        .color(tokens.text_primary)
                         .font(&tokens.font_sans),
                 ),
         ),
@@ -269,7 +269,7 @@ pub fn calendar_overlay() -> LayerWindow {
             .child(
                 Text::new(label)
                     .size(typography::BADGE)
-                    .color(tokens.text_muted)
+                    .color(tokens.accent)
                     .font(&tokens.font_sans),
             );
         weekday_pills.push(Box::new(pill));
@@ -334,9 +334,13 @@ pub fn calendar_overlay() -> LayerWindow {
             let is_selected = is_current_month && cal.selected_day == Some(day_num);
 
             let (cell_fill, cell_border, text_color) = if is_today {
-                (tokens.accent, tokens.accent, Color::BLACK)
+                (tokens.accent, tokens.accent, Color::WHITE)
             } else if is_selected {
-                (tokens.surface_selected, tokens.border_focus, tokens.accent)
+                (
+                    tokens.surface_active,
+                    tokens.border_focus,
+                    tokens.text_primary,
+                )
             } else {
                 (
                     Color::TRANSPARENT,
@@ -352,7 +356,7 @@ pub fn calendar_overlay() -> LayerWindow {
             let cell = Rectangle::new()
                 .width(38.0)
                 .height(28.0)
-                .radius(radius::SM)
+                .radius(radius::PILL)
                 .fill(cell_fill)
                 .border(1.0, cell_border)
                 .cursor(if is_current_month {
@@ -384,35 +388,24 @@ pub fn calendar_overlay() -> LayerWindow {
         week_rows.push(Box::new(week_row));
     }
 
-    let calendar_panel = Rectangle::new()
-        .width(320.0)
-        .height(350.0)
-        .radius(radius::LG)
-        .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
-        .padding(Padding {
-            top: spacing::PAD_MD,
-            bottom: spacing::PAD_MD,
-            left: spacing::PAD_MD,
-            right: spacing::PAD_MD,
-        })
-        .child(
-            Column::new(vec![
-                Box::new(header_clock),
-                Box::new(nav_row),
-                Box::new(weekday_row),
-                Box::new(Column::new(week_rows).width(Parent).gap(3.0)),
-            ])
-            .width(Parent)
-            .gap(spacing::GAP_MD),
-        );
+    let calendar_content = Column::new(vec![
+        Box::new(header_clock),
+        Box::new(nav_row),
+        Box::new(weekday_row),
+        Box::new(Column::new(week_rows).width(Parent).gap(3.0)),
+    ])
+    .width(Parent)
+    .gap(spacing::GAP_MD);
+
+    let calendar_panel =
+        crate::ui::components::clay_modal_frame(330.0, 360.0, calendar_content, &tokens);
 
     let (dock_height, _, _) = crate::ui::bar::bar_layer_properties(&manifest);
     let bottom_margin = (dock_height + 10.0) as i32;
 
     LayerWindow::new()
-        .width(320.0)
-        .height(350.0)
+        .width(330.0)
+        .height(360.0)
         .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Bottom)
         .anchor_horizontal(Horizontal::Right)

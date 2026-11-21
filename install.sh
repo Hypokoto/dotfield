@@ -65,6 +65,7 @@ Options:
   --apparmor             Forward AppArmor profile setup to setup.sh
   --flatpak              Forward Flatpak overrides setup to setup.sh
   --nft                  Forward NFTables firewall setup to setup.sh
+  --network              Forward network stability setup to setup.sh
   -y, --yes, --noconfirm Automatically answer yes to package manager prompts
   --no-setup             Skip running setup.sh after dependency installation
   --no-build             Skip compiling amane desktop shell binary
@@ -118,7 +119,7 @@ while [[ $# -gt 0 ]]; do
             TARGET="all"
             shift
             ;;
-        --hardening|--apparmor|--flatpak|--nft)
+        --hardening|--apparmor|--flatpak|--nft|--network)
             HARDENING_FLAGS+=("$1")
             shift
             ;;

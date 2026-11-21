@@ -386,7 +386,7 @@ pub fn start_menu_overlay() -> LayerWindow {
     let search_bar = Rectangle::new()
         .width(Parent)
         .height(44.0)
-        .radius(radius::MD)
+        .radius(radius::PILL)
         .fill(tokens.surface_elevated)
         .border(
             1.0,
@@ -405,7 +405,12 @@ pub fn start_menu_overlay() -> LayerWindow {
         .align_child(Align::Start, Align::Center)
         .child(
             Row::new(vec![
-                Box::new(Text::new("").size(15.0).color(tokens.accent).font(font)),
+                Box::new(
+                    Text::new("")
+                        .size(15.0)
+                        .color(tokens.accent)
+                        .font(&tokens.font_mono),
+                ),
                 Box::new(search_input),
             ])
             .gap(spacing::GAP_MD)
@@ -450,13 +455,13 @@ pub fn start_menu_overlay() -> LayerWindow {
                 Text::new("Terminal Execution")
                     .size(typography::TITLE_SM)
                     .color(tokens.text_primary)
-                    .font(font),
+                    .font(&tokens.font_sans),
             ),
             Box::new(
                 Text::new(": <command>")
                     .size(typography::CAPTION)
                     .color(tokens.accent)
-                    .font(font),
+                    .font(&tokens.font_mono),
             ),
         ])
         .width(Parent)
@@ -474,7 +479,7 @@ pub fn start_menu_overlay() -> LayerWindow {
             .height(72.0)
             .radius(radius::MD)
             .fill(tokens.surface_elevated)
-            .border(1.5, tokens.accent)
+            .border(1.0, tokens.border_focus)
             .cursor(Pointer)
             .padding(Padding {
                 top: spacing::PAD_SM,
@@ -495,20 +500,25 @@ pub fn start_menu_overlay() -> LayerWindow {
             })
             .child(
                 Row::new(vec![
-                    Box::new(Text::new("󰆍").size(24.0).color(tokens.accent).font(font)),
+                    Box::new(
+                        Text::new("󰆍")
+                            .size(24.0)
+                            .color(tokens.accent)
+                            .font(&tokens.font_mono),
+                    ),
                     Box::new(
                         Column::new(vec![
                             Box::new(
                                 Text::new(&cmd_title)
                                     .size(typography::SECONDARY)
                                     .color(tokens.text_primary)
-                                    .font(font),
+                                    .font(&tokens.font_sans),
                             ),
                             Box::new(
                                 Text::new("Press Enter to launch in Ghostty terminal")
                                     .size(typography::CAPTION)
                                     .color(tokens.text_secondary)
-                                    .font(font),
+                                    .font(&tokens.font_sans),
                             ),
                         ])
                         .align(Align::Start)
@@ -546,13 +556,13 @@ pub fn start_menu_overlay() -> LayerWindow {
                 Text::new("System HUD Actions")
                     .size(typography::TITLE_SM)
                     .color(tokens.text_primary)
-                    .font(font),
+                    .font(&tokens.font_sans),
             ),
             Box::new(
                 Text::new(format!("{} available", filtered_actions.len()))
                     .size(typography::CAPTION)
                     .color(tokens.accent)
-                    .font(font),
+                    .font(&tokens.font_sans),
             ),
         ])
         .width(Parent)
@@ -568,14 +578,14 @@ pub fn start_menu_overlay() -> LayerWindow {
                 .height(48.0)
                 .radius(radius::MD)
                 .fill(if is_sel {
-                    tokens.surface_elevated
+                    tokens.surface_hover
                 } else {
-                    tokens.surface
+                    tokens.surface_elevated
                 })
                 .border(
                     1.0,
                     if is_sel {
-                        tokens.accent
+                        tokens.border_focus
                     } else {
                         tokens.border_subtle
                     },
@@ -597,7 +607,7 @@ pub fn start_menu_overlay() -> LayerWindow {
                             Text::new(action.icon)
                                 .size(18.0)
                                 .color(tokens.accent)
-                                .font(font),
+                                .font(&tokens.font_mono),
                         ),
                         Box::new(
                             Column::new(vec![
@@ -605,13 +615,13 @@ pub fn start_menu_overlay() -> LayerWindow {
                                     Text::new(action.title)
                                         .size(typography::SECONDARY)
                                         .color(tokens.text_primary)
-                                        .font(font),
+                                        .font(&tokens.font_sans),
                                 ),
                                 Box::new(
                                     Text::new(action.subtitle)
                                         .size(typography::CAPTION)
                                         .color(tokens.text_secondary)
-                                        .font(font),
+                                        .font(&tokens.font_sans),
                                 ),
                             ])
                             .align(Align::Start)
@@ -654,13 +664,13 @@ pub fn start_menu_overlay() -> LayerWindow {
                         Text::new(header_title)
                             .size(typography::TITLE_SM)
                             .color(tokens.text_primary)
-                            .font(font),
+                            .font(&tokens.font_sans),
                     ),
                     Box::new(
                         Text::new(&badge_text)
                             .size(typography::CAPTION)
                             .color(tokens.accent)
-                            .font(font),
+                            .font(&tokens.font_sans),
                     ),
                 ])
                 .gap(spacing::GAP_SM)
@@ -689,11 +699,11 @@ pub fn start_menu_overlay() -> LayerWindow {
                         Text::new(if has_query {
                             "Clear 󰅖"
                         } else {
-                            "❮ Pinned"
+                            "󰅁 Pinned"
                         })
                         .size(typography::CAPTION)
-                        .color(tokens.accent)
-                        .font(font),
+                        .color(tokens.text_primary)
+                        .font(&tokens.font_sans),
                     ),
             ),
         ])
@@ -709,18 +719,28 @@ pub fn start_menu_overlay() -> LayerWindow {
                     .align_child(Center, Center)
                     .child(
                         Column::new(vec![
-                            Box::new(Text::new("󰛐").size(28.0).color(tokens.steel).font(font)),
                             Box::new(
-                                Text::new(format!("No applications found matching \"{}\"", query_raw))
-                                    .size(typography::SECONDARY)
-                                    .color(tokens.text_secondary)
-                                    .font(font),
+                                Text::new("󰄰")
+                                    .size(28.0)
+                                    .color(tokens.accent)
+                                    .font(&tokens.font_mono),
                             ),
                             Box::new(
-                                Text::new("Tip: type ': <cmd>' for terminal command or '> <action>' for HUD")
-                                    .size(typography::CAPTION)
-                                    .color(tokens.text_muted)
-                                    .font(font),
+                                Text::new(format!(
+                                    "No applications found matching \"{}\"",
+                                    query_raw
+                                ))
+                                .size(typography::BODY)
+                                .color(tokens.text_primary)
+                                .font(&tokens.font_sans),
+                            ),
+                            Box::new(
+                                Text::new(
+                                    "Tip: type ': <cmd>' for terminal command or '> <action>' for HUD",
+                                )
+                                .size(typography::CAPTION)
+                                .color(tokens.text_secondary)
+                                .font(&tokens.font_sans),
                             ),
                         ])
                         .align(Center)
@@ -759,7 +779,10 @@ pub fn start_menu_overlay() -> LayerWindow {
                                     .fill(tokens.surface)
                                     .align_child(Center, Center)
                                     .child(
-                                        Text::new("󰵆").size(16.0).color(tokens.accent).font(font),
+                                        Text::new("󰵆")
+                                            .size(16.0)
+                                            .color(tokens.text_primary)
+                                            .font(&tokens.font_mono),
                                     ),
                             ),
                         };
@@ -777,7 +800,7 @@ pub fn start_menu_overlay() -> LayerWindow {
                         let pin_color = if is_pinned_app {
                             tokens.accent
                         } else {
-                            tokens.steel
+                            tokens.text_secondary
                         };
                         let app_name_for_pin = app_name.clone();
                         let app_name_for_card = app_name.clone();
@@ -787,14 +810,14 @@ pub fn start_menu_overlay() -> LayerWindow {
                             .height(28.0)
                             .radius(radius::SM)
                             .fill(if is_pinned_app {
-                                tokens.surface_elevated
+                                tokens.surface_hover
                             } else {
-                                tokens.surface
+                                tokens.surface_elevated
                             })
                             .border(
                                 1.0,
                                 if is_pinned_app {
-                                    tokens.accent
+                                    tokens.border_focus
                                 } else {
                                     tokens.border_subtle
                                 },
@@ -804,21 +827,26 @@ pub fn start_menu_overlay() -> LayerWindow {
                             .on_click(move |_| {
                                 toggle_pin_app(&app_name_for_pin);
                             })
-                            .child(Text::new(pin_icon).size(14.0).color(pin_color).font(font));
+                            .child(
+                                Text::new(pin_icon)
+                                    .size(14.0)
+                                    .color(pin_color)
+                                    .font(&tokens.font_mono),
+                            );
 
                         let card = Rectangle::new()
                             .width(292.0)
                             .height(52.0)
                             .radius(radius::MD)
                             .fill(if is_selected {
-                                tokens.surface_elevated
+                                tokens.surface_hover
                             } else {
-                                tokens.surface
+                                tokens.surface_elevated
                             })
                             .border(
                                 1.0,
                                 if is_selected {
-                                    tokens.accent
+                                    tokens.border_focus
                                 } else {
                                     tokens.border_subtle
                                 },
@@ -852,13 +880,13 @@ pub fn start_menu_overlay() -> LayerWindow {
                                                         Text::new(&app_name)
                                                             .size(typography::SECONDARY)
                                                             .color(tokens.text_primary)
-                                                            .font(font),
+                                                            .font(&tokens.font_sans),
                                                     ),
                                                     Box::new(
                                                         Text::new(&desc_truncated)
                                                             .size(typography::CAPTION)
                                                             .color(tokens.text_secondary)
-                                                            .font(font),
+                                                            .font(&tokens.font_sans),
                                                     ),
                                                 ])
                                                 .align(Align::Start)
@@ -930,13 +958,13 @@ pub fn start_menu_overlay() -> LayerWindow {
                         Text::new("Pinned")
                             .size(typography::TITLE_SM)
                             .color(tokens.text_primary)
-                            .font(font),
+                            .font(&tokens.font_sans),
                     ),
                     Box::new(
                         Text::new(&badge_text)
                             .size(typography::CAPTION)
-                            .color(tokens.accent)
-                            .font(font),
+                            .color(tokens.text_secondary)
+                            .font(&tokens.font_sans),
                     ),
                 ])
                 .gap(spacing::GAP_SM)
@@ -958,10 +986,10 @@ pub fn start_menu_overlay() -> LayerWindow {
                         menu.scroll_row = 0;
                     })
                     .child(
-                        Text::new("All apps ❯")
+                        Text::new("All apps 󰅂")
                             .size(typography::CAPTION)
-                            .color(tokens.accent)
-                            .font(font),
+                            .color(tokens.text_primary)
+                            .font(&tokens.font_sans),
                     ),
             ),
         ])
@@ -975,7 +1003,7 @@ pub fn start_menu_overlay() -> LayerWindow {
                     .width(Parent)
                     .height(268.0)
                     .radius(radius::MD)
-                    .fill(tokens.surface)
+                    .fill(tokens.surface_elevated)
                     .border(1.0, tokens.border_subtle)
                     .align_child(Center, Center)
                     .child(
@@ -997,15 +1025,15 @@ pub fn start_menu_overlay() -> LayerWindow {
                                     "Right-click any app or click 󰤱 in 'All apps' to pin it here",
                                 )
                                 .size(typography::CAPTION)
-                                .color(tokens.text_muted)
+                                .color(tokens.text_secondary)
                                 .font(&tokens.font_sans),
                             ),
                             Box::new(
                                 Rectangle::new()
                                     .width(170.0)
                                     .height(30.0)
-                                    .radius(radius::SM)
-                                    .fill(tokens.accent_tint)
+                                    .radius(radius::PILL)
+                                    .fill(tokens.surface_active)
                                     .border(1.0, tokens.border_focus)
                                     .cursor(Pointer)
                                     .align_child(Center, Center)
@@ -1016,9 +1044,9 @@ pub fn start_menu_overlay() -> LayerWindow {
                                         menu.scroll_row = 0;
                                     })
                                     .child(
-                                        Text::new("Browse All Apps ❯")
+                                        Text::new("Browse All Apps 󰅂")
                                             .size(typography::SECONDARY)
-                                            .color(tokens.accent)
+                                            .color(tokens.text_primary)
                                             .font(&tokens.font_sans),
                                     ),
                             ),
@@ -1058,7 +1086,10 @@ pub fn start_menu_overlay() -> LayerWindow {
                                     .fill(tokens.surface)
                                     .align_child(Center, Center)
                                     .child(
-                                        Text::new("󰵆").size(18.0).color(tokens.accent).font(font),
+                                        Text::new("󰵆")
+                                            .size(18.0)
+                                            .color(tokens.text_primary)
+                                            .font(&tokens.font_mono),
                                     ),
                             ),
                         };
@@ -1071,7 +1102,7 @@ pub fn start_menu_overlay() -> LayerWindow {
                                 Text::new(&line1)
                                     .size(typography::CAPTION)
                                     .color(tokens.text_primary)
-                                    .font(font),
+                                    .font(&tokens.font_sans),
                             ),
                         ];
 
@@ -1080,7 +1111,7 @@ pub fn start_menu_overlay() -> LayerWindow {
                                 Text::new(&line2)
                                     .size(9.5)
                                     .color(tokens.text_secondary)
-                                    .font(font),
+                                    .font(&tokens.font_sans),
                             ));
                         }
 
@@ -1089,14 +1120,14 @@ pub fn start_menu_overlay() -> LayerWindow {
                             .height(tile_height)
                             .radius(radius::MD)
                             .fill(if is_selected {
-                                tokens.surface_elevated
+                                tokens.surface_active
                             } else {
                                 tokens.surface
                             })
                             .border(
                                 1.0,
                                 if is_selected {
-                                    tokens.accent
+                                    tokens.border_focus
                                 } else {
                                     tokens.border_subtle
                                 },
@@ -1221,9 +1252,14 @@ pub fn start_menu_overlay() -> LayerWindow {
                 .height(36.0)
                 .radius(radius::PILL)
                 .fill(tokens.surface_elevated)
-                .border(1.0, tokens.accent)
+                .border(1.0, tokens.border_subtle)
                 .align_child(Center, Center)
-                .child(Text::new("").size(16.0).color(tokens.accent).font(font)),
+                .child(
+                    Text::new("")
+                        .size(16.0)
+                        .color(tokens.text_primary)
+                        .font(&tokens.font_mono),
+                ),
         ),
         Box::new(
             Column::new(vec![
@@ -1231,13 +1267,13 @@ pub fn start_menu_overlay() -> LayerWindow {
                     Text::new(display_name)
                         .size(typography::BODY)
                         .color(tokens.text_primary)
-                        .font(font),
+                        .font(&tokens.font_sans),
                 ),
                 Box::new(
                     Text::new("Signed in • Wayland")
                         .size(typography::CAPTION)
                         .color(tokens.text_secondary)
-                        .font(font),
+                        .font(&tokens.font_sans),
                 ),
             ])
             .align(Align::Start)
@@ -1251,7 +1287,7 @@ pub fn start_menu_overlay() -> LayerWindow {
         Box::new(render_power_icon(
             "󰌾",
             "Lock",
-            tokens.steel,
+            tokens.text_secondary,
             font,
             &tokens,
             || {
@@ -1262,7 +1298,7 @@ pub fn start_menu_overlay() -> LayerWindow {
         Box::new(render_power_icon(
             "󰒲",
             "Sleep",
-            tokens.steel,
+            tokens.warning,
             font,
             &tokens,
             || {
@@ -1275,7 +1311,7 @@ pub fn start_menu_overlay() -> LayerWindow {
         Box::new(render_power_icon(
             "󰜉",
             "Reboot",
-            tokens.accent_hover,
+            tokens.warning,
             font,
             &tokens,
             || {
@@ -1334,20 +1370,9 @@ pub fn start_menu_overlay() -> LayerWindow {
         .height(Parent)
         .justify(Justify::SpaceBetween);
 
-    // 640px width x 604px height with 12px corner radius (radius::XL)
-    let container = Rectangle::new()
-        .width(640.0)
-        .height(604.0)
-        .fill(tokens.acrylic_bg)
-        .border(1.0, tokens.acrylic_border)
-        .radius(radius::XL)
-        .padding(Padding {
-            top: spacing::PAD_LG,
-            bottom: spacing::PAD_MD,
-            left: spacing::PAD_LG,
-            right: spacing::PAD_LG,
-        })
-        .child(start_menu_content);
+    // 640px width x 604px height wrapped in Clay Modal Frame
+    let container =
+        crate::ui::components::clay_modal_frame(640.0, 604.0, start_menu_content, &tokens);
 
     let bottom_margin = (dock_height + 10.0) as i32;
 
@@ -1502,29 +1527,22 @@ pub fn start_menu_overlay() -> LayerWindow {
         .child(container)
 }
 
-fn render_recommended_section(font: &str, tokens: &ThemeTokens) -> Rectangle {
+fn render_recommended_section(_font: &str, tokens: &ThemeTokens) -> Rectangle {
     let header = Text::new("Recommended")
         .size(typography::TITLE_SM)
         .color(tokens.text_primary)
-        .font(font);
+        .font(&tokens.font_sans);
 
-    let item_terminal = render_quick_action_item(
-        "󰆍",
-        "Ghostty Terminal",
-        "Shell prompt",
-        font,
-        tokens,
-        || {
+    let item_terminal =
+        render_quick_action_item("󰆍", "Ghostty Terminal", "Shell prompt", tokens, || {
             let _ = std::process::Command::new("ghostty").spawn();
             close();
-        },
-    );
+        });
 
     let item_files = render_quick_action_item(
         "󰉋",
         "Yazi Explorer",
         "Terminal file manager",
-        font,
         tokens,
         || {
             let _ = std::process::Command::new("ghostty")
@@ -1535,26 +1553,19 @@ fn render_recommended_section(font: &str, tokens: &ThemeTokens) -> Rectangle {
         },
     );
 
-    let item_nvim = render_quick_action_item(
-        "󰅩",
-        "Neovim Editor",
-        "Modal code editor",
-        font,
-        tokens,
-        || {
+    let item_nvim =
+        render_quick_action_item("󰅩", "Neovim Editor", "Modal code editor", tokens, || {
             let _ = std::process::Command::new("ghostty")
                 .arg("-e")
                 .arg("nvim")
                 .spawn();
             close();
-        },
-    );
+        });
 
     let item_btop = render_quick_action_item(
         "󰓅",
         "Btop Monitor",
         "System telemetry HUD",
-        font,
         tokens,
         || {
             let _ = std::process::Command::new("ghostty")
@@ -1584,27 +1595,29 @@ fn render_quick_action_item<F>(
     icon: &'static str,
     title: &'static str,
     desc: &'static str,
-    font: &str,
     tokens: &ThemeTokens,
     on_click: F,
 ) -> Rectangle
 where
     F: Fn() + Send + Sync + 'static,
 {
-    let icon_part = Text::new(icon).size(20.0).color(tokens.accent).font(font);
+    let icon_part = Text::new(icon)
+        .size(20.0)
+        .color(tokens.accent)
+        .font(&tokens.font_mono);
 
     let text_part = Column::new(vec![
         Box::new(
             Text::new(title)
                 .size(typography::SECONDARY)
                 .color(tokens.text_primary)
-                .font(font),
+                .font(&tokens.font_sans),
         ),
         Box::new(
             Text::new(desc)
                 .size(typography::CAPTION)
                 .color(tokens.text_secondary)
-                .font(font),
+                .font(&tokens.font_sans),
         ),
     ])
     .align(Align::Start)
@@ -1618,7 +1631,7 @@ where
         .width(292.0)
         .height(44.0)
         .radius(radius::MD)
-        .fill(tokens.surface)
+        .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .padding(Padding {
@@ -1636,23 +1649,40 @@ fn render_power_icon<F>(
     icon: &'static str,
     _tooltip: &'static str,
     color: Color,
-    font: &str,
+    _font: &str,
     tokens: &ThemeTokens,
     on_click: F,
 ) -> Rectangle
 where
     F: Fn() + Send + Sync + 'static,
 {
+    let is_shutdown = icon == "󰐥";
+    let (bg, border_col) = if is_shutdown {
+        (tokens.danger, tokens.border_danger)
+    } else {
+        (tokens.surface_elevated, tokens.border_subtle)
+    };
+    let icon_col = if is_shutdown {
+        tokens.text_primary
+    } else {
+        color
+    };
+
     Rectangle::new()
         .width(36.0)
         .height(36.0)
-        .radius(radius::MD)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
+        .radius(radius::SM)
+        .fill(bg)
+        .border(1.0, border_col)
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(move |_| on_click())
-        .child(Text::new(icon).size(16.0).color(color).font(font))
+        .child(
+            Text::new(icon)
+                .size(16.0)
+                .color(icon_col)
+                .font(&tokens.font_mono),
+        )
 }
 
 #[cfg(test)]

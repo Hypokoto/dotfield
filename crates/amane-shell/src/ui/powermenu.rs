@@ -2,7 +2,7 @@ use std::process::Command;
 use std::time::Duration;
 
 use amane::{
-    Align, Center, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin,
+    Align, Center, Color, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin,
     OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
 };
 
@@ -207,14 +207,14 @@ pub fn powermenu_overlay() -> LayerWindow {
         let (card_fill, card_border, icon_color, title_color) = if is_selected {
             if action.is_critical {
                 (
-                    tokens.danger_subtle,
-                    tokens.border_danger,
                     tokens.danger,
-                    tokens.text_primary,
+                    tokens.border_danger,
+                    Color::WHITE,
+                    Color::WHITE,
                 )
             } else {
                 (
-                    tokens.surface_selected,
+                    tokens.surface_active,
                     tokens.border_focus,
                     tokens.accent,
                     tokens.text_primary,
@@ -225,14 +225,14 @@ pub fn powermenu_overlay() -> LayerWindow {
                 tokens.surface_elevated,
                 tokens.border_subtle,
                 tokens.danger,
-                tokens.text_secondary,
+                tokens.text_primary,
             )
         } else {
             (
                 tokens.surface_elevated,
                 tokens.border_subtle,
-                tokens.text_secondary,
-                tokens.text_secondary,
+                tokens.accent,
+                tokens.text_primary,
             )
         };
 
@@ -241,7 +241,7 @@ pub fn powermenu_overlay() -> LayerWindow {
         let card = Rectangle::new()
             .width(102.0)
             .height(116.0)
-            .radius(crate::ui::tokens::radius::SM)
+            .radius(crate::ui::tokens::radius::MD)
             .fill(card_fill)
             .border(if is_selected { 1.5 } else { 1.0 }, card_border)
             .cursor(Pointer)
@@ -328,32 +328,20 @@ pub fn powermenu_overlay() -> LayerWindow {
     .gap(6.0)
     .align(Align::Center);
 
-    // Modal Dialog Box
-    let dialog = Rectangle::new()
-        .width(580.0)
-        .height(218.0)
-        .radius(crate::ui::tokens::radius::LG)
-        .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
-        .padding(Padding {
-            top: 14.0,
-            bottom: 12.0,
-            left: 16.0,
-            right: 16.0,
-        })
-        .child(
-            Column::new(vec![
-                Box::new(header_card),
-                Box::new(actions_row),
-                Box::new(footer_row),
-            ])
-            .width(Parent)
-            .gap(12.0),
-        );
+    // Modal Dialog Box wrapped with Smooth Clay Modal Frame
+    let dialog_content = Column::new(vec![
+        Box::new(header_card),
+        Box::new(actions_row),
+        Box::new(footer_row),
+    ])
+    .width(Parent)
+    .gap(12.0);
+
+    let dialog = crate::ui::components::clay_modal_frame(590.0, 228.0, dialog_content, &tokens);
 
     LayerWindow::new()
-        .width(580.0)
-        .height(218.0)
+        .width(590.0)
+        .height(228.0)
         .target_output(OutputTarget::Active)
         .anchor_vertical(Vertical::Middle)
         .anchor_horizontal(Horizontal::Middle)

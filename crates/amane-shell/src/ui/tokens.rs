@@ -18,13 +18,13 @@ pub mod spacing {
     pub const PAD_PANEL: f32 = 16.0;
 }
 
-/// Border radius scale providing mechanical tactical curvature (BLACKSITE Industrial Noir: 1-3px)
+/// Border radius scale providing smooth claymorphic curvature (Generous, tactile, pillowy)
 pub mod radius {
-    pub const XS: f32 = 2.0; // Micro indicators, dot tags
-    pub const SM: f32 = 4.0; // Keycaps, tags, badges, buttons
-    pub const MD: f32 = 6.0; // Standard cards, buttons, input fields
-    pub const LG: f32 = 8.0; // Windows, modal shells, popovers
-    pub const XL: f32 = 12.0; // Large Windows 11 flyouts and Start Menu
+    pub const XS: f32 = 4.0; // Micro indicators, dot tags
+    pub const SM: f32 = 10.0; // Keycaps, tags, badges, buttons
+    pub const MD: f32 = 16.0; // Standard cards, buttons, input fields
+    pub const LG: f32 = 24.0; // Windows, modal shells, popovers
+    pub const XL: f32 = 30.0; // Large flyouts and Start Menu
     pub const PILL: f32 = 999.0; // Fully rounded pills, radar dots
 }
 
@@ -55,8 +55,8 @@ pub mod typography {
     pub const DISPLAY: f32 = 22.0; // Hero display, large clock
 }
 
-/// Hardcoded design tokens strictly defined in PALETTE.md (Controlled Chaos)
 pub mod palette {
+    // Canonical Controlled Chaos Palette (PALETTE.md)
     pub const VOID: &str = "#0A0A0C"; // Primary background
     pub const OBSIDIAN: &str = "#121216"; // Windows, panels, and cards
     pub const GRAPHITE: &str = "#1C1C23"; // Elevated surfaces
@@ -69,9 +69,32 @@ pub mod palette {
     pub const PALE_AMBER: &str = "#FFD166"; // Hover states and highlighted information
     pub const STEEL: &str = "#8B949E"; // Neutral states and secondary controls
     pub const SUCCESS_GREEN: &str = "#7BC47F"; // Successful operations
-    pub const ACCENT_BLUE: &str = "#60CDFF"; // Fluent Blue / WinUI accent
-    pub const ACRYLIC_BG: &str = "#1c1c1ce6"; // Translucent Mica/Acrylic window background
-    pub const ACRYLIC_BORDER: &str = "#ffffff14"; // Subtle translucent 1px border outline
+
+    // Tints & Translucency
+    pub const AMBER_TINT: &str = "#FFB00026";
+    pub const ACRYLIC_BG: &str = "#121216fa";
+    pub const ACRYLIC_BORDER: &str = IRON;
+
+    // Backward-compatibility & semantic aliases mapping directly to Controlled Chaos
+    pub const MATTE_DARK_CLAY: &str = VOID;
+    pub const WARM_BISQUE: &str = OBSIDIAN;
+    pub const TERRACOTTA_PUTTY: &str = GRAPHITE;
+    pub const CLAY_INSET: &str = "#23232C";
+    pub const CLAY_ACTIVE: &str = "#2A2A35";
+    pub const CLAY_LIP: &str = IRON;
+    pub const CLAY_LIP_LIGHT: &str = "#454552";
+    pub const CLAY_SEAM: &str = "#18181F";
+    pub const CLAY_BORDER_SUBTLE: &str = IRON;
+    pub const GLAZED_TERRACOTTA: &str = INDUSTRIAL_AMBER;
+    pub const LIGHT_TERRACOTTA: &str = PALE_AMBER;
+    pub const TERRACOTTA_TINT: &str = AMBER_TINT;
+    pub const WARM_SAND: &str = BONE;
+    pub const MUTED_PUTTY: &str = ASH;
+    pub const STONE_GREY: &str = STEEL;
+    pub const CRIMSON_GLAZE: &str = CRIMSON;
+    pub const CRIMSON_GLAZE_HOVER: &str = "#FF6B76";
+    pub const CRIMSON_GLAZE_BORDER: &str = BLOOD_RED;
+    pub const SAGE_CLAY: &str = SUCCESS_GREEN;
 }
 
 /// Semantic theme tokens resolved from the active shell manifest
@@ -127,97 +150,40 @@ impl Default for ThemeTokens {
 }
 
 impl ThemeTokens {
-    pub fn from_manifest(manifest: &ShellManifest) -> Self {
-        let p = &manifest.palette;
-
-        // Controlled Chaos Core Palette strictly mapped to PALETTE.md
-        let bg = if !p.background.is_empty() {
-            Color::from(p.background.as_str())
-        } else {
-            Color::from(palette::VOID)
-        };
-        let surface = if !p.surface.is_empty() {
-            Color::from(p.surface.as_str())
-        } else {
-            Color::from(palette::OBSIDIAN)
-        };
-        let surface_elevated = if !p.overlay.is_empty() {
-            Color::from(p.overlay.as_str())
-        } else {
-            Color::from(palette::GRAPHITE)
-        };
-        let border_subtle = if !p.border.is_empty() {
-            Color::from(p.border.as_str())
-        } else {
-            Color::from(palette::IRON)
-        };
-        let text_primary = if !p.foreground.is_empty() {
-            Color::from(p.foreground.as_str())
-        } else {
-            Color::from(palette::BONE)
-        };
-        let text_secondary = if !p.muted.is_empty() {
-            Color::from(p.muted.as_str())
-        } else {
-            Color::from(palette::ASH)
-        };
-        let text_muted = if !p.steel.is_empty() {
-            Color::from(p.steel.as_str())
-        } else {
-            Color::from(palette::STEEL)
-        };
-        let accent = if !p.highlight.is_empty() {
-            Color::from(p.highlight.as_str())
-        } else {
-            Color::from(palette::INDUSTRIAL_AMBER)
-        };
-        let accent_hover = if !p.hover.is_empty() {
-            Color::from(p.hover.as_str())
-        } else {
-            Color::from(palette::PALE_AMBER)
-        };
-        let danger = if !p.accent.is_empty() {
-            Color::from(p.accent.as_str())
-        } else {
-            Color::from(palette::CRIMSON)
-        };
-        let danger_critical = if !p.danger_critical.is_empty() {
-            Color::from(p.danger_critical.as_str())
-        } else {
-            Color::from(palette::BLOOD_RED)
-        };
+    pub fn from_manifest(_manifest: &ShellManifest) -> Self {
+        let bg = Color::from(palette::VOID);
+        let surface = Color::from(palette::OBSIDIAN);
+        let surface_elevated = Color::from(palette::GRAPHITE);
+        let border_subtle = Color::from(palette::IRON);
+        let text_primary = Color::from(palette::BONE);
+        let text_secondary = Color::from(palette::ASH);
+        let text_muted = Color::from(palette::STEEL);
+        let accent = Color::from(palette::INDUSTRIAL_AMBER);
+        let accent_hover = Color::from(palette::PALE_AMBER);
+        let danger = Color::from(palette::CRIMSON);
+        let danger_critical = Color::from(palette::BLOOD_RED);
         let warning = Color::from(palette::INDUSTRIAL_AMBER);
-        let warning_subtle = Color::from("#261D0A");
-        let success = if !p.success.is_empty() {
-            Color::from(p.success.as_str())
-        } else {
-            Color::from(palette::SUCCESS_GREEN)
-        };
-        let steel = if !p.steel.is_empty() {
-            Color::from(p.steel.as_str())
-        } else {
-            Color::from(palette::STEEL)
-        };
+        let warning_subtle = Color::from("#2E2010");
+        let success = Color::from(palette::SUCCESS_GREEN);
+        let steel = Color::from(palette::STEEL);
 
-        // WinUI 3 Fluent / Mica Acrylic Tokens
         let acrylic_bg = Color::from(palette::ACRYLIC_BG);
-        let acrylic_border = Color::from(palette::ACRYLIC_BORDER);
+        let acrylic_border = Color::from(palette::IRON);
         let card_bg = surface_elevated;
-        let card_border = Color::from("#ffffff0f");
+        let card_border = Color::from(palette::IRON);
         let indicator_active = accent;
 
-        // Derived surface & border states (Controlled Chaos)
-        let surface_hover = Color::from("#1C1C23");
-        let surface_active = Color::from("#252530");
-        let surface_selected = Color::from("#1A2633");
-        let surface_track = Color::from("#0A0A0C");
+        let surface_hover = Color::from("#24242D");
+        let surface_active = Color::from("#2C2C37");
+        let surface_selected = Color::from("#2A2A35");
+        let surface_track = Color::from(palette::VOID);
 
-        let border_hover = Color::from("#44475A");
+        let border_hover = Color::from("#454552");
         let border_focus = accent;
-        let border_danger = danger;
+        let border_danger = Color::from(palette::BLOOD_RED);
 
-        let accent_subtle = Color::from("#142533");
-        let danger_subtle = Color::from("#251114");
+        let accent_subtle = Color::from("#332400");
+        let danger_subtle = Color::from("#361114");
 
         Self {
             bg,
@@ -249,10 +215,10 @@ impl ThemeTokens {
             card_bg,
             card_border,
             indicator_active,
-            font_family: "Inter".to_string(),
-            font_sans: "Inter".to_string(),
+            font_family: "Outfit".to_string(),
+            font_sans: "Outfit".to_string(),
             font_mono: "JetBrainsMono Nerd Font".to_string(),
-            accent_tint: Color::from("#f59e0b24"),
+            accent_tint: Color::from(palette::AMBER_TINT),
         }
     }
 }

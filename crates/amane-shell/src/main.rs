@@ -356,8 +356,8 @@ fn ipc_start_menu_handler(_args: &[String]) -> String {
 }
 
 fn ipc_action_center_handler(_args: &[String]) -> String {
-    ui::control_center::open_view(ui::control_center::ActiveView::Calendar);
-    "control-center calendar toggled".to_string()
+    ui::calendar::toggle();
+    "calendar toggled".to_string()
 }
 
 fn ipc_overview_handler(_args: &[String]) -> String {

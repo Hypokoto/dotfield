@@ -1,6 +1,5 @@
 use amane::{
-    Align, Center, Color, Column, Justify, Padding, Parent, Pointer, Rectangle, Row, Service, Text,
-    Widget,
+    Align, Center, Column, Justify, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Widget,
 };
 
 use crate::config::ShellManifest;
@@ -36,7 +35,13 @@ pub fn render_tray_pill(
                     TrayService::activate(idx);
                 }
             })
-            .child(Text::new(glyph).size(14.0).color(tokens.accent).font(font));
+            .child(
+                Text::new(glyph)
+                    .size(14.0)
+                    .color(tokens.accent)
+                    .font(font)
+                    .tight(),
+            );
 
         items.push(Box::new(app_pill));
     }
@@ -44,7 +49,11 @@ pub fn render_tray_pill(
     // Fallback: If no external SNI apps are registered, show a subtle chevron up icon
     if items.is_empty() {
         items.push(Box::new(
-            Text::new("󰅃").size(16.0).color(tokens.steel).font(font),
+            Text::new("󰅃")
+                .size(16.0)
+                .color(tokens.text_muted)
+                .font(font)
+                .tight(),
         ));
     }
 
@@ -81,15 +90,7 @@ pub fn render_tray_pill(
 
 /// Renders the full Status Notifier Item (SNI) management drawer in Control Center.
 pub fn render_tray_drawer(manifest: &ShellManifest, font: &str) -> Box<dyn Widget> {
-    let surface_color = Color::from(manifest.palette.surface.as_str());
-    let overlay_color = Color::from(manifest.palette.overlay.as_str());
-    let amber_color = Color::from(manifest.palette.highlight.as_str());
-    let hover_color = Color::from(manifest.palette.hover.as_str());
-    let crimson_color = Color::from(manifest.palette.accent.as_str());
-    let fg_color = Color::from(manifest.palette.foreground.as_str());
-    let border_color = Color::from(manifest.palette.border.as_str());
-    let steel_color = Color::from(manifest.palette.steel.as_str());
-
+    let tokens = ThemeTokens::from_manifest(manifest);
     let tray = TrayService::read();
 
     let mut elements: Vec<Box<dyn Widget>> = Vec::new();
@@ -98,9 +99,9 @@ pub fn render_tray_drawer(manifest: &ShellManifest, font: &str) -> Box<dyn Widge
     let watcher_banner = Rectangle::new()
         .width(Parent)
         .height(30.0)
-        .radius(6.0)
-        .fill(overlay_color)
-        .border(1.0, border_color)
+        .radius(radius::SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
         .padding(Padding {
             top: 4.0,
             bottom: 4.0,
@@ -111,11 +112,17 @@ pub fn render_tray_drawer(manifest: &ShellManifest, font: &str) -> Box<dyn Widge
             Row::new(vec![
                 Box::new(
                     Row::new(vec![
-                        Box::new(Text::new("󰘳").size(12.0).color(amber_color).font(font)),
+                        Box::new(
+                            Text::new("󰘳")
+                                .size(12.0)
+                                .color(tokens.accent)
+                                .font(font)
+                                .tight(),
+                        ),
                         Box::new(
                             Text::new("StatusNotifierWatcher")
                                 .size(10.0)
-                                .color(fg_color)
+                                .color(tokens.text_primary)
                                 .font(font),
                         ),
                     ])
@@ -130,9 +137,9 @@ pub fn render_tray_drawer(manifest: &ShellManifest, font: &str) -> Box<dyn Widge
                     })
                     .size(10.0)
                     .color(if tray.watcher_active {
-                        hover_color
+                        tokens.success
                     } else {
-                        crimson_color
+                        tokens.danger
                     })
                     .font(font),
                 ),
@@ -149,13 +156,13 @@ pub fn render_tray_drawer(manifest: &ShellManifest, font: &str) -> Box<dyn Widge
         Box::new(
             Text::new("Status Notifier Applications")
                 .size(10.0)
-                .color(amber_color)
+                .color(tokens.accent)
                 .font(font),
         ),
         Box::new(
             Text::new(format!("{} active", tray.items.len()))
                 .size(10.0)
-                .color(steel_color)
+                .color(tokens.text_muted)
                 .font(font),
         ),
     ])
@@ -172,9 +179,9 @@ pub fn render_tray_drawer(manifest: &ShellManifest, font: &str) -> Box<dyn Widge
             Rectangle::new()
                 .width(Parent)
                 .height(84.0)
-                .radius(8.0)
-                .fill(surface_color)
-                .border(1.0, border_color)
+                .radius(radius::MD)
+                .fill(tokens.surface)
+                .border(1.0, tokens.border_subtle)
                 .padding(Padding {
                     top: 12.0,
                     bottom: 12.0,
@@ -184,17 +191,23 @@ pub fn render_tray_drawer(manifest: &ShellManifest, font: &str) -> Box<dyn Widge
                 .align_child(Center, Center)
                 .child(
                     Column::new(vec![
-                        Box::new(Text::new("󰀻").size(22.0).color(steel_color).font(font)),
+                        Box::new(
+                            Text::new("󰀻")
+                                .size(22.0)
+                                .color(tokens.text_muted)
+                                .font(font)
+                                .tight(),
+                        ),
                         Box::new(
                             Text::new("No Background Apps")
                                 .size(11.0)
-                                .color(fg_color)
+                                .color(tokens.text_primary)
                                 .font(font),
                         ),
                         Box::new(
                             Text::new("SNI status items appear here automatically")
                                 .size(9.5)
-                                .color(steel_color)
+                                .color(tokens.text_muted)
                                 .font(font),
                         ),
                     ])
@@ -219,9 +232,9 @@ pub fn render_tray_drawer(manifest: &ShellManifest, font: &str) -> Box<dyn Widge
             let row = Rectangle::new()
                 .width(Parent)
                 .height(36.0)
-                .radius(6.0)
-                .fill(overlay_color)
-                .border(1.0, border_color)
+                .radius(radius::SM)
+                .fill(tokens.surface_elevated)
+                .border(1.0, tokens.border_subtle)
                 .padding(Padding {
                     top: 2.0,
                     bottom: 2.0,
@@ -232,12 +245,23 @@ pub fn render_tray_drawer(manifest: &ShellManifest, font: &str) -> Box<dyn Widge
                     Row::new(vec![
                         Box::new(
                             Row::new(vec![
-                                Box::new(Text::new(glyph).size(14.0).color(amber_color).font(font)),
-                                Box::new(Text::new(title).size(11.0).color(fg_color).font(font)),
+                                Box::new(
+                                    Text::new(glyph)
+                                        .size(14.0)
+                                        .color(tokens.accent)
+                                        .font(font)
+                                        .tight(),
+                                ),
+                                Box::new(
+                                    Text::new(title)
+                                        .size(11.0)
+                                        .color(tokens.text_primary)
+                                        .font(font),
+                                ),
                                 Box::new(
                                     Text::new(format!("• {status}"))
                                         .size(9.0)
-                                        .color(steel_color)
+                                        .color(tokens.text_muted)
                                         .font(font),
                                 ),
                             ])
@@ -250,25 +274,28 @@ pub fn render_tray_drawer(manifest: &ShellManifest, font: &str) -> Box<dyn Widge
                                     Rectangle::new()
                                         .width(62.0)
                                         .height(24.0)
-                                        .radius(4.0)
-                                        .fill(surface_color)
-                                        .border(1.0, border_color)
+                                        .radius(radius::SM)
+                                        .fill(tokens.surface)
+                                        .border(1.0, tokens.border_subtle)
                                         .cursor(Pointer)
                                         .align_child(Center, Center)
                                         .on_click(move |_| {
                                             TrayService::activate(idx);
                                         })
                                         .child(
-                                            Text::new("Open").size(10.0).color(fg_color).font(font),
+                                            Text::new("Open")
+                                                .size(10.0)
+                                                .color(tokens.text_primary)
+                                                .font(font),
                                         ),
                                 ),
                                 Box::new(
                                     Rectangle::new()
                                         .width(52.0)
                                         .height(24.0)
-                                        .radius(4.0)
-                                        .fill(surface_color)
-                                        .border(1.0, border_color)
+                                        .radius(radius::SM)
+                                        .fill(tokens.surface)
+                                        .border(1.0, tokens.border_subtle)
                                         .cursor(Pointer)
                                         .align_child(Center, Center)
                                         .on_click(move |_| {
@@ -277,7 +304,7 @@ pub fn render_tray_drawer(manifest: &ShellManifest, font: &str) -> Box<dyn Widge
                                         .child(
                                             Text::new("Menu")
                                                 .size(10.0)
-                                                .color(steel_color)
+                                                .color(tokens.text_muted)
                                                 .font(font),
                                         ),
                                 ),
@@ -285,9 +312,9 @@ pub fn render_tray_drawer(manifest: &ShellManifest, font: &str) -> Box<dyn Widge
                                     Rectangle::new()
                                         .width(52.0)
                                         .height(24.0)
-                                        .radius(4.0)
-                                        .fill(surface_color)
-                                        .border(1.0, Color::from(manifest.palette.accent.as_str()))
+                                        .radius(radius::SM)
+                                        .fill(tokens.surface)
+                                        .border(1.0, tokens.danger)
                                         .cursor(Pointer)
                                         .align_child(Center, Center)
                                         .on_click(move |_| {
@@ -296,7 +323,7 @@ pub fn render_tray_drawer(manifest: &ShellManifest, font: &str) -> Box<dyn Widge
                                         .child(
                                             Text::new("Quit")
                                                 .size(10.0)
-                                                .color(crimson_color)
+                                                .color(tokens.danger)
                                                 .font(font),
                                         ),
                                 ),

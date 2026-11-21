@@ -130,12 +130,15 @@ fn elide(line: &str, font: FontRef<'static>, size: f32, width: f32) -> String {
     }
 }
 
-// where the letters' ink starts and ends, counted from the pen's starting point
-pub fn ink(content: &str, font: FontRef<'static>, size: f32) -> (f32, f32) {
+// the 2D bounding box of the ink: (left, right, bottom, top)
+// where left and right are relative to pen start, and bottom and top are relative to baseline (y > 0 is above baseline)
+pub fn ink_bounds(content: &str, font: FontRef<'static>, size: f32) -> (f32, f32, f32, f32) {
     let mut pen = 0.0;
 
     let mut left = f32::MAX;
     let mut right = f32::MIN;
+    let mut bottom = f32::MAX;
+    let mut top = f32::MIN;
 
     for letter in content.chars() {
         let measured = font::measure_letter(font, letter, size);
@@ -144,17 +147,20 @@ pub fn ink(content: &str, font: FontRef<'static>, size: f32) -> (f32, f32) {
         if let Some(bounds) = bounds(measured.font, measured.id) {
             left = left.min(pen + bounds.min.x * measured.units);
             right = right.max(pen + bounds.max.x * measured.units);
+            bottom = bottom.min(bounds.min.y * measured.units);
+            top = top.max(bounds.max.y * measured.units);
         }
 
         pen += measured.advance;
     }
 
     // nothing but spaces is as wide as its advance
-    if left > right {
-        return (0.0, pen);
+    if left > right || bottom > top {
+        let metrics = font.metrics(font::coords(font)).scale(size);
+        return (0.0, pen, -metrics.descent, metrics.ascent);
     }
 
-    (left, right)
+    (left, right, bottom, top)
 }
 
 // the box around a letter's outline, in the font's own units; none for a space
@@ -169,7 +175,7 @@ fn bounds(font: FontRef<'static>, id: u16) -> Option<Bounds> {
 
         let bounds = shape.bounds();
 
-        if bounds.width() == 0.0 {
+        if bounds.width() == 0.0 && bounds.height() == 0.0 {
             return None;
         }
 

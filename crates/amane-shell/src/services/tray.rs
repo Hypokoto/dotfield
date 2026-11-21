@@ -17,7 +17,7 @@ pub struct TrayItem {
 impl TrayItem {
     /// Maps the application ID or icon name to a recognizable Nerd Font glyph.
     pub fn glyph(&self) -> &'static str {
-        let needle = format!("{} {}", self.id, self.icon_name).to_lowercase();
+        let needle = format!("{} {} {}", self.id, self.icon_name, self.title).to_lowercase();
         if needle.contains("discord") || needle.contains("vesktop") {
             "󰙯"
         } else if needle.contains("steam") {
@@ -36,19 +36,41 @@ impl TrayItem {
             "󰇣"
         } else if needle.contains("nextcloud") {
             "󰍡"
-        } else if needle.contains("torrent") || needle.contains("transmission") {
+        } else if needle.contains("torrent")
+            || needle.contains("transmission")
+            || needle.contains("deluge")
+        {
             "󰇚"
         } else if needle.contains("slack") {
             "󰒱"
         } else if needle.contains("element") || needle.contains("matrix") {
             "󰘑"
-        } else if needle.contains("flameshot") {
+        } else if needle.contains("flameshot") || needle.contains("screenshot") {
             "󰹑"
         } else if needle.contains("keepass")
             || needle.contains("bitwarden")
+            || needle.contains("1password")
             || needle.contains("pass")
         {
             "󰌋"
+        } else if needle.contains("network")
+            || needle.contains("wifi")
+            || needle.contains("nm-applet")
+        {
+            "󰤨"
+        } else if needle.contains("volume")
+            || needle.contains("audio")
+            || needle.contains("pavucontrol")
+        {
+            "󰕾"
+        } else if needle.contains("bluetooth") || needle.contains("blueman") {
+            "󰂯"
+        } else if needle.contains("mail") || needle.contains("thunderbird") {
+            "󰇮"
+        } else if needle.contains("tailscale") {
+            "󰢾"
+        } else if needle.contains("docker") {
+            "󰡨"
         } else {
             "󰀻"
         }
@@ -87,7 +109,13 @@ impl Service for TrayService {
     }
 
     fn listen() {
-        // Event-driven via StatusNotifierWatcher server started by TrayService::start()
+        loop {
+            thread::sleep(Duration::from_secs(2));
+            let mut tray = TrayService::write();
+            if !tray.update() {
+                tray.quiet();
+            }
+        }
     }
 }
 
@@ -101,7 +129,7 @@ impl TrayService {
 
     fn run_watcher_server() {
         let bus = Bus::session();
-        let methods = bus.methods("/StatusNotifierWatcher", "org.kde.StatusNotifierWatcher");
+        let methods = bus.methods_for_path("/StatusNotifierWatcher");
 
         let owned_kde = bus.own("org.kde.StatusNotifierWatcher");
         let _owned_fd = bus.own("org.freedesktop.StatusNotifierWatcher");
@@ -111,6 +139,19 @@ impl TrayService {
             tray.watcher_active = true;
         }
 
+        bus.emit(
+            "/StatusNotifierWatcher",
+            "org.kde.StatusNotifierWatcher",
+            "StatusNotifierHostRegistered",
+            &[],
+        );
+        bus.emit(
+            "/StatusNotifierWatcher",
+            "org.freedesktop.StatusNotifierWatcher",
+            "StatusNotifierHostRegistered",
+            &[],
+        );
+
         for method in methods {
             Self::handle_method(&method);
         }
@@ -118,36 +159,197 @@ impl TrayService {
 
     fn handle_method(method: &Method) {
         let bus = Bus::session();
-        match method.name() {
+        let interface = method.interface().unwrap_or_default();
+        let name = method.name();
+
+        if interface == "org.freedesktop.DBus.Introspectable" && name == "Introspect" {
+            const INTROSPECTION_XML: &str = r#"<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node>
+  <interface name="org.kde.StatusNotifierWatcher">
+    <method name="RegisterStatusNotifierItem">
+      <arg name="service" type="s" direction="in"/>
+    </method>
+    <method name="RegisterStatusNotifierHost">
+      <arg name="service" type="s" direction="in"/>
+    </method>
+    <property name="RegisteredStatusNotifierItems" type="as" access="read"/>
+    <property name="IsStatusNotifierHostRegistered" type="b" access="read"/>
+    <property name="ProtocolVersion" type="i" access="read"/>
+    <signal name="StatusNotifierItemRegistered">
+      <arg type="s"/>
+    </signal>
+    <signal name="StatusNotifierItemUnregistered">
+      <arg type="s"/>
+    </signal>
+    <signal name="StatusNotifierHostRegistered"/>
+  </interface>
+  <interface name="org.freedesktop.StatusNotifierWatcher">
+    <method name="RegisterStatusNotifierItem">
+      <arg name="service" type="s" direction="in"/>
+    </method>
+    <method name="RegisterStatusNotifierHost">
+      <arg name="service" type="s" direction="in"/>
+    </method>
+    <property name="RegisteredStatusNotifierItems" type="as" access="read"/>
+    <property name="IsStatusNotifierHostRegistered" type="b" access="read"/>
+    <property name="ProtocolVersion" type="i" access="read"/>
+    <signal name="StatusNotifierItemRegistered">
+      <arg type="s"/>
+    </signal>
+    <signal name="StatusNotifierItemUnregistered">
+      <arg type="s"/>
+    </signal>
+    <signal name="StatusNotifierHostRegistered"/>
+  </interface>
+  <interface name="org.freedesktop.DBus.Introspectable">
+    <method name="Introspect">
+      <arg name="data" type="s" direction="out"/>
+    </method>
+  </interface>
+  <interface name="org.freedesktop.DBus.Properties">
+    <method name="Get">
+      <arg name="interface_name" type="s" direction="in"/>
+      <arg name="property_name" type="s" direction="in"/>
+      <arg name="value" type="v" direction="out"/>
+    </method>
+    <method name="GetAll">
+      <arg name="interface_name" type="s" direction="in"/>
+      <arg name="props" type="a{sv}" direction="out"/>
+    </method>
+  </interface>
+</node>"#;
+            method.reply(&[Argument::from(INTROSPECTION_XML)]);
+            return;
+        }
+
+        if interface == "org.freedesktop.DBus.Properties" {
+            match name {
+                "Get" => {
+                    let prop = method.arguments().get(1).map(|v| v.text()).unwrap_or("");
+                    match prop {
+                        "RegisteredStatusNotifierItems" => {
+                            let tray = TrayService::read();
+                            let items: Vec<String> = tray
+                                .items
+                                .iter()
+                                .map(|i| {
+                                    if i.path == "/StatusNotifierItem" {
+                                        i.service.clone()
+                                    } else {
+                                        format!("{}:{}", i.service, i.path)
+                                    }
+                                })
+                                .collect();
+                            method.reply(&[Argument::Variant(Box::new(Argument::TextList(items)))]);
+                        }
+                        "IsStatusNotifierHostRegistered" => {
+                            method.reply(&[Argument::Variant(Box::new(Argument::Bool(true)))]);
+                        }
+                        "ProtocolVersion" => {
+                            method.reply(&[Argument::Variant(Box::new(Argument::Int(0)))]);
+                        }
+                        _ => {
+                            method.reply(&[]);
+                        }
+                    }
+                    return;
+                }
+                "GetAll" => {
+                    let tray = TrayService::read();
+                    let items: Vec<String> = tray
+                        .items
+                        .iter()
+                        .map(|i| {
+                            if i.path == "/StatusNotifierItem" {
+                                i.service.clone()
+                            } else {
+                                format!("{}:{}", i.service, i.path)
+                            }
+                        })
+                        .collect();
+                    let mut map = std::collections::BTreeMap::new();
+                    map.insert(
+                        "RegisteredStatusNotifierItems".to_string(),
+                        Argument::Variant(Box::new(Argument::TextList(items))),
+                    );
+                    map.insert(
+                        "IsStatusNotifierHostRegistered".to_string(),
+                        Argument::Variant(Box::new(Argument::Bool(true))),
+                    );
+                    map.insert(
+                        "ProtocolVersion".to_string(),
+                        Argument::Variant(Box::new(Argument::Int(0))),
+                    );
+                    method.reply(&[Argument::Map(map)]);
+                    return;
+                }
+                _ => {
+                    method.reply(&[]);
+                    return;
+                }
+            }
+        }
+
+        match name {
             "RegisterStatusNotifierItem" => {
                 if let Some(arg) = method.arguments().first() {
                     let service_or_path = arg.text().to_string();
                     if !service_or_path.is_empty() {
+                        let sender = method.sender().unwrap_or_default().to_string();
                         let (service, path) = if service_or_path.starts_with('/') {
-                            (service_or_path.clone(), service_or_path)
+                            let s = if !sender.is_empty() {
+                                sender
+                            } else {
+                                service_or_path.clone()
+                            };
+                            (s, service_or_path)
                         } else {
                             (service_or_path, "/StatusNotifierItem".to_string())
                         };
 
-                        Self::register_item(&service, &path);
-                        bus.emit(
-                            "/StatusNotifierWatcher",
-                            "org.kde.StatusNotifierWatcher",
-                            "StatusNotifierItemRegistered",
-                            &[Argument::from(service.as_str())],
-                        );
+                        method.reply(&[]);
+
+                        thread::spawn(move || {
+                            Self::register_item(&service, &path);
+                            let bus = Bus::session();
+                            let id_for_signal = if path == "/StatusNotifierItem" {
+                                service.clone()
+                            } else {
+                                format!("{}:{}", service, path)
+                            };
+                            bus.emit(
+                                "/StatusNotifierWatcher",
+                                "org.kde.StatusNotifierWatcher",
+                                "StatusNotifierItemRegistered",
+                                &[Argument::from(id_for_signal.as_str())],
+                            );
+                            bus.emit(
+                                "/StatusNotifierWatcher",
+                                "org.freedesktop.StatusNotifierWatcher",
+                                "StatusNotifierItemRegistered",
+                                &[Argument::from(id_for_signal.as_str())],
+                            );
+                        });
+                        return;
                     }
                 }
                 method.reply(&[]);
             }
             "RegisterStatusNotifierHost" => {
+                method.reply(&[]);
                 bus.emit(
                     "/StatusNotifierWatcher",
                     "org.kde.StatusNotifierWatcher",
                     "StatusNotifierHostRegistered",
                     &[],
                 );
-                method.reply(&[]);
+                bus.emit(
+                    "/StatusNotifierWatcher",
+                    "org.freedesktop.StatusNotifierWatcher",
+                    "StatusNotifierHostRegistered",
+                    &[],
+                );
             }
             _ => {
                 method.reply(&[]);
@@ -157,22 +359,59 @@ impl TrayService {
 
     fn register_item(service: &str, path: &str) {
         let bus = Bus::session();
-        let id = bus
+        let mut id = bus
             .property(service, path, "org.kde.StatusNotifierItem", "Id")
             .text()
             .to_string();
-        let title = bus
+        if id.is_empty() {
+            id = bus
+                .property(service, path, "org.freedesktop.StatusNotifierItem", "Id")
+                .text()
+                .to_string();
+        }
+
+        let mut title = bus
             .property(service, path, "org.kde.StatusNotifierItem", "Title")
             .text()
             .to_string();
-        let icon_name = bus
+        if title.is_empty() {
+            title = bus
+                .property(service, path, "org.freedesktop.StatusNotifierItem", "Title")
+                .text()
+                .to_string();
+        }
+
+        let mut icon_name = bus
             .property(service, path, "org.kde.StatusNotifierItem", "IconName")
             .text()
             .to_string();
-        let status = bus
+        if icon_name.is_empty() {
+            icon_name = bus
+                .property(
+                    service,
+                    path,
+                    "org.freedesktop.StatusNotifierItem",
+                    "IconName",
+                )
+                .text()
+                .to_string();
+        }
+
+        let mut status = bus
             .property(service, path, "org.kde.StatusNotifierItem", "Status")
             .text()
             .to_string();
+        if status.is_empty() {
+            status = bus
+                .property(
+                    service,
+                    path,
+                    "org.freedesktop.StatusNotifierItem",
+                    "Status",
+                )
+                .text()
+                .to_string();
+        }
 
         let item = TrayItem {
             service: service.to_string(),

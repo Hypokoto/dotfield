@@ -72,6 +72,10 @@ dotfield/
 │   ├── firejail/
 │   ├── flatpak/
 │   └── nft/
+├── network/                # Network stability & kernel wireless configs
+│   ├── NetworkManager/
+│   │   └── conf.d/         # Global Wi-Fi power saving disable drop-ins
+│   └── modprobe.d/         # PCIe ASPM fix for MediaTek wireless
 ├── scripts/                # Standalone helper scripts
 ├── docs/                   # Architectural blueprints and roadmap
 ├── crates/

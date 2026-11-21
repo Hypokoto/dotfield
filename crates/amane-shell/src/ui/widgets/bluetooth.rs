@@ -130,7 +130,7 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
             Text::new("Bluetooth Devices")
                 .size(typography::BADGE)
                 .color(tokens.accent)
-                .font(font),
+                .font(&tokens.font_sans),
         ),
         Box::new(
             Text::new(format!(

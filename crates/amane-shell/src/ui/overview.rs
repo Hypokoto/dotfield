@@ -5,8 +5,8 @@
 use std::time::{Duration, Instant};
 
 use amane::{
-    Align, Center, Color, Column, Full, Key, Keyboard, Layer, LayerWindow, OutputTarget, Padding,
-    Parent, Pointer, Rectangle, Row, Service, Text, Widget, Zone,
+    Align, Center, Column, Full, Key, Keyboard, Layer, LayerWindow, OutputTarget, Padding, Parent,
+    Pointer, Rectangle, Row, Service, Text, Widget, Zone,
 };
 
 use crate::config::ConfigService;
@@ -286,7 +286,7 @@ pub fn overview_overlay() -> LayerWindow {
     let backdrop = Rectangle::new()
         .width(Parent)
         .height(Parent)
-        .fill(Color::rgba(10, 10, 14, 210))
+        .fill(tokens.acrylic_bg)
         .align_child(Center, Center)
         .child(overview_container);
 

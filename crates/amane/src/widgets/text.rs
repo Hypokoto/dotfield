@@ -104,7 +104,7 @@ impl Widget for Text {
         }
 
         if self.tight {
-            let (left, right) = lines::ink(&self.content, self.face(), self.size);
+            let (left, right, _, _) = lines::ink_bounds(&self.content, self.face(), self.size);
 
             return Size::Fixed(right - left);
         }
@@ -123,17 +123,29 @@ impl Widget for Text {
             (true, None) => return Size::Parent,
         };
 
+        if self.tight && !self.rules.wrap && !self.rules.elide {
+            let (_, _, bottom, top) = lines::ink_bounds(&self.content, self.face(), self.size);
+
+            return Size::Fixed((top - bottom).max(0.0));
+        }
+
         Size::Fixed(lines::stack_height(self.face(), self.size, count))
     }
 
     fn draw(&self, renderer: &mut Renderer, area: Area) {
         let font = self.face();
 
-        // the ink starts at the area's left edge, not the pen
+        // the ink starts at the area's top-left edge, not the pen or baseline
         let area = if self.tight {
-            let (left, _) = lines::ink(&self.content, font, self.size);
+            let (left, _, _, top) = lines::ink_bounds(&self.content, font, self.size);
+            let ascent = font.metrics(font::coords(font)).scale(self.size).ascent;
 
-            Area::new(area.x - left, area.y, area.width, area.height)
+            Area::new(
+                area.x - left,
+                area.y - (ascent - top),
+                area.width,
+                area.height,
+            )
         } else {
             area
         };

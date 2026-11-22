@@ -262,10 +262,22 @@ fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         .child(
             Column::new(vec![
                 Box::new(
-                    Text::new("󰍛 CPU")
-                        .size(typography::BADGE)
-                        .color(cpu_color)
-                        .font(&tokens.font_sans),
+                    Row::new(vec![
+                        Box::new(
+                            Text::new("󰍛")
+                                .size(typography::BADGE)
+                                .color(cpu_color)
+                                .font(&tokens.font_mono),
+                        ),
+                        Box::new(
+                            Text::new("CPU")
+                                .size(typography::BADGE)
+                                .color(cpu_color)
+                                .font(&tokens.font_sans),
+                        ),
+                    ])
+                    .gap(4.0)
+                    .align(Align::Center),
                 ),
                 Box::new(
                     Text::new(format!("{cpu}%"))
@@ -302,10 +314,22 @@ fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         .child(
             Column::new(vec![
                 Box::new(
-                    Text::new("󰘚 RAM")
-                        .size(typography::BADGE)
-                        .color(ram_color)
-                        .font(&tokens.font_sans),
+                    Row::new(vec![
+                        Box::new(
+                            Text::new("󰘚")
+                                .size(typography::BADGE)
+                                .color(ram_color)
+                                .font(&tokens.font_mono),
+                        ),
+                        Box::new(
+                            Text::new("RAM")
+                                .size(typography::BADGE)
+                                .color(ram_color)
+                                .font(&tokens.font_sans),
+                        ),
+                    ])
+                    .gap(4.0)
+                    .align(Align::Center),
                 ),
                 Box::new(
                     Text::new(format!("{mem_pct}% ({used_gib:.1}/{total_gib:.0}G)"))
@@ -319,11 +343,11 @@ fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     metrics.push(Box::new(ram_card));
 
     // Battery / Power Card
-    let bat_text = if battery.present() {
+    let (bat_icon, bat_text) = if battery.present() {
         let icon = if battery.charging() { "󰂄" } else { "󰁹" };
-        format!("{icon} {}%", battery.percent())
+        (icon, format!("{}%", battery.percent()))
     } else {
-        "󰚥 AC Online".to_string()
+        ("󰚥", "AC Online".to_string())
     };
     let bat_card = Rectangle::new()
         .width(112.0)
@@ -340,10 +364,22 @@ fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         .child(
             Column::new(vec![
                 Box::new(
-                    Text::new("󰚥 Power")
-                        .size(typography::BADGE)
-                        .color(tokens.accent)
-                        .font(&tokens.font_sans),
+                    Row::new(vec![
+                        Box::new(
+                            Text::new(bat_icon)
+                                .size(typography::BADGE)
+                                .color(tokens.accent)
+                                .font(&tokens.font_mono),
+                        ),
+                        Box::new(
+                            Text::new("Power")
+                                .size(typography::BADGE)
+                                .color(tokens.accent)
+                                .font(&tokens.font_sans),
+                        ),
+                    ])
+                    .gap(4.0)
+                    .align(Align::Center),
                 ),
                 Box::new(
                     Text::new(bat_text)
@@ -740,12 +776,17 @@ fn render_subview_header(title: &str, icon: &str, tokens: &ThemeTokens, _font: &
     .align(Align::Center);
 
     let close_btn = components::close_button(close, tokens);
+    let close_box = Rectangle::new()
+        .width(86.0)
+        .height(28.0)
+        .align_child(Align::End, Align::Center)
+        .child(close_btn);
 
     Rectangle::new().width(Parent).height(28.0).child(
         Row::new(vec![
             Box::new(back_btn),
             Box::new(title_block),
-            Box::new(close_btn),
+            Box::new(close_box),
         ])
         .width(Parent)
         .justify(Justify::SpaceBetween)
@@ -768,7 +809,7 @@ fn render_sliders(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         slider_w,
         34.0,
         if is_muted { "󰖁" } else { "󰕾" },
-        &format!("Volume {vol}%"),
+        "Volume",
         is_muted,
         tokens,
         |step| {
@@ -787,7 +828,7 @@ fn render_sliders(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         slider_w,
         34.0,
         "󰃠",
-        &format!("Brightness {bright}%"),
+        "Brightness",
         false,
         tokens,
         |step| {
@@ -1025,11 +1066,11 @@ fn render_appearance(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     .align(Align::Center);
 
     let wallpaper_btn = Rectangle::new()
-        .width(110.0)
+        .width(104.0)
         .height(26.0)
         .radius(radius::PILL)
         .fill(tokens.surface_active)
-        .border(1.0, tokens.border_focus)
+        .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(|_| {
@@ -1038,10 +1079,22 @@ fn render_appearance(tokens: &ThemeTokens, _font: &str) -> Rectangle {
                 .spawn();
         })
         .child(
-            Text::new("󰸉 Next Wall")
-                .size(typography::BADGE)
-                .color(tokens.text_primary)
-                .font(&tokens.font_sans),
+            Row::new(vec![
+                Box::new(
+                    Text::new("󰸉")
+                        .size(12.0)
+                        .color(tokens.accent)
+                        .font(&tokens.font_mono),
+                ),
+                Box::new(
+                    Text::new("Next Wall")
+                        .size(typography::BADGE)
+                        .color(tokens.text_primary)
+                        .font(&tokens.font_sans),
+                ),
+            ])
+            .gap(spacing::GAP_XS)
+            .align(Align::Center),
         );
 
     let row = Row::new(vec![Box::new(theme_badge), Box::new(wallpaper_btn)])

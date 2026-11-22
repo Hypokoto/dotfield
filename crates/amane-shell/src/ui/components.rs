@@ -290,7 +290,42 @@ pub fn action_card(
     let avail_width = (width - spacing::PAD_MD * 2.0).max(60.0);
     let (badge_widget, badge_space) = if let Some(badge_text) = badge {
         let badge_w = (badge_text.chars().count() as f32 * 7.5 + 14.0).max(22.0);
-        (Some(keycap(badge_text, tokens)), badge_w + spacing::GAP_MD)
+        let pill_badge = Rectangle::new()
+            .width(badge_w)
+            .height(20.0)
+            .radius(radius::PILL)
+            .fill(if selected {
+                tokens.accent_tint
+            } else {
+                tokens.surface_elevated
+            })
+            .border(
+                1.0,
+                if selected {
+                    tokens.border_focus
+                } else {
+                    tokens.border_subtle
+                },
+            )
+            .padding(Padding {
+                top: 2.0,
+                bottom: 2.0,
+                left: 6.0,
+                right: 6.0,
+            })
+            .align_child(Center, Center)
+            .child(
+                Text::new(badge_text)
+                    .size(typography::CAPTION)
+                    .color(if selected {
+                        tokens.accent
+                    } else {
+                        tokens.text_primary
+                    })
+                    .font(&tokens.font_sans)
+                    .tight(),
+            );
+        (Some(pill_badge), badge_w + spacing::GAP_MD)
     } else {
         (None, 0.0)
     };
@@ -600,7 +635,7 @@ where
         .height(slider_height)
         .radius(radius::MD)
         .fill(if is_muted {
-            tokens.danger
+            tokens.surface_track
         } else {
             tokens.surface_active
         });
@@ -613,7 +648,7 @@ where
                 .height(26.0)
                 .radius(radius::PILL)
                 .fill(if is_muted {
-                    tokens.danger
+                    tokens.danger_subtle
                 } else {
                     tokens.surface_elevated
                 })
@@ -631,7 +666,7 @@ where
                 .child(
                     Text::new(icon)
                         .size(typography::BODY_LG)
-                        .color(if is_muted { Color::WHITE } else { icon_color })
+                        .color(if is_muted { tokens.danger } else { icon_color })
                         .font(&tokens.font_mono),
                 ),
         )

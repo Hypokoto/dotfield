@@ -41,18 +41,30 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
             Bluetooth::set_powered(!is_powered);
         })
         .child(
-            Text::new(if is_powered {
-                "󰂯 BlueZ ON"
-            } else {
-                "󰂲 BlueZ OFF"
-            })
-            .size(typography::SECONDARY)
-            .color(if is_powered {
-                tokens.accent
-            } else {
-                tokens.text_primary
-            })
-            .font(&tokens.font_sans),
+            Row::new(vec![
+                Box::new(
+                    Text::new(if is_powered { "󰂯" } else { "󰂲" })
+                        .size(13.0)
+                        .color(if is_powered {
+                            tokens.accent
+                        } else {
+                            tokens.text_primary
+                        })
+                        .font(&tokens.font_mono),
+                ),
+                Box::new(
+                    Text::new(if is_powered { "BlueZ ON" } else { "BlueZ OFF" })
+                        .size(typography::SECONDARY)
+                        .color(if is_powered {
+                            tokens.accent
+                        } else {
+                            tokens.text_primary
+                        })
+                        .font(&tokens.font_sans),
+                ),
+            ])
+            .gap(spacing::GAP_XS)
+            .align(Align::Center),
         );
 
     let scan_btn = Rectangle::new()
@@ -82,14 +94,26 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
             }
         })
         .child(
-            Text::new(if is_scanning {
-                "󰑐 Scanning..."
-            } else {
-                "󰑐 Scan Devices"
-            })
-            .size(typography::SECONDARY)
-            .color(tokens.accent)
-            .font(&tokens.font_sans),
+            Row::new(vec![
+                Box::new(
+                    Text::new("󰑐")
+                        .size(13.0)
+                        .color(tokens.accent)
+                        .font(&tokens.font_mono),
+                ),
+                Box::new(
+                    Text::new(if is_scanning {
+                        "Scanning..."
+                    } else {
+                        "Scan Devices"
+                    })
+                    .size(typography::SECONDARY)
+                    .color(tokens.accent)
+                    .font(&tokens.font_sans),
+                ),
+            ])
+            .gap(spacing::GAP_XS)
+            .align(Align::Center),
         );
 
     let status_summary = Rectangle::new()
@@ -239,9 +263,9 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
                         ),
                         Box::new(
                             Rectangle::new()
-                                .width(140.0)
+                                .width(148.0)
                                 .height(26.0)
-                                .radius(radius::SM)
+                                .radius(radius::PILL)
                                 .fill(tokens.accent_tint)
                                 .border(1.0, tokens.border_focus)
                                 .cursor(Pointer)
@@ -250,10 +274,22 @@ pub fn render_bluetooth_widget(manifest: &ShellManifest, font: &str) -> Box<dyn 
                                     Bluetooth::start_scan();
                                 })
                                 .child(
-                                    Text::new("󰑐 Scan for Devices")
-                                        .size(typography::CAPTION)
-                                        .color(tokens.accent)
-                                        .font(&tokens.font_sans),
+                                    Row::new(vec![
+                                        Box::new(
+                                            Text::new("󰑐")
+                                                .size(12.0)
+                                                .color(tokens.accent)
+                                                .font(&tokens.font_mono),
+                                        ),
+                                        Box::new(
+                                            Text::new("Scan for Devices")
+                                                .size(typography::CAPTION)
+                                                .color(tokens.accent)
+                                                .font(&tokens.font_sans),
+                                        ),
+                                    ])
+                                    .gap(spacing::GAP_XS)
+                                    .align(Align::Center),
                                 ),
                         ),
                     ])

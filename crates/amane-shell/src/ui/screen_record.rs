@@ -309,12 +309,17 @@ pub fn screen_record_overlay() -> LayerWindow {
                 Column::new(vec![
                     Box::new(
                         Row::new(vec![
-                            Box::new(Text::new("󰩭").size(20.0).color(tokens.accent).font(&font)),
+                            Box::new(
+                                Text::new("󰩭")
+                                    .size(20.0)
+                                    .color(tokens.accent)
+                                    .font(&tokens.font_mono),
+                            ),
                             Box::new(
                                 Text::new("Region")
                                     .size(typography::BODY)
                                     .color(tokens.text_primary)
-                                    .font(&font),
+                                    .font(&tokens.font_sans),
                             ),
                             Box::new(components::keycap("R", &tokens)),
                         ])
@@ -325,7 +330,7 @@ pub fn screen_record_overlay() -> LayerWindow {
                         Text::new("Select area with slurp")
                             .size(typography::CAPTION)
                             .color(tokens.text_muted)
-                            .font(&font),
+                            .font(&tokens.font_sans),
                     ),
                 ])
                 .gap(4.0)
@@ -347,12 +352,17 @@ pub fn screen_record_overlay() -> LayerWindow {
                 Column::new(vec![
                     Box::new(
                         Row::new(vec![
-                            Box::new(Text::new("󰍹").size(20.0).color(tokens.accent).font(&font)),
+                            Box::new(
+                                Text::new("󰍹")
+                                    .size(20.0)
+                                    .color(tokens.accent)
+                                    .font(&tokens.font_mono),
+                            ),
                             Box::new(
                                 Text::new("Fullscreen")
                                     .size(typography::BODY)
                                     .color(tokens.text_primary)
-                                    .font(&font),
+                                    .font(&tokens.font_sans),
                             ),
                             Box::new(components::keycap("F", &tokens)),
                         ])
@@ -363,7 +373,7 @@ pub fn screen_record_overlay() -> LayerWindow {
                         Text::new("Record entire display")
                             .size(typography::CAPTION)
                             .color(tokens.text_muted)
-                            .font(&font),
+                            .font(&tokens.font_sans),
                     ),
                 ])
                 .gap(4.0)
@@ -400,14 +410,26 @@ pub fn screen_record_overlay() -> LayerWindow {
             .child(
                 Row::new(vec![
                     Box::new(
-                        Text::new(if rec.with_audio {
-                            "󰍬 Mic Audio: On"
-                        } else {
-                            "󰍭 Mic Audio: Off"
-                        })
-                        .size(typography::SECONDARY)
-                        .color(audio_fg)
-                        .font(&font),
+                        Row::new(vec![
+                            Box::new(
+                                Text::new(if rec.with_audio { "󰍬" } else { "󰍭" })
+                                    .size(13.0)
+                                    .color(audio_fg)
+                                    .font(&tokens.font_mono),
+                            ),
+                            Box::new(
+                                Text::new(if rec.with_audio {
+                                    "Mic Audio: On"
+                                } else {
+                                    "Mic Audio: Off"
+                                })
+                                .size(typography::SECONDARY)
+                                .color(audio_fg)
+                                .font(&tokens.font_sans),
+                            ),
+                        ])
+                        .gap(spacing::GAP_XS)
+                        .align(Align::Center),
                     ),
                     Box::new(components::keycap("A", &tokens)),
                 ])

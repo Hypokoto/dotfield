@@ -451,7 +451,7 @@ fn render_right_cluster(
 
     // 7. Far-Right "Show Desktop" / Task View sliver
     let show_desktop_sliver = Rectangle::new()
-        .width(8.0)
+        .width(6.0)
         .height(34.0)
         .radius(radius::SM)
         .fill(Color::TRANSPARENT)
@@ -462,10 +462,10 @@ fn render_right_cluster(
         })
         .child(
             Rectangle::new()
-                .width(3.0)
-                .height(22.0)
+                .width(2.0)
+                .height(18.0)
                 .radius(radius::PILL)
-                .fill(tokens.accent),
+                .fill(tokens.border_subtle),
         );
     pills.push(Box::new(show_desktop_sliver));
 

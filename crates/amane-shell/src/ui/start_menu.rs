@@ -788,38 +788,38 @@ pub fn start_menu_overlay() -> LayerWindow {
                         };
 
                         let app_name = app.name().to_string();
+                        let display_name: String = if app_name.chars().count() > 18 {
+                            format!("{}…", app_name.chars().take(17).collect::<String>())
+                        } else {
+                            app_name.clone()
+                        };
                         let app_desc = app.description().unwrap_or("Application").to_string();
-                        let desc_truncated: String = if app_desc.chars().count() > 30 {
-                            format!("{}…", app_desc.chars().take(28).collect::<String>())
+                        let desc_truncated: String = if app_desc.chars().count() > 24 {
+                            format!("{}…", app_desc.chars().take(22).collect::<String>())
                         } else {
                             app_desc
                         };
 
                         let is_pinned_app = is_pinned(&app_name);
                         let pin_icon = if is_pinned_app { "󰤰" } else { "󰤱" };
-                        let pin_color = if is_pinned_app {
-                            tokens.accent
-                        } else {
-                            tokens.text_secondary
-                        };
                         let app_name_for_pin = app_name.clone();
                         let app_name_for_card = app_name.clone();
 
                         let pin_btn = Rectangle::new()
-                            .width(28.0)
-                            .height(28.0)
+                            .width(26.0)
+                            .height(26.0)
                             .radius(radius::SM)
                             .fill(if is_pinned_app {
-                                tokens.surface_hover
+                                tokens.surface_active
                             } else {
-                                tokens.surface_elevated
+                                Color::TRANSPARENT
                             })
                             .border(
                                 1.0,
                                 if is_pinned_app {
                                     tokens.border_focus
                                 } else {
-                                    tokens.border_subtle
+                                    Color::TRANSPARENT
                                 },
                             )
                             .cursor(Pointer)
@@ -829,8 +829,12 @@ pub fn start_menu_overlay() -> LayerWindow {
                             })
                             .child(
                                 Text::new(pin_icon)
-                                    .size(14.0)
-                                    .color(pin_color)
+                                    .size(13.0)
+                                    .color(if is_pinned_app {
+                                        tokens.accent
+                                    } else {
+                                        tokens.text_muted
+                                    })
                                     .font(&tokens.font_mono),
                             );
 
@@ -877,7 +881,7 @@ pub fn start_menu_overlay() -> LayerWindow {
                                             Box::new(
                                                 Column::new(vec![
                                                     Box::new(
-                                                        Text::new(&app_name)
+                                                        Text::new(&display_name)
                                                             .size(typography::SECONDARY)
                                                             .color(tokens.text_primary)
                                                             .font(&tokens.font_sans),
@@ -889,6 +893,7 @@ pub fn start_menu_overlay() -> LayerWindow {
                                                             .font(&tokens.font_sans),
                                                     ),
                                                 ])
+                                                .width(190.0)
                                                 .align(Align::Start)
                                                 .gap(1.0),
                                             ),

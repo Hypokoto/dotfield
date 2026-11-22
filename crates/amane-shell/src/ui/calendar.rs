@@ -191,8 +191,8 @@ pub fn calendar_overlay() -> LayerWindow {
                         .width(28.0)
                         .height(26.0)
                         .radius(radius::PILL)
-                        .fill(tokens.surface_active)
-                        .border(1.0, tokens.border_focus)
+                        .fill(tokens.surface_elevated)
+                        .border(1.0, tokens.border_subtle)
                         .cursor(Pointer)
                         .align_child(Center, Center)
                         .on_click(|_| {
@@ -216,8 +216,8 @@ pub fn calendar_overlay() -> LayerWindow {
                         .width(28.0)
                         .height(26.0)
                         .radius(radius::PILL)
-                        .fill(tokens.surface_active)
-                        .border(1.0, tokens.border_focus)
+                        .fill(tokens.surface_elevated)
+                        .border(1.0, tokens.border_subtle)
                         .cursor(Pointer)
                         .align_child(Center, Center)
                         .on_click(|_| {
@@ -239,8 +239,8 @@ pub fn calendar_overlay() -> LayerWindow {
                 .width(58.0)
                 .height(26.0)
                 .radius(radius::PILL)
-                .fill(tokens.surface_active)
-                .border(1.0, tokens.border_focus)
+                .fill(tokens.surface_elevated)
+                .border(1.0, tokens.border_subtle)
                 .cursor(Pointer)
                 .align_child(Center, Center)
                 .on_click(|_| {

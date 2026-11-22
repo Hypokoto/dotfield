@@ -179,8 +179,8 @@ impl ThemeTokens {
         let surface_track = Color::from(palette::VOID);
 
         let border_hover = Color::from("#454552");
-        let border_focus = accent;
-        let border_danger = Color::from(palette::BLOOD_RED);
+        let border_focus = Color::rgba(0xFF, 0xB0, 0x00, 0x88); // Soft warm amber clay highlight
+        let border_danger = Color::rgba(0xE6, 0x39, 0x46, 0x88); // Soft crimson clay highlight
 
         let accent_subtle = Color::from("#332400");
         let danger_subtle = Color::from("#361114");

@@ -18,7 +18,7 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
 
     // Controls Bar: Radio toggle, Scan button, Disconnect button
     let wifi_toggle_btn = Rectangle::new()
-        .width(96.0)
+        .width(102.0)
         .height(30.0)
         .radius(radius::SM)
         .fill(if is_wifi_enabled {
@@ -40,18 +40,34 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
             Network::set_wifi(!is_wifi_enabled);
         })
         .child(
-            Text::new(if is_wifi_enabled {
-                "󰤨 Wi-Fi ON"
-            } else {
-                "󰤭 Wi-Fi OFF"
-            })
-            .size(typography::SECONDARY)
-            .color(if is_wifi_enabled {
-                tokens.accent
-            } else {
-                tokens.text_primary
-            })
-            .font(&tokens.font_sans),
+            Row::new(vec![
+                Box::new(
+                    Text::new(if is_wifi_enabled { "󰤨" } else { "󰤭" })
+                        .size(13.0)
+                        .color(if is_wifi_enabled {
+                            tokens.accent
+                        } else {
+                            tokens.text_primary
+                        })
+                        .font(&tokens.font_mono),
+                ),
+                Box::new(
+                    Text::new(if is_wifi_enabled {
+                        "Wi-Fi ON"
+                    } else {
+                        "Wi-Fi OFF"
+                    })
+                    .size(typography::SECONDARY)
+                    .color(if is_wifi_enabled {
+                        tokens.accent
+                    } else {
+                        tokens.text_primary
+                    })
+                    .font(&tokens.font_sans),
+                ),
+            ])
+            .gap(spacing::GAP_XS)
+            .align(Align::Center),
         );
 
     let scan_btn = Rectangle::new()
@@ -66,14 +82,26 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
             Network::scan();
         })
         .child(
-            Text::new("󰑐 Scan")
-                .size(typography::SECONDARY)
-                .color(tokens.accent)
-                .font(&tokens.font_sans),
+            Row::new(vec![
+                Box::new(
+                    Text::new("󰑐")
+                        .size(13.0)
+                        .color(tokens.accent)
+                        .font(&tokens.font_mono),
+                ),
+                Box::new(
+                    Text::new("Scan")
+                        .size(typography::SECONDARY)
+                        .color(tokens.accent)
+                        .font(&tokens.font_sans),
+                ),
+            ])
+            .gap(spacing::GAP_XS)
+            .align(Align::Center),
         );
 
     let disconnect_btn = Rectangle::new()
-        .width(96.0)
+        .width(108.0)
         .height(30.0)
         .radius(radius::SM)
         .fill(if is_connected {
@@ -95,14 +123,30 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
             Network::disconnect();
         })
         .child(
-            Text::new("󰅙 Disconnect")
-                .size(typography::SECONDARY)
-                .color(if is_connected {
-                    tokens.danger
-                } else {
-                    tokens.text_muted
-                })
-                .font(&tokens.font_sans),
+            Row::new(vec![
+                Box::new(
+                    Text::new("󰅙")
+                        .size(13.0)
+                        .color(if is_connected {
+                            tokens.danger
+                        } else {
+                            tokens.text_muted
+                        })
+                        .font(&tokens.font_mono),
+                ),
+                Box::new(
+                    Text::new("Disconnect")
+                        .size(typography::SECONDARY)
+                        .color(if is_connected {
+                            tokens.danger
+                        } else {
+                            tokens.text_muted
+                        })
+                        .font(&tokens.font_sans),
+                ),
+            ])
+            .gap(spacing::GAP_XS)
+            .align(Align::Center),
         );
 
     elements.push(Box::new(

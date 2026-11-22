@@ -474,11 +474,7 @@ pub fn display_config_overlay() -> LayerWindow {
     for (idx, preset) in PRESETS.iter().enumerate() {
         let is_selected = idx == selected_idx;
         let is_hovered = hover_idx == Some(idx);
-        let badge_text = if is_selected {
-            Some("↵ Active")
-        } else {
-            None
-        };
+        let badge_text = if is_selected { Some("Active") } else { None };
 
         let icon_box = Box::new(
             Rectangle::new()
@@ -488,16 +484,9 @@ pub fn display_config_overlay() -> LayerWindow {
                 .fill(if is_selected {
                     tokens.surface_active
                 } else {
-                    tokens.surface
+                    tokens.surface_elevated
                 })
-                .border(
-                    1.0,
-                    if is_selected {
-                        tokens.border_focus
-                    } else {
-                        tokens.border_subtle
-                    },
-                )
+                .border(1.0, tokens.border_subtle)
                 .align_child(Align::Center, Align::Center)
                 .child(
                     Text::new(preset.icon)

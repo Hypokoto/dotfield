@@ -22,31 +22,11 @@ animations {
     }
 }
 
-// Dual Kawase Background Blur Tuning
-blur {
-    passes 7
-    offset 3.0
-    noise 0.01
-    saturation 1.2
-}
-
-// Terminal Glass Effect (Ghostty, Foot, Kitty, Alacritty)
-// ponytail: minimalist pure native compositor glass with clean frosted edge
+// Terminal Glass & Smooth Geometry (Ghostty, Foot, Kitty, Alacritty)
+// Native Wayland sub-surface transparency without broken dmabuf shader overrides
 window-rule {
     match app-id=r#"^(com\.mitchellh\.ghostty|floating-term|foot|kitty|Alacritty)$"#
 
-    opacity 0.78
-    geometry-corner-radius 15
+    geometry-corner-radius 12
     clip-to-geometry true
-
-    border {
-        width 0
-    }
-
-    background-effect {
-        blur true
-        xray true
-        noise 0.01
-        saturation 1.2
-    }
 }

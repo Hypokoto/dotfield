@@ -75,6 +75,24 @@ pub mod palette {
     pub const ACRYLIC_BG: &str = "#121216fa";
     pub const ACRYLIC_BORDER: &str = IRON;
 
+    // Playful Clay Palette Foundations (Soft 3D malleable clay)
+    pub const CLAY_CANVAS: &str = "#EBF2FE";
+    pub const CLAY_SURFACE: &str = "#FFFFFF";
+    pub const CLAY_SURFACE_HOVER: &str = "#F0F4FF";
+    pub const CLAY_SURFACE_ACTIVE: &str = "#E0ECFF";
+    pub const CLAY_SURFACE_SELECTED: &str = "#D8E7FF";
+    pub const CLAY_SURFACE_TRACK: &str = "#E2ECFE";
+    pub const CLAY_PRIMARY: &str = "#3B82F6";
+    pub const CLAY_PRIMARY_HOVER: &str = "#2563EB";
+    pub const CLAY_PRIMARY_SUBTLE: &str = "#EFF6FF";
+    pub const CLAY_TEXT_PRIMARY: &str = "#1C398E";
+    pub const CLAY_TEXT_SECONDARY: &str = "#5B72B4";
+    pub const CLAY_TEXT_MUTED: &str = "#8EA0D0";
+    pub const CLAY_SUCCESS: &str = "#16A34A";
+    pub const CLAY_WARNING: &str = "#D97706";
+    pub const CLAY_DANGER: &str = "#DC2626";
+    pub const CLAY_DANGER_CRITICAL: &str = "#B91C1C";
+
     // Backward-compatibility & semantic aliases mapping directly to Controlled Chaos
     pub const MATTE_DARK_CLAY: &str = VOID;
     pub const WARM_BISQUE: &str = OBSIDIAN;
@@ -150,7 +168,7 @@ impl Default for ThemeTokens {
 }
 
 impl ThemeTokens {
-    pub fn from_manifest(_manifest: &ShellManifest) -> Self {
+    pub fn dark_controlled_chaos() -> Self {
         let bg = Color::from(palette::VOID);
         let surface = Color::from(palette::OBSIDIAN);
         let surface_elevated = Color::from(palette::GRAPHITE);
@@ -220,5 +238,120 @@ impl ThemeTokens {
             font_mono: "JetBrainsMono Nerd Font".to_string(),
             accent_tint: Color::from(palette::AMBER_TINT),
         }
+    }
+
+    pub fn playful_clay() -> Self {
+        let bg = Color::from(palette::CLAY_CANVAS);
+        let surface = Color::from(palette::CLAY_SURFACE);
+        let surface_elevated = Color::from(palette::CLAY_SURFACE);
+        let surface_hover = Color::from(palette::CLAY_SURFACE_HOVER);
+        let surface_active = Color::from(palette::CLAY_SURFACE_ACTIVE);
+        let surface_selected = Color::from(palette::CLAY_SURFACE_SELECTED);
+        let surface_track = Color::from(palette::CLAY_SURFACE_TRACK);
+
+        let border_subtle = Color::rgba(28, 57, 142, 28);
+        let border_hover = Color::rgba(59, 130, 246, 120);
+        let border_focus = Color::rgba(59, 130, 246, 180);
+        let border_danger = Color::rgba(220, 38, 38, 180);
+
+        let text_primary = Color::from(palette::CLAY_TEXT_PRIMARY);
+        let text_secondary = Color::from(palette::CLAY_TEXT_SECONDARY);
+        let text_muted = Color::from(palette::CLAY_TEXT_MUTED);
+
+        let accent = Color::from(palette::CLAY_PRIMARY);
+        let accent_hover = Color::from(palette::CLAY_PRIMARY_HOVER);
+        let accent_subtle = Color::from(palette::CLAY_PRIMARY_SUBTLE);
+        let accent_tint = Color::rgba(59, 130, 246, 36);
+
+        let danger = Color::from(palette::CLAY_DANGER);
+        let danger_critical = Color::from(palette::CLAY_DANGER_CRITICAL);
+        let danger_subtle = Color::rgba(220, 38, 38, 36);
+
+        let warning = Color::from(palette::CLAY_WARNING);
+        let warning_subtle = Color::rgba(217, 119, 6, 36);
+
+        let success = Color::from(palette::CLAY_SUCCESS);
+        let steel = Color::from(palette::CLAY_TEXT_SECONDARY);
+
+        let acrylic_bg = Color::rgba(255, 255, 255, 245);
+        let acrylic_border = Color::rgba(28, 57, 142, 28);
+        let card_bg = Color::from(palette::CLAY_SURFACE);
+        let card_border = Color::rgba(28, 57, 142, 28);
+        let indicator_active = accent;
+
+        Self {
+            bg,
+            surface,
+            surface_elevated,
+            surface_hover,
+            surface_active,
+            surface_selected,
+            surface_track,
+            border_subtle,
+            border_hover,
+            border_focus,
+            border_danger,
+            text_primary,
+            text_secondary,
+            text_muted,
+            accent,
+            accent_hover,
+            accent_subtle,
+            danger,
+            danger_critical,
+            danger_subtle,
+            warning,
+            warning_subtle,
+            success,
+            steel,
+            acrylic_bg,
+            acrylic_border,
+            card_bg,
+            card_border,
+            indicator_active,
+            font_family: "Inter".to_string(),
+            font_sans: "Inter".to_string(),
+            font_mono: "JetBrainsMono Nerd Font".to_string(),
+            accent_tint,
+        }
+    }
+
+    pub fn from_manifest(manifest: &ShellManifest) -> Self {
+        let style = manifest.theme.style.to_lowercase();
+        let mut tokens = if style.contains("dark") || style.contains("controlled") {
+            Self::dark_controlled_chaos()
+        } else {
+            Self::playful_clay()
+        };
+
+        if !manifest.theme.font_family.is_empty() && manifest.theme.font_family != "monospace" {
+            tokens.font_family = manifest.theme.font_family.clone();
+            tokens.font_sans = manifest.theme.font_family.clone();
+        }
+
+        tokens
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tokens_from_manifest_defaults_to_playful_clay() {
+        let manifest = ShellManifest::default();
+        let tokens = ThemeTokens::from_manifest(&manifest);
+        assert_eq!(tokens.text_primary, Color::from(palette::CLAY_TEXT_PRIMARY));
+        assert_eq!(tokens.accent, Color::from(palette::CLAY_PRIMARY));
+        assert_eq!(tokens.font_sans, "Inter");
+    }
+
+    #[test]
+    fn test_tokens_from_manifest_dark_style() {
+        let mut manifest = ShellManifest::default();
+        manifest.theme.style = "dark".to_string();
+        let tokens = ThemeTokens::from_manifest(&manifest);
+        assert_eq!(tokens.text_primary, Color::from(palette::BONE));
+        assert_eq!(tokens.accent, Color::from(palette::INDUSTRIAL_AMBER));
     }
 }

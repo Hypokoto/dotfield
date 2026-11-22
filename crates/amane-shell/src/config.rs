@@ -7,13 +7,15 @@ use std::path::{Path, PathBuf};
 pub struct ThemeConfig {
     pub font_family: String,
     pub font_size: f64,
+    pub style: String,
 }
 
 impl Default for ThemeConfig {
     fn default() -> Self {
         Self {
-            font_family: "JetBrainsMono Nerd Font".to_string(),
+            font_family: "Inter".to_string(),
             font_size: 10.0,
+            style: "playful-clay".to_string(),
         }
     }
 }
@@ -228,6 +230,7 @@ mod tests {
         assert_eq!(manifest.bar.height, 48.0);
         assert!(manifest.bar.enabled);
         assert_eq!(manifest.theme.font_size, 10.0);
+        assert_eq!(manifest.theme.style, "playful-clay");
         assert_eq!(manifest.palette.accent, "#E63946");
         assert_eq!(manifest.terminal.default, "ghostty");
     }
@@ -247,7 +250,8 @@ mod tests {
         assert!(manifest.bar.enabled);
         assert_eq!(manifest.bar.position, "bottom");
         assert_eq!(manifest.theme.font_size, 12.0);
-        assert_eq!(manifest.theme.font_family, "JetBrainsMono Nerd Font");
+        assert_eq!(manifest.theme.font_family, "Inter");
+        assert_eq!(manifest.theme.style, "playful-clay");
         assert_eq!(manifest.palette.accent, "#E63946");
     }
 

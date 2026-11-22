@@ -233,8 +233,8 @@ impl ThemeTokens {
             card_bg,
             card_border,
             indicator_active,
-            font_family: "Outfit".to_string(),
-            font_sans: "Outfit".to_string(),
+            font_family: "Inter".to_string(),
+            font_sans: "Inter".to_string(),
             font_mono: "JetBrainsMono Nerd Font".to_string(),
             accent_tint: Color::from(palette::AMBER_TINT),
         }
@@ -318,10 +318,10 @@ impl ThemeTokens {
 
     pub fn from_manifest(manifest: &ShellManifest) -> Self {
         let style = manifest.theme.style.to_lowercase();
-        let mut tokens = if style.contains("dark") || style.contains("controlled") {
-            Self::dark_controlled_chaos()
-        } else {
+        let mut tokens = if style.contains("clay") || style.contains("playful") {
             Self::playful_clay()
+        } else {
+            Self::dark_controlled_chaos()
         };
 
         if !manifest.theme.font_family.is_empty() && manifest.theme.font_family != "monospace" {
@@ -338,20 +338,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_tokens_from_manifest_defaults_to_playful_clay() {
+    fn test_tokens_from_manifest_defaults_to_controlled_chaos() {
         let manifest = ShellManifest::default();
         let tokens = ThemeTokens::from_manifest(&manifest);
-        assert_eq!(tokens.text_primary, Color::from(palette::CLAY_TEXT_PRIMARY));
-        assert_eq!(tokens.accent, Color::from(palette::CLAY_PRIMARY));
+        assert_eq!(tokens.text_primary, Color::from(palette::BONE));
+        assert_eq!(tokens.accent, Color::from(palette::INDUSTRIAL_AMBER));
         assert_eq!(tokens.font_sans, "Inter");
     }
 
     #[test]
-    fn test_tokens_from_manifest_dark_style() {
+    fn test_tokens_from_manifest_playful_clay_style() {
         let mut manifest = ShellManifest::default();
-        manifest.theme.style = "dark".to_string();
+        manifest.theme.style = "playful-clay".to_string();
         let tokens = ThemeTokens::from_manifest(&manifest);
-        assert_eq!(tokens.text_primary, Color::from(palette::BONE));
-        assert_eq!(tokens.accent, Color::from(palette::INDUSTRIAL_AMBER));
+        assert_eq!(tokens.text_primary, Color::from(palette::CLAY_TEXT_PRIMARY));
+        assert_eq!(tokens.accent, Color::from(palette::CLAY_PRIMARY));
     }
 }

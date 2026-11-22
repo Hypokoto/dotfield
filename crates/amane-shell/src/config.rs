@@ -15,7 +15,7 @@ impl Default for ThemeConfig {
         Self {
             font_family: "Inter".to_string(),
             font_size: 10.0,
-            style: "playful-clay".to_string(),
+            style: "controlled-chaos".to_string(),
         }
     }
 }
@@ -230,7 +230,7 @@ mod tests {
         assert_eq!(manifest.bar.height, 48.0);
         assert!(manifest.bar.enabled);
         assert_eq!(manifest.theme.font_size, 10.0);
-        assert_eq!(manifest.theme.style, "playful-clay");
+        assert_eq!(manifest.theme.style, "controlled-chaos");
         assert_eq!(manifest.palette.accent, "#E63946");
         assert_eq!(manifest.terminal.default, "ghostty");
     }
@@ -251,7 +251,7 @@ mod tests {
         assert_eq!(manifest.bar.position, "bottom");
         assert_eq!(manifest.theme.font_size, 12.0);
         assert_eq!(manifest.theme.font_family, "Inter");
-        assert_eq!(manifest.theme.style, "playful-clay");
+        assert_eq!(manifest.theme.style, "controlled-chaos");
         assert_eq!(manifest.palette.accent, "#E63946");
     }
 

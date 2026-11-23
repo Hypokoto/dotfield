@@ -793,6 +793,7 @@ else
     ln -sf "${SCRIPTS_DEST}/scratchpad.sh" "${PREFIX}/dotfield-scratchpad" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/session-manager.sh" "${PREFIX}/dotfield-session" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/niri-nav.sh" "${PREFIX}/dotfield-niri-nav" 2>/dev/null || true
+    ln -sf "${SCRIPTS_DEST}/miri-toggle.sh" "${PREFIX}/dotfield-miri-toggle" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/fw-open" "${PREFIX}/fw-open" 2>/dev/null || true
     success "Helper scripts deployed to ${SCRIPTS_DEST}"
 fi

@@ -2,10 +2,10 @@
 // Master-Stack tiling mode, dynamic per-workspace switching, and column overrides
 
 binds {
-    // Layout Mode Switching
-    Mod+M { spawn "miri" "action" "cycle-focused-workspace-mode"; }
-    Mod+Shift+M { spawn "miri" "action" "set-focused-workspace-mode" "master"; }
-    Mod+Ctrl+M { spawn "miri" "action" "set-focused-workspace-mode" "scroll"; }
+    // Layout Mode Switching with Visual Feedback
+    Mod+M       { spawn "sh" "-c" "~/.config/dotfield/scripts/miri-toggle.sh cycle"; }
+    Mod+Shift+M { spawn "sh" "-c" "~/.config/dotfield/scripts/miri-toggle.sh master"; }
+    Mod+Ctrl+M  { spawn "sh" "-c" "~/.config/dotfield/scripts/miri-toggle.sh scroll"; }
 
     // Column Movement Overrides (Falls back to native Niri if Miri daemon is offline)
     Mod+Shift+Left  { spawn "miri" "override" "move-column-left"; }

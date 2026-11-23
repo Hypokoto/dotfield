@@ -552,9 +552,28 @@ EOF
 )
 
 # ------------------------------------------------------------------------------
-# Test 13: Shellcheck across all repository scripts
+# Test 13: Miri Toggle Script Resilience
 # ------------------------------------------------------------------------------
-header "Test 13: ShellCheck Verification Across Repository"
+header "Test 13: Miri Toggle Script Execution Resilience"
+(
+    # Ensure miri-toggle runs cleanly without crashing even if daemon action fails
+    if "${SCRIPT_DIR}/scripts/miri-toggle.sh" cycle >/dev/null 2>&1; then
+        pass "miri-toggle cycle executed cleanly with 0 exit code"
+    else
+        fail "miri-toggle cycle failed"
+    fi
+
+    if "${SCRIPT_DIR}/scripts/miri-toggle.sh" master >/dev/null 2>&1; then
+        pass "miri-toggle master executed cleanly with 0 exit code"
+    else
+        fail "miri-toggle master failed"
+    fi
+)
+
+# ------------------------------------------------------------------------------
+# Test 14: Shellcheck across all repository scripts
+# ------------------------------------------------------------------------------
+header "Test 14: ShellCheck Verification Across Repository"
 if command -v shellcheck >/dev/null 2>&1; then
     # shellcheck disable=SC2046
     if shellcheck $(find "${SCRIPT_DIR}/scripts" -name "*.sh") "${SCRIPT_DIR}/setup.sh" "${SCRIPT_DIR}/tests/test_scripts_resilience.sh"; then

@@ -18,12 +18,12 @@ layout {
 
     default-column-width { proportion 0.5; }
 
-    // Window Borders & Focus Rings: Controlled Chaos Industrial Amber
+    // Window Borders & Focus Rings: Obsidian Mint
     border {
         width 2
-        active-color "#FFB000"
-        inactive-color "#34343D"
-        urgent-color "#E63946"
+        active-color "#2DD4BF"
+        inactive-color "#23322F"
+        urgent-color "#F43F5E"
     }
 
     // Windows 11 Fluent Drop Shadow

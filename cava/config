@@ -34,20 +34,20 @@ channels = stereo
 mono_option = average
 
 [color]
-# Controlled Chaos Palette Theme
+# Obsidian Mint Palette Theme
 background = default
-foreground = '#E8E6E3'
+foreground = '#ECFDF5'
 
 # Vertical gradient from baseline to peak
 gradient = 1
-gradient_color_1 = '#34343D'
-gradient_color_2 = '#8B949E'
-gradient_color_3 = '#7BC47F'
-gradient_color_4 = '#FFD166'
-gradient_color_5 = '#FFB000'
-gradient_color_6 = '#FF8C00'
-gradient_color_7 = '#E63946'
-gradient_color_8 = '#9D0208'
+gradient_color_1 = '#23322F'
+gradient_color_2 = '#16201E'
+gradient_color_3 = '#71827E'
+gradient_color_4 = '#10B981'
+gradient_color_5 = '#2DD4BF'
+gradient_color_6 = '#2DD4BF'
+gradient_color_7 = '#FBBF24'
+gradient_color_8 = '#F43F5E'
 
 [smoothing]
 # Monstercat smoothing filter for fluid frequency response

@@ -70,10 +70,10 @@ zstyle ':completion:*' use-cache on
 zstyle ':completion:*' cache-path "$ZSH_CACHE_DIR/zcompcache"
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
 
-# Section headers — Controlled Chaos Amber bold (used in fzf-tab group labels)
-zstyle ':completion:*:descriptions' format $'\e[1;38;2;255;176;0m %d \e[0m'
-zstyle ':completion:*:messages'     format $'\e[0;38;2;130;170;255m %d \e[0m'
-zstyle ':completion:*:warnings'     format $'\e[0;38;2;230;57;70m No matches: %d \e[0m'
+# Section headers — Obsidian Mint bold (used in fzf-tab group labels)
+zstyle ':completion:*:descriptions' format $'\e[1;38;2;45;212;191m %d \e[0m'
+zstyle ':completion:*:messages'     format $'\e[0;38;2;56;189;248m %d \e[0m'
+zstyle ':completion:*:warnings'     format $'\e[0;38;2;244;63;94m No matches: %d \e[0m'
 
 zstyle ':completion:*' extra-verbose yes
 zstyle ':completion:*:options' auto-description '%d'
@@ -92,8 +92,8 @@ if command -v carapace >/dev/null 2>&1; then
     fi
     source "$CARAPACE_CACHE"
     # Re-assert themed formats after carapace sourcing (carapace sets its own generic format)
-    zstyle ':completion:*' format $'\e[1;38;2;255;176;0m %d \e[0m'
-    zstyle ':completion:*:descriptions' format $'\e[1;38;2;255;176;0m %d \e[0m'
+    zstyle ':completion:*' format $'\e[1;38;2;45;212;191m %d \e[0m'
+    zstyle ':completion:*:descriptions' format $'\e[1;38;2;45;212;191m %d \e[0m'
 fi
 
 # fzf-tab: replace Tab completion menu with fzf popup (prompt never moves up)
@@ -102,12 +102,12 @@ local FZF_TAB_DIR="$HOME/.local/share/zsh/plugins/fzf-tab"
 if [[ -r "$FZF_TAB_DIR/fzf-tab.plugin.zsh" ]]; then
     source "$FZF_TAB_DIR/fzf-tab.plugin.zsh"
 
-    # BLACKSITE Industrial Noir palette — matches FZF_DEFAULT_OPTS in section 8
+    # Obsidian Mint palette — matches FZF_DEFAULT_OPTS in section 8
     zstyle ':fzf-tab:*' fzf-flags \
-        --color='bg+:#181920,bg:#08080A,hl:#E63946,hl+:#FFB000' \
-        --color='fg:#E6E6EB,fg+:#FFFFFF,border:#282A36,separator:#282A36' \
-        --color='header:#FFB000,info:#FFB000,prompt:#FFB000,pointer:#FFB000' \
-        --color='marker:#4AF626,spinner:#FFB000,query:#E6E6EB' \
+        --color='bg+:#16201E,bg:#080B0B,hl:#F43F5E,hl+:#2DD4BF' \
+        --color='fg:#ECFDF5,fg+:#FFFFFF,border:#23322F,separator:#23322F' \
+        --color='header:#2DD4BF,info:#2DD4BF,prompt:#2DD4BF,pointer:#2DD4BF' \
+        --color='marker:#10B981,spinner:#2DD4BF,query:#ECFDF5' \
         --prompt='❯ ' --pointer='▶' --marker='✔' \
         --border=sharp --height=~40% --layout=reverse \
         --min-height=6 --bind='tab:accept'
@@ -369,16 +369,16 @@ ipinfo() {
     whois "$ip" 2>/dev/null | grep -E "^(NetName|OrgName|Country|CIDR|inetnum|netname|descr|country):" | head -20
 }
 
-### 8. FZF Interactive Fuzzy Finder (BLACKSITE Industrial Noir Theme)
+### 8. FZF Interactive Fuzzy Finder (Obsidian Mint Theme)
 if command -v fzf >/dev/null 2>&1; then
     [[ -r /usr/share/fzf/key-bindings.zsh ]] && source /usr/share/fzf/key-bindings.zsh
     [[ -r /usr/share/fzf/completion.zsh ]] && source /usr/share/fzf/completion.zsh
 
     export FZF_DEFAULT_OPTS=" \
-        --color=bg+:#181920,bg:#08080A,spinner:#FFB000,hl:#E63946 \
-        --color=fg:#E6E6EB,header:#8F94A6,info:#FFB000,pointer:#FFB000 \
-        --color=marker:#4AF626,fg+:#FFFFFF,prompt:#FFB000,hl+:#FFB000 \
-        --color=border:#282A36,separator:#282A36 \
+        --color=bg+:#16201E,bg:#080B0B,spinner:#2DD4BF,hl:#F43F5E \
+        --color=fg:#ECFDF5,header:#71827E,info:#2DD4BF,pointer:#2DD4BF \
+        --color=marker:#10B981,fg+:#FFFFFF,prompt:#2DD4BF,hl+:#2DD4BF \
+        --color=border:#23322F,separator:#23322F \
         --border=sharp --height=50% --layout=reverse --prompt='❯ ' --pointer='▶' --marker='✔'"
 
     if command -v fd >/dev/null 2>&1; then
@@ -429,7 +429,7 @@ fi
 # Fish-like autosuggestions
 if [[ -r /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
     source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-    export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#606474" # BLACKSITE Steel
+    export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#71827E" # Obsidian Mint Steel
     export ZSH_AUTOSUGGEST_STRATEGY=(history completion)
     export ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=50
     bindkey '^ ' autosuggest-accept
@@ -446,18 +446,18 @@ elif [[ -r "$HOME/.local/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-
 elif [[ -r /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
     source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
     typeset -A ZSH_HIGHLIGHT_STYLES
-    ZSH_HIGHLIGHT_STYLES[command]='fg=#FFB000,bold'           # Amber
-    ZSH_HIGHLIGHT_STYLES[builtin]='fg=#FFD166,bold'           # Pale Amber
-    ZSH_HIGHLIGHT_STYLES[alias]='fg=#FFD166'                  # Pale Amber
-    ZSH_HIGHLIGHT_STYLES[function]='fg=#FFB000'               # Amber
-    ZSH_HIGHLIGHT_STYLES[single-hyphen-option]='fg=#4C78A8'   # Tactical Blue flags
-    ZSH_HIGHLIGHT_STYLES[double-hyphen-option]='fg=#4C78A8'   # Tactical Blue flags
-    ZSH_HIGHLIGHT_STYLES[command-substitution]='fg=#606474'   # Steel
-    ZSH_HIGHLIGHT_STYLES[path]='fg=#56B6C2,underline'         # Ice Cyan path
-    ZSH_HIGHLIGHT_STYLES[path_prefix]='fg=#56B6C2'            # Path prefix
-    ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=#E63946,bold'     # Crimson error
-    ZSH_HIGHLIGHT_STYLES[single-quoted-argument]='fg=#4AF626' # Terminal Green string
-    ZSH_HIGHLIGHT_STYLES[double-quoted-argument]='fg=#4AF626' # Terminal Green string
+    ZSH_HIGHLIGHT_STYLES[command]='fg=#2DD4BF,bold'           # Mint
+    ZSH_HIGHLIGHT_STYLES[builtin]='fg=#10B981,bold'           # Emerald
+    ZSH_HIGHLIGHT_STYLES[alias]='fg=#10B981'                  # Emerald
+    ZSH_HIGHLIGHT_STYLES[function]='fg=#2DD4BF'               # Mint
+    ZSH_HIGHLIGHT_STYLES[single-hyphen-option]='fg=#38BDF8'   # Sky Blue flags
+    ZSH_HIGHLIGHT_STYLES[double-hyphen-option]='fg=#38BDF8'   # Sky Blue flags
+    ZSH_HIGHLIGHT_STYLES[command-substitution]='fg=#71827E'   # Steel
+    ZSH_HIGHLIGHT_STYLES[path]='fg=#2DD4BF,underline'         # Mint path
+    ZSH_HIGHLIGHT_STYLES[path_prefix]='fg=#2DD4BF'            # Path prefix
+    ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=#F43F5E,bold'     # Rose error
+    ZSH_HIGHLIGHT_STYLES[single-quoted-argument]='fg=#10B981' # Emerald string
+    ZSH_HIGHLIGHT_STYLES[double-quoted-argument]='fg=#10B981' # Emerald string
 fi
 
 ### 11. Developer Toolchains & Environments

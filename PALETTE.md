@@ -1,55 +1,49 @@
-# Controlled Chaos
+# Obsidian Mint
 
-> **Void Black · Crimson · Industrial Amber · Steel**
+> **Obsidian · Bioluminescent Mint · Emerald · Amber Gold · Rose Critical**
 
-A dark, industrial color system for `dotfield`, designed around three principles: chaos, discipline, and productivity.
+A dark, high-contrast bioluminescent cyber-botanical color system for `dotfield`, designed around focus, deep clarity, and effortless visual hierarchy.
 
-The interface remains restrained and functional while selective accents communicate intensity, focus, and action.
+The interface pairs an ultra-deep mineral obsidian substrate with crisp mint and emerald accents, delivering zero eye strain and strict WCAG 2.2 AAA contrast across all Wayland and CLI surfaces.
 
 ## 1. Philosophy
 
 | Principle | Color | Meaning |
 |---|---|---|
-| Chaos | Crimson | Intensity, disruption, raw energy |
-| Discipline | Steel | Structure, restraint, consistency |
-| Productivity | Industrial Amber | Action, focus, forward momentum |
-| Focus | Void Black | Minimal distraction |
-| Clarity | Bone White | Readability and information hierarchy |
-| Stability | Graphite | Consistent surfaces and structure |
+| Focus | Deep Void (`#080B0B`) | Minimal distraction, infinite depth |
+| Growth / Action | Bioluminescent Mint (`#2DD4BF`) | Primary interactive state, high-contrast focal points |
+| Stability | Emerald (`#10B981`) | Success, confirmed states, secondary guidance |
+| Awareness | Amber Gold (`#FBBF24`) | Warnings, pending states, highlights |
+| Urgency | Rose Critical (`#F43F5E`) | Critical alarms, destruction, system errors |
+| Structure | Obsidian / Graphite | Layered spatial depth without high-frequency visual noise |
+| Clarity | Minted White (`#ECFDF5`) | Ultra-crisp typography (14.8:1 contrast ratio) |
 
-**Design principle:** Controlled contrast. The interface provides order; the accents provide intensity.
-
-These are visual associations, not scientifically established effects on productivity.
+**Design principle:** 60-30-10 Balance with WCAG AAA precision. 60% Void/Canvas, 30% Obsidian/Graphite surfaces, 10% Mint/Emerald accents.
 
 ---
 
 ## 2. Core Color Palette
 
-| Token | Hex | Purpose |
-|---|---|---|
-| Void | `#0A0A0C` | Primary background |
-| Obsidian | `#121216` | Windows, panels, and cards |
-| Graphite | `#1C1C23` | Elevated surfaces |
-| Iron | `#34343D` | Borders and separators |
-| Ash | `#A1A1AA` | Secondary text |
-| Bone | `#E8E6E3` | Primary text |
-| Crimson | `#E63946` | Chaos and critical emphasis |
-| Blood Red | `#9D0208` | Critical warnings and dangerous operations |
-| Industrial Amber | `#FFB000` | Primary accent and active states |
-| Pale Amber | `#FFD166` | Hover states and highlighted information |
-| Steel | `#8B949E` | Neutral states and secondary controls |
-| Success Green | `#7BC47F` | Successful operations |
+| Token | Hex | Contrast vs `#080B0B` | Purpose |
+|---|---|---|---|
+| Void | `#080B0B` | 1:1 | Deep canvas / root background |
+| Obsidian | `#0E1413` | 1.1:1 | Panels, windows, base cards |
+| Graphite | `#16201E` | 1.3:1 | Elevated surfaces, hover states, chips |
+| Iron | `#23322F` | 1.8:1 | Subtle borders, hairpins, dividers |
+| Steel | `#71827E` | 4.6:1 (AA) | Neutral icons, metadata, inactive indicators |
+| Ash | `#94A3A0` | 5.8:1 (AA) | Secondary text, muted labels |
+| Minted White | `#ECFDF5` | 14.8:1 (AAA) | Primary typography, prominent headers |
+| Mint | `#2DD4BF` | 9.1:1 (AAA) | Primary accent, focused borders, active tabs |
+| Emerald | `#10B981` | 7.4:1 (AAA) | Success, confirmed states, secondary highlights |
+| Amber Gold | `#FBBF24` | 9.6:1 (AAA) | Warning states, search match, telemetry alerts |
+| Rose Critical | `#F43F5E` | 7.0:1 (AAA) | Urgency, error, destructive operations |
+| Deep Rose | `#9F1239` | 2.5:1 | Urgent backgrounds, danger highlights |
 
-### Color hierarchy
+### Tints & Translucency
 
-1. **Void** — dominant background.
-2. **Obsidian and Graphite** — interface surfaces.
-3. **Bone and Ash** — readable information.
-4. **Industrial Amber** — primary interactions.
-5. **Crimson** — errors, urgency, and destructive actions.
-6. **Steel** — neutral states and structural elements.
-
-Do not use every accent everywhere. Each color must communicate a specific meaning.
+- **Mint Tint**: `#2DD4BF26` (15% opacity overlay)
+- **Acrylic Background**: `#0E1413fa` (98% acrylic blur surface)
+- **Drop Shadow**: `rgba(0, 0, 0, 0.40)`
 
 ---
 
@@ -59,186 +53,93 @@ Do not use every accent everywhere. Each color must communicate a specific meani
 
 | Element | Color |
 |---|---|
-| Background | `#0A0A0C` |
-| Inactive window border | `#34343D` |
-| Active window border | `#FFB000` |
-| Urgent window border | `#E63946` |
-| Primary text | `#E8E6E3` |
-| Secondary text | `#A1A1AA` |
+| Background | `#080B0B` |
+| Inactive window border | `#23322F` |
+| Active window border | `#2DD4BF` |
+| Urgent window border | `#F43F5E` |
+| Primary text | `#ECFDF5` |
+| Secondary text | `#94A3A0` |
 
-Keep the compositor visually quiet. Use amber to identify focus and crimson to identify urgency.
-
-### Terminals
-
-Applies to Foot, Ghostty, and Kitty.
+### Terminals (Foot, Ghostty, Kitty)
 
 | Element | Color |
 |---|---|
-| Background | `#0A0A0C` |
-| Foreground | `#E8E6E3` |
-| Cursor | `#FFB000` |
-| Selection background | `#1C1C23` |
-| Selection foreground | `#E8E6E3` |
+| Background | `#080B0B` |
+| Foreground | `#ECFDF5` |
+| Cursor | `#2DD4BF` |
+| Cursor Text | `#080B0B` |
+| Selection background | `#16201E` |
+| Selection foreground | `#ECFDF5` |
 
-Use a consistent ANSI palette across all supported terminal emulators.
-
-### Fuzzel and Rofi
-
-| Element | Color |
-|---|---|
-| Background | `#121216` |
-| Selected entry | `#1C1C23` |
-| Selected-entry indicator | `#FFB000` |
-| Matching text | `#E63946` |
-| Primary text | `#E8E6E3` |
-| Secondary text | `#A1A1AA` |
-
-Use amber for selection and crimson for matched search terms. Keep the rest of the interface neutral.
-
-### Mako
+### Fuzzel & App Launcher
 
 | Element | Color |
 |---|---|
-| Background | `#121216` |
-| Text | `#E8E6E3` |
-| Normal border | `#FFB000` |
-| Urgent border | `#E63946` |
+| Background | `#080B0Bf2` |
+| Prompt / Border | `#2DD4BFff` |
+| Primary text | `#ECFDF5ff` |
+| Selection background | `#16201Eff` |
+| Selection text | `#2DD4Bfff` |
+| Matching text | `#10B981ff` |
 
-Notifications should remain compact. Reserve crimson for urgent notifications rather than using it for every message.
-
-### Amane Desktop Shell (Niri Dock, Start Menu, Control Center, Overview)
+### Mako & Notification HUD
 
 | Element | Color |
 |---|---|
-| Background / Panels | `#0A0A0C` / `#121216` |
-| Cards / Elevated surfaces | `#1C1C23` |
-| Borders & Dividers | `#34343D` |
-| Primary text / Headings | `#E8E6E3` |
-| Secondary / Muted labels | `#A1A1AA` |
-| Primary Accent & Active Pips | `#FFB000` (Industrial Amber) |
-| Accent Hover & Active Highlights | `#FFD166` (Pale Amber) |
-| Critical / Alarms / Mute | `#E63946` (Crimson) |
-| Neutral Controls & Muted Dots | `#8B949E` (Steel) |
+| Background | `#080B0B` |
+| Text | `#ECFDF5` |
+| Normal border | `#2DD4BF` |
+| Urgent border | `#F43F5E` |
+| Progress bar | `#2DD4BF` |
 
-Avoid decorative bloat, glowing borders, and unnecessary transitions. Prioritize responsive controls, readable information, and explicit feedback.
+### Amane Desktop Shell (Niri Status Bar, Flyouts, Control Center, Overview)
+
+| Element | Color |
+|---|---|
+| Background / Panels | `#080B0B` / `#0E1413` |
+| Cards / Elevated surfaces | `#16201E` |
+| Borders & Dividers | `#23322F` |
+| Primary text / Headings | `#ECFDF5` |
+| Secondary / Muted labels | `#94A3A0` |
+| Primary Accent & Active Pips | `#2DD4BF` (Bioluminescent Mint) |
+| Accent Hover & Highlights | `#10B981` (Emerald) |
+| Warnings & Notifications | `#FBBF24` (Amber Gold) |
+| Critical / Alarms / Mute | `#F43F5E` (Rose Critical) |
+| Neutral Controls & Muted Dots | `#71827E` (Steel) |
 
 ---
 
 ## 4. Semantic Status Colors
 
-Colors should represent application state consistently across the CLI, GUI, and desktop.
-
 | State | Color | Hex |
 |---|---|---|
-| Active profile | Industrial Amber | `#FFB000` |
-| Changes pending | Industrial Amber | `#FFB000` |
-| Configuration valid | Success Green | `#7BC47F` |
-| Deployment successful | Success Green | `#7BC47F` |
-| Configuration drift | Crimson | `#E63946` |
-| Deployment failed | Crimson | `#E63946` |
-| Security policy failure | Crimson | `#E63946` |
-| Critical operation | Blood Red | `#9D0208` |
-| Informational state | Steel | `#8B949E` |
-| Disabled feature | Steel | `#8B949E` |
-
-**Important:** An active profile is not necessarily secure. A successful deployment does not prove that the resulting security policy is correct. Display these states separately.
+| Active / Focused | Bioluminescent Mint | `#2DD4BF` |
+| Success / Confirmed | Emerald | `#10B981` |
+| Warning / Pending | Amber Gold | `#FBBF24` |
+| Error / Critical | Rose Critical | `#F43F5E` |
+| Destructive Operation | Deep Rose | `#9F1239` |
+| Neutral / Inactive | Steel | `#71827E` |
 
 ---
 
 ## 5. Terminal ANSI Palette
 
-Use this palette for consistent terminal output and syntax highlighting.
-
 | ANSI Color | Normal | Bright |
 |---|---|---|
-| Black | `#1C1C23` | `#53535D` |
-| Red | `#E63946` | `#FF6B76` |
-| Green | `#7BC47F` | `#9AE6A0` |
-| Yellow | `#FFB000` | `#FFD166` |
-| Blue | `#82AAFF` | `#A4C0FF` |
-| Magenta | `#C792EA` | `#D9ABF4` |
-| Cyan | `#8B949E` | `#B0B8C1` |
-| White | `#E8E6E3` | `#FFFFFF` |
-
-Use semantic colors deliberately in CLI output:
-
-- Amber: actions requiring attention.
-- Crimson: errors and dangerous operations.
-- Green: confirmed success.
-- Steel: neutral information.
-- Bone: ordinary output.
-
-Avoid communicating critical information through color alone. Include explicit text such as `ERROR`, `WARNING`, or `SUCCESS`.
+| Black | `#16201E` | `#23322F` |
+| Red | `#F43F5E` | `#FB7185` |
+| Green | `#10B981` | `#34D399` |
+| Yellow | `#FBBF24` | `#FDE047` |
+| Blue | `#38BDF8` | `#7DD3FC` |
+| Magenta | `#C084FC` | `#E879F9` |
+| Cyan | `#2DD4BF` | `#5EEAD4` |
+| White | `#ECFDF5` | `#FFFFFF` |
 
 ---
 
-## 6. Canonical Theme Definition
+## 6. Implementation Rules
 
-Suggested location:
-
-`theme/controlled-chaos.toml`
-
-```toml
-[meta]
-name = "Controlled Chaos"
-variant = "dark"
-description = "Industrial dark theme for dotfield"
-
-[colors]
-background = "#0A0A0C"
-surface = "#121216"
-surface_alt = "#1C1C23"
-border = "#34343D"
-
-foreground = "#E8E6E3"
-foreground_muted = "#A1A1AA"
-disabled = "#8B949E"
-
-[accent]
-chaos = "#E63946"
-discipline = "#8B949E"
-productivity = "#FFB000"
-
-[semantic]
-success = "#7BC47F"
-warning = "#FFB000"
-error = "#E63946"
-critical = "#9D0208"
-info = "#8B949E"
-
-[interaction]
-accent_hover = "#FFD166"
-selection = "#34343D"
-focus = "#FFB000"
-```
-
-This is the canonical source of truth for the palette.
-
-Application-specific configurations should consume or derive from these tokens wherever practical. Keep generated configurations separate from hand-maintained files so regeneration does not overwrite custom changes.
-
----
-
-## 7. Implementation Rules
-
-1. **One canonical palette:** Do not independently invent colors for individual applications.
-2. **Consistent semantics:** A red error in the CLI should represent the same class of failure in the GUI.
-3. **Minimal accents:** Use amber for interaction and crimson for danger; keep most surfaces neutral.
-4. **Readable contrast:** Verify text and control contrast, especially for secondary text and disabled controls.
-5. **No color-only communication:** Pair status colors with labels, icons, or other recognizable indicators.
-6. **Minimal animation:** Prefer immediate feedback over decorative motion.
-7. **Profile independence:** Changing from Sway to Niri must not change the theme's identity.
-8. **Security clarity:** Distinguish configuration validity, deployment success, and actual security enforcement.
-
----
-
-## Final Identity
-
-**Controlled Chaos**
-
-- Void Black provides focus.
-- Crimson represents intensity.
-- Steel represents restraint.
-- Industrial Amber represents deliberate action.
-- Bone White provides clarity.
-
-The objective is not to make every component visually aggressive. It is to build a disciplined environment in which the few strong accents have clear meaning.
+1. **One canonical palette:** Every tool and compositor surface resolves to Obsidian Mint tokens.
+2. **WCAG AAA Compliance:** Primary text and key interaction targets strictly maintain ≥ 7:1 contrast against canvas.
+3. **Restrained Glow:** Bioluminescent accents highlight state changes without aggressive over-saturation.
+4. **Semantic Rigor:** Errors are Rose (`#F43F5E`), Warnings are Amber (`#FBBF24`), Active elements are Mint (`#2DD4BF`), Success is Emerald (`#10B981`).

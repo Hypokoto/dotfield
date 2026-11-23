@@ -1,5 +1,5 @@
 # Dotfield Starship Prompt Configuration
-# BLACKSITE Specification — Void Black · Industrial Amber · Crimson · Steel
+# Obsidian Mint Specification — Void · Mint · Emerald · Amber Gold · Rose Critical
 
 format = """
 $username\
@@ -22,33 +22,34 @@ $character"""
 scan_timeout = 250
 command_timeout = 500
 
-palette = "blacksite"
+palette = "obsidian_mint"
 
-[palettes.blacksite]
-void = "#08080A"
-obsidian = "#111216"
-graphite = "#181920"
-iron = "#282A36"
-ash = "#8F94A6"
-bone = "#E6E6EB"
-crimson = "#E63946"
-blood_red = "#9D0208"
-amber = "#FFB000"
-pale_amber = "#FFD166"
-steel = "#606474"
-green = "#4AF626"
-blue = "#4C78A8"
+[palettes.obsidian_mint]
+void = "#080B0B"
+obsidian = "#0E1413"
+graphite = "#16201E"
+iron = "#23322F"
+ash = "#94A3A0"
+bone = "#ECFDF5"
+crimson = "#F43F5E"
+blood_red = "#9F1239"
+amber = "#FBBF24"
+mint = "#2DD4BF"
+emerald = "#10B981"
+steel = "#71827E"
+green = "#10B981"
+blue = "#38BDF8"
 
 [character]
-success_symbol = "[❯](bold amber)"
+success_symbol = "[❯](bold mint)"
 error_symbol = "[❯](bold crimson)"
-vimcmd_symbol = "[❮](bold amber)"
+vimcmd_symbol = "[❮](bold mint)"
 vimcmd_replace_symbol = "[❮](bold crimson)"
 vimcmd_replace_one_symbol = "[❮](bold crimson)"
-vimcmd_visual_symbol = "[❮](bold pale_amber)"
+vimcmd_visual_symbol = "[❮](bold amber)"
 
 [directory]
-style = "bold amber"
+style = "bold mint"
 truncation_length = 3
 truncate_to_repo = true
 read_only = " 󰌾"
@@ -72,7 +73,7 @@ format = "[$state( $progress_current/$progress_total)]($style) "
 
 [rust]
 symbol = "󱘗 "
-style = "bold crimson"
+style = "bold mint"
 format = "[$symbol($version )]($style)"
 
 [python]
@@ -82,7 +83,7 @@ format = "[$symbol($version )]($style)"
 
 [nodejs]
 symbol = "󰌞 "
-style = "bold green"
+style = "bold emerald"
 format = "[$symbol($version )]($style)"
 
 [golang]
@@ -108,7 +109,7 @@ format = "[$symbol$status]($style) "
 
 [jobs]
 symbol = "󰔚 "
-style = "bold pale_amber"
+style = "bold amber"
 format = "[$symbol$number]($style) "
 
 [line_break]

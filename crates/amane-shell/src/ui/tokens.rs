@@ -56,7 +56,23 @@ pub mod typography {
 }
 
 pub mod palette {
-    // Canonical Controlled Chaos Palette (PALETTE.md)
+    // Canonical Obsidian Mint Palette (PALETTE.md)
+    pub const OBSIDIAN_MINT_VOID: &str = "#080B0B";
+    pub const OBSIDIAN_MINT_SURFACE: &str = "#0E1413";
+    pub const OBSIDIAN_MINT_GRAPHITE: &str = "#16201E";
+    pub const OBSIDIAN_MINT_IRON: &str = "#23322F";
+    pub const OBSIDIAN_MINT_ASH: &str = "#94A3A0";
+    pub const OBSIDIAN_MINT_PRIMARY_TEXT: &str = "#ECFDF5";
+    pub const OBSIDIAN_MINT_ACCENT: &str = "#2DD4BF";
+    pub const OBSIDIAN_MINT_EMERALD: &str = "#10B981";
+    pub const OBSIDIAN_MINT_HIGHLIGHT: &str = "#FBBF24";
+    pub const OBSIDIAN_MINT_DANGER: &str = "#F43F5E";
+    pub const OBSIDIAN_MINT_DEEP_DANGER: &str = "#9F1239";
+    pub const OBSIDIAN_MINT_STEEL: &str = "#71827E";
+    pub const OBSIDIAN_MINT_TINT: &str = "#2DD4BF26";
+    pub const OBSIDIAN_MINT_ACRYLIC_BG: &str = "#0E1413fa";
+
+    // Canonical Controlled Chaos Palette (Legacy)
     pub const VOID: &str = "#0A0A0C"; // Primary background
     pub const OBSIDIAN: &str = "#121216"; // Windows, panels, and cards
     pub const GRAPHITE: &str = "#1C1C23"; // Elevated surfaces
@@ -316,12 +332,86 @@ impl ThemeTokens {
         }
     }
 
+    pub fn obsidian_mint() -> Self {
+        let bg = Color::from(palette::OBSIDIAN_MINT_VOID);
+        let surface = Color::from(palette::OBSIDIAN_MINT_SURFACE);
+        let surface_elevated = Color::from(palette::OBSIDIAN_MINT_GRAPHITE);
+        let border_subtle = Color::from(palette::OBSIDIAN_MINT_IRON);
+        let text_primary = Color::from(palette::OBSIDIAN_MINT_PRIMARY_TEXT);
+        let text_secondary = Color::from(palette::OBSIDIAN_MINT_ASH);
+        let text_muted = Color::from(palette::OBSIDIAN_MINT_STEEL);
+        let accent = Color::from(palette::OBSIDIAN_MINT_ACCENT);
+        let accent_hover = Color::from(palette::OBSIDIAN_MINT_EMERALD);
+        let danger = Color::from(palette::OBSIDIAN_MINT_DANGER);
+        let danger_critical = Color::from(palette::OBSIDIAN_MINT_DEEP_DANGER);
+        let warning = Color::from(palette::OBSIDIAN_MINT_HIGHLIGHT);
+        let warning_subtle = Color::from("#2B210B");
+        let success = Color::from(palette::OBSIDIAN_MINT_EMERALD);
+        let steel = Color::from(palette::OBSIDIAN_MINT_STEEL);
+
+        let acrylic_bg = Color::from(palette::OBSIDIAN_MINT_ACRYLIC_BG);
+        let acrylic_border = Color::from(palette::OBSIDIAN_MINT_IRON);
+        let card_bg = surface_elevated;
+        let card_border = Color::from(palette::OBSIDIAN_MINT_IRON);
+        let indicator_active = accent;
+
+        let surface_hover = Color::from("#1B2926");
+        let surface_active = Color::from("#20332F");
+        let surface_selected = Color::from("#1D302C");
+        let surface_track = Color::from(palette::OBSIDIAN_MINT_VOID);
+
+        let border_hover = Color::from("#2D423E");
+        let border_focus = Color::rgba(0x2D, 0xD4, 0xBF, 0x88);
+        let border_danger = Color::rgba(0xF4, 0x3F, 0x5E, 0x88);
+
+        let accent_subtle = Color::from("#0D332D");
+        let danger_subtle = Color::from("#361118");
+
+        Self {
+            bg,
+            surface,
+            surface_elevated,
+            surface_hover,
+            surface_active,
+            surface_selected,
+            surface_track,
+            border_subtle,
+            border_hover,
+            border_focus,
+            border_danger,
+            text_primary,
+            text_secondary,
+            text_muted,
+            accent,
+            accent_hover,
+            accent_subtle,
+            danger,
+            danger_critical,
+            danger_subtle,
+            warning,
+            warning_subtle,
+            success,
+            steel,
+            acrylic_bg,
+            acrylic_border,
+            card_bg,
+            card_border,
+            indicator_active,
+            font_family: "Inter".to_string(),
+            font_sans: "Inter".to_string(),
+            font_mono: "JetBrainsMono Nerd Font".to_string(),
+            accent_tint: Color::from(palette::OBSIDIAN_MINT_TINT),
+        }
+    }
+
     pub fn from_manifest(manifest: &ShellManifest) -> Self {
         let style = manifest.theme.style.to_lowercase();
         let mut tokens = if style.contains("clay") || style.contains("playful") {
             Self::playful_clay()
-        } else {
+        } else if style.contains("chaos") || style.contains("controlled") {
             Self::dark_controlled_chaos()
+        } else {
+            Self::obsidian_mint()
         };
 
         if !manifest.theme.font_family.is_empty() && manifest.theme.font_family != "monospace" {
@@ -338,12 +428,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_tokens_from_manifest_defaults_to_controlled_chaos() {
+    fn test_tokens_from_manifest_defaults_to_obsidian_mint() {
         let manifest = ShellManifest::default();
+        let tokens = ThemeTokens::from_manifest(&manifest);
+        assert_eq!(
+            tokens.text_primary,
+            Color::from(palette::OBSIDIAN_MINT_PRIMARY_TEXT)
+        );
+        assert_eq!(tokens.accent, Color::from(palette::OBSIDIAN_MINT_ACCENT));
+        assert_eq!(tokens.font_sans, "Inter");
+    }
+
+    #[test]
+    fn test_tokens_from_manifest_controlled_chaos_style() {
+        let mut manifest = ShellManifest::default();
+        manifest.theme.style = "controlled-chaos".to_string();
         let tokens = ThemeTokens::from_manifest(&manifest);
         assert_eq!(tokens.text_primary, Color::from(palette::BONE));
         assert_eq!(tokens.accent, Color::from(palette::INDUSTRIAL_AMBER));
-        assert_eq!(tokens.font_sans, "Inter");
     }
 
     #[test]

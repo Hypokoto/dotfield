@@ -1,26 +1,26 @@
-## Dotfield CAVA Theme — Controlled Chaos
+## Dotfield CAVA Theme — Controlled Chaos (Obsidian Mint)
 [color]
-background = '#0A0A0C'
-foreground = '#E8E6E3'
+background = '#080B0B'
+foreground = '#ECFDF5'
 
 gradient = 1
-gradient_color_1 = '#34343D'
-gradient_color_2 = '#8B949E'
-gradient_color_3 = '#7BC47F'
-gradient_color_4 = '#FFD166'
-gradient_color_5 = '#FFB000'
-gradient_color_6 = '#FF8C00'
-gradient_color_7 = '#E63946'
-gradient_color_8 = '#9D0208'
+gradient_color_1 = '#23322F'
+gradient_color_2 = '#16201E'
+gradient_color_3 = '#71827E'
+gradient_color_4 = '#10B981'
+gradient_color_5 = '#2DD4BF'
+gradient_color_6 = '#2DD4BF'
+gradient_color_7 = '#FBBF24'
+gradient_color_8 = '#F43F5E'
 
 horizontal_gradient = 1
-horizontal_gradient_color_1 = '#34343D'
-horizontal_gradient_color_2 = '#8B949E'
-horizontal_gradient_color_3 = '#FFD166'
-horizontal_gradient_color_4 = '#FFB000'
-horizontal_gradient_color_5 = '#FFB000'
-horizontal_gradient_color_6 = '#FFD166'
-horizontal_gradient_color_7 = '#8B949E'
-horizontal_gradient_color_8 = '#34343D'
+horizontal_gradient_color_1 = '#23322F'
+horizontal_gradient_color_2 = '#10B981'
+horizontal_gradient_color_3 = '#2DD4BF'
+horizontal_gradient_color_4 = '#ECFDF5'
+horizontal_gradient_color_5 = '#ECFDF5'
+horizontal_gradient_color_6 = '#2DD4BF'
+horizontal_gradient_color_7 = '#10B981'
+horizontal_gradient_color_8 = '#23322F'
 
 blend_direction = 'up'

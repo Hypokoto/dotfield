@@ -1,0 +1,26 @@
+## Dotfield CAVA Theme — Obsidian Mint
+[color]
+background = '#080B0B'
+foreground = '#ECFDF5'
+
+gradient = 1
+gradient_color_1 = '#23322F'
+gradient_color_2 = '#16201E'
+gradient_color_3 = '#71827E'
+gradient_color_4 = '#10B981'
+gradient_color_5 = '#2DD4BF'
+gradient_color_6 = '#2DD4BF'
+gradient_color_7 = '#FBBF24'
+gradient_color_8 = '#F43F5E'
+
+horizontal_gradient = 1
+horizontal_gradient_color_1 = '#23322F'
+horizontal_gradient_color_2 = '#10B981'
+horizontal_gradient_color_3 = '#2DD4BF'
+horizontal_gradient_color_4 = '#ECFDF5'
+horizontal_gradient_color_5 = '#ECFDF5'
+horizontal_gradient_color_6 = '#2DD4BF'
+horizontal_gradient_color_7 = '#10B981'
+horizontal_gradient_color_8 = '#23322F'
+
+blend_direction = 'up'

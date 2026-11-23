@@ -1,16 +1,16 @@
 -- Ly Display Manager Configuration managed by Dotfield
--- BLACKSITE Industrial Noir — Tactical Interface (65-20-8-5-2 palette)
+-- Obsidian Mint — Cyber-Botanical Interface (60-30-10 palette)
 -- Target installation: /etc/ly/config.lua
 
 return {
-    -- Terminal & Colors (Dotfield Controlled Chaos: Void #121216, Industrial Amber #FFB000, Crimson #E63946, Bone #F0F0F5)
-    bg = 0x121216,
-    fg = 0xF0F0F5,
-    border_fg = 0xFFB000,
-    border_bg = 0x121216,
-    text_fg = 0xF0F0F5,
-    error_fg = 0xE63946,
-    error_bg = 0x121216,
+    -- Terminal & Colors (Dotfield Obsidian Mint: Void #080B0B, Mint #2DD4BF, Rose #F43F5E, Minted White #ECFDF5)
+    bg = 0x080B0B,
+    fg = 0xECFDF5,
+    border_fg = 0x2DD4BF,
+    border_bg = 0x080B0B,
+    text_fg = 0xECFDF5,
+    error_fg = 0xF43F5E,
+    error_bg = 0x080B0B,
 
     -- Visual Styling & Frame
     box_title = "ARCH LINUX // DOTFIELD",

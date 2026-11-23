@@ -18,24 +18,24 @@ In traditional Linux desktop customization (ricing), changing a default terminal
 
 ---
 
-## Aesthetic: Controlled Chaos Palette
+## Aesthetic: Obsidian Mint Palette
 
-Dotfield is styled around the **Controlled Chaos** theme — an industrial, high-contrast dark aesthetic balancing Void Black, Industrial Amber, and Crimson:
+Dotfield is styled around the **Obsidian Mint** theme — a bioluminescent cyber-botanical aesthetic balancing Void Black, Mint, and Emerald:
 
 | Token | Hex | Role | Visual Preview |
 | :--- | :--- | :--- | :--- |
-| **Void Black** | `#0A0A0C` | Deep background | `██████` |
-| **Obsidian** | `#121216` | Panel / Surface background | `██████` |
-| **Graphite** | `#1C1C23` | Active cards / popups | `██████` |
-| **Iron** | `#34343D` | Borders & subtle dividers | `██████` |
-| **Ash** | `#A1A1AA` | Inactive text & secondary labels | `██████` |
-| **Bone White**| `#E8E6E3` | Primary foreground & headings | `██████` |
-| **Crimson** | `#E63946` | Errors, alarms, critical indicators | `██████` |
-| **Amber** | `#FFB000` | Primary accent & active highlights | `██████` |
-| **Pale Amber**| `#FFD166` | Secondary accent & command builtins | `██████` |
-| **Steel** | `#8B949E` | Muted accents, paths & icons | `██████` |
-| **Green** | `#7BC47F` | Success states & strings | `██████` |
-| **Blue** | `#82AAFF` | Links & function identifiers | `██████` |
+| **Void Black** | `#080B0B` | Deep canvas & background (60%) | `██████` |
+| **Obsidian** | `#0E1413` | Panel / Surface background (30%) | `██████` |
+| **Graphite** | `#16201E` | Active cards / popups / elevated | `██████` |
+| **Iron** | `#23322F` | Hairline borders & subtle dividers | `██████` |
+| **Steel** | `#71827E` | Muted icons, paths & comments | `██████` |
+| **Ash** | `#94A3A0` | Inactive text & secondary labels | `██████` |
+| **Minted White**| `#ECFDF5` | Primary foreground & headings | `██████` |
+| **Mint** | `#2DD4BF` | Primary accent & active highlights (10%) | `██████` |
+| **Emerald** | `#10B981` | Secondary accent & success states | `██████` |
+| **Amber Gold** | `#FBBF24` | Warm highlights, warnings & status | `██████` |
+| **Rose** | `#F43F5E` | Errors, alarms & critical indicators | `██████` |
+| **Sky Blue** | `#38BDF8` | Informational links & flag tokens | `██████` |
 
 For design tokens across tools, see [PALETTE.md](PALETTE.md).
 

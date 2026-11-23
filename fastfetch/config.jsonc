@@ -4,7 +4,7 @@
         "type": "file",
         "source": "~/.config/fastfetch/logo.txt",
         "color": {
-            "1": "magenta"
+            "1": "cyan"
         },
         "padding": {
             "top": 1,
@@ -14,8 +14,8 @@
     "display": {
         "separator": "  󰄾  ",
         "color": {
-            "keys": "magenta",
-            "title": "cyan"
+            "keys": "cyan",
+            "title": "green"
         },
         "key": {
             "width": 14

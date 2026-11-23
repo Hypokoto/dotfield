@@ -1,31 +1,31 @@
-# Controlled Chaos Palette Theme for Ghostty
-# Void Black · Crimson · Industrial Amber · Steel
+# Obsidian Mint Palette Theme for Ghostty
+# Obsidian · Mint · Emerald · Amber Gold · Rose Critical
 # Canonical definition: PALETTE.md
 
-background = 0A0A0C
-foreground = E8E6E3
-selection-background = 1C1C23
-selection-foreground = E8E6E3
+background = 080B0B
+foreground = ECFDF5
+selection-background = 16201E
+selection-foreground = ECFDF5
 
-cursor-color = FFB000
-cursor-text = 0A0A0C
+cursor-color = 2DD4BF
+cursor-text = 080B0B
 
 # Normal Colors (0-7)
-palette = 0=#1C1C23
-palette = 1=#E63946
-palette = 2=#7BC47F
-palette = 3=#FFB000
-palette = 4=#82AAFF
-palette = 5=#C792EA
-palette = 6=#8B949E
-palette = 7=#E8E6E3
+palette = 0=#16201E
+palette = 1=#F43F5E
+palette = 2=#10B981
+palette = 3=#FBBF24
+palette = 4=#38BDF8
+palette = 5=#C084FC
+palette = 6=#2DD4BF
+palette = 7=#ECFDF5
 
 # Bright Colors (8-15)
-palette = 8=#53535D
-palette = 9=#FF6B76
-palette = 10=#9AE6A0
-palette = 11=#FFD166
-palette = 12=#A4C0FF
-palette = 13=#D9ABF4
-palette = 14=#B0B8C1
+palette = 8=#23322F
+palette = 9=#FB7185
+palette = 10=#34D399
+palette = 11=#FDE047
+palette = 12=#7DD3FC
+palette = 13=#E879F9
+palette = 14=#5EEAD4
 palette = 15=#FFFFFF

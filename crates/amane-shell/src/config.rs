@@ -15,7 +15,7 @@ impl Default for ThemeConfig {
         Self {
             font_family: "Inter".to_string(),
             font_size: 10.0,
-            style: "controlled-chaos".to_string(),
+            style: "obsidian-mint".to_string(),
         }
     }
 }
@@ -40,18 +40,18 @@ pub struct PaletteConfig {
 impl Default for PaletteConfig {
     fn default() -> Self {
         Self {
-            background: "#0A0A0C".to_string(),
-            surface: "#121216".to_string(),
-            overlay: "#1C1C23".to_string(),
-            muted: "#A1A1AA".to_string(),
-            accent: "#E63946".to_string(),
-            highlight: "#FFB000".to_string(),
-            foreground: "#E8E6E3".to_string(),
-            border: "#34343D".to_string(),
-            hover: "#FFD166".to_string(),
-            steel: "#8B949E".to_string(),
-            success: "#7BC47F".to_string(),
-            danger_critical: "#9D0208".to_string(),
+            background: "#080B0B".to_string(),
+            surface: "#0E1413".to_string(),
+            overlay: "#16201E".to_string(),
+            muted: "#94A3A0".to_string(),
+            accent: "#2DD4BF".to_string(),
+            highlight: "#FBBF24".to_string(),
+            foreground: "#ECFDF5".to_string(),
+            border: "#23322F".to_string(),
+            hover: "#10B981".to_string(),
+            steel: "#71827E".to_string(),
+            success: "#10B981".to_string(),
+            danger_critical: "#F43F5E".to_string(),
         }
     }
 }
@@ -230,8 +230,8 @@ mod tests {
         assert_eq!(manifest.bar.height, 48.0);
         assert!(manifest.bar.enabled);
         assert_eq!(manifest.theme.font_size, 10.0);
-        assert_eq!(manifest.theme.style, "controlled-chaos");
-        assert_eq!(manifest.palette.accent, "#E63946");
+        assert_eq!(manifest.theme.style, "obsidian-mint");
+        assert_eq!(manifest.palette.accent, "#2DD4BF");
         assert_eq!(manifest.terminal.default, "ghostty");
     }
 
@@ -251,8 +251,8 @@ mod tests {
         assert_eq!(manifest.bar.position, "bottom");
         assert_eq!(manifest.theme.font_size, 12.0);
         assert_eq!(manifest.theme.font_family, "Inter");
-        assert_eq!(manifest.theme.style, "controlled-chaos");
-        assert_eq!(manifest.palette.accent, "#E63946");
+        assert_eq!(manifest.theme.style, "obsidian-mint");
+        assert_eq!(manifest.palette.accent, "#2DD4BF");
     }
 
     #[test]

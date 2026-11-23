@@ -1,106 +1,106 @@
 # Dotfield Yazi Theme Configuration
-# Controlled Chaos (Void Black, Graphite, Industrial Amber, Crimson, Steel)
+# Obsidian Mint (Void #080B0B, Graphite #16201E, Mint #2DD4BF, Emerald #10B981, Rose #F43F5E)
 
 [mgr]
-cwd = { fg = "#ffb000", bold = true }
-hovered = { bg = "#1c1c23", bold = true }
+cwd = { fg = "#2dd4bf", bold = true }
+hovered = { bg = "#16201e", bold = true }
 preview_hovered = { underline = true }
 
 # Search and Marker
-find_keyword = { fg = "#ffd166", italic = true }
-find_position = { fg = "#e63946", bold = true }
-marker_copied = { fg = "#7bc47f", bg = "#7bc47f" }
-marker_cut = { fg = "#e63946", bg = "#e63946" }
-marker_marked = { fg = "#ffb000", bg = "#ffb000" }
-marker_selected = { fg = "#ffd166", bg = "#ffd166" }
+find_keyword = { fg = "#fbbf24", italic = true }
+find_position = { fg = "#f43f5e", bold = true }
+marker_copied = { fg = "#10b981", bg = "#10b981" }
+marker_cut = { fg = "#f43f5e", bg = "#f43f5e" }
+marker_marked = { fg = "#2dd4bf", bg = "#2dd4bf" }
+marker_selected = { fg = "#fbbf24", bg = "#fbbf24" }
 
 # Tabs
-tab_active = { fg = "#0a0a0c", bg = "#ffb000", bold = true }
-tab_inactive = { fg = "#8b949e", bg = "#121216" }
-count_copied = { fg = "#0a0a0c", bg = "#7bc47f" }
-count_cut = { fg = "#0a0a0c", bg = "#e63946" }
-count_selected = { fg = "#0a0a0c", bg = "#ffd166" }
+tab_active = { fg = "#080b0b", bg = "#2dd4bf", bold = true }
+tab_inactive = { fg = "#71827e", bg = "#0e1413" }
+count_copied = { fg = "#080b0b", bg = "#10b981" }
+count_cut = { fg = "#080b0b", bg = "#f43f5e" }
+count_selected = { fg = "#080b0b", bg = "#fbbf24" }
 
 # Border
 border_symbol = "│"
-border_style = { fg = "#34343d" }
+border_style = { fg = "#23322f" }
 
 [status]
 separator_open = ""
 separator_close = ""
-separator_style = { fg = "#1c1c23", bg = "#1c1c23" }
+separator_style = { fg = "#16201e", bg = "#16201e" }
 
-mode_normal = { fg = "#0a0a0c", bg = "#ffb000", bold = true }
-mode_select = { fg = "#0a0a0c", bg = "#ffd166", bold = true }
-mode_unset = { fg = "#0a0a0c", bg = "#e63946", bold = true }
+mode_normal = { fg = "#080b0b", bg = "#2dd4bf", bold = true }
+mode_select = { fg = "#080b0b", bg = "#fbbf24", bold = true }
+mode_unset = { fg = "#080b0b", bg = "#f43f5e", bold = true }
 
 progress_label = { bold = true }
-progress_normal = { fg = "#ffb000", bg = "#121216" }
-progress_error = { fg = "#e63946", bg = "#121216" }
+progress_normal = { fg = "#2dd4bf", bg = "#0e1413" }
+progress_error = { fg = "#f43f5e", bg = "#0e1413" }
 
-permissions_t = { fg = "#ffb000" }
-permissions_r = { fg = "#ffd166" }
-permissions_w = { fg = "#e63946" }
-permissions_x = { fg = "#7bc47f" }
-permissions_s = { fg = "#8b949e" }
+permissions_t = { fg = "#2dd4bf" }
+permissions_r = { fg = "#fbbf24" }
+permissions_w = { fg = "#f43f5e" }
+permissions_x = { fg = "#10b981" }
+permissions_s = { fg = "#71827e" }
 
 [select]
-border = { fg = "#ffb000" }
-active = { fg = "#ffd166", bold = true }
-inactive = { fg = "#e8e6e3" }
+border = { fg = "#2dd4bf" }
+active = { fg = "#fbbf24", bold = true }
+inactive = { fg = "#ecfdf5" }
 
 [input]
-border = { fg = "#ffb000" }
-title = { fg = "#e8e6e3" }
-value = { fg = "#e8e6e3" }
-selected = { bg = "#1c1c23" }
+border = { fg = "#2dd4bf" }
+title = { fg = "#ecfdf5" }
+value = { fg = "#ecfdf5" }
+selected = { bg = "#16201e" }
 
 [completion]
-border = { fg = "#34343d" }
-active = { bg = "#1c1c23", fg = "#ffb000" }
-inactive = { fg = "#e8e6e3" }
+border = { fg = "#23322f" }
+active = { bg = "#16201e", fg = "#2dd4bf" }
+inactive = { fg = "#ecfdf5" }
 
 [tasks]
-border = { fg = "#34343d" }
-title = { fg = "#ffb000" }
+border = { fg = "#23322f" }
+title = { fg = "#2dd4bf" }
 hovered = { underline = true }
 
 [which]
 cols = 3
-mask = { bg = "#0a0a0c" }
-cand = { fg = "#ffb000" }
-rest = { fg = "#8b949e" }
-desc = { fg = "#e8e6e3" }
+mask = { bg = "#080b0b" }
+cand = { fg = "#2dd4bf" }
+rest = { fg = "#71827e" }
+desc = { fg = "#ecfdf5" }
 separator = "  "
-separator_style = { fg = "#34343d" }
+separator_style = { fg = "#23322f" }
 
 [help]
-on = { fg = "#ffb000" }
-exec = { fg = "#8b949e" }
-desc = { fg = "#e8e6e3" }
-hovered = { bg = "#1c1c23", bold = true }
-footer = { fg = "#0a0a0c", bg = "#ffb000" }
+on = { fg = "#2dd4bf" }
+exec = { fg = "#71827e" }
+desc = { fg = "#ecfdf5" }
+hovered = { bg = "#16201e", bold = true }
+footer = { fg = "#080b0b", bg = "#2dd4bf" }
 
 [filetype]
 rules = [
     # Media
-    { mime = "image/*", fg = "#c792ea" },
-    { mime = "video/*", fg = "#ff6b76" },
-    { mime = "audio/*", fg = "#ffd166" },
+    { mime = "image/*", fg = "#c084fc" },
+    { mime = "video/*", fg = "#fb7185" },
+    { mime = "audio/*", fg = "#fbbf24" },
     # Archives
-    { mime = "application/*zip", fg = "#ffb000" },
-    { mime = "application/x-tar", fg = "#ffb000" },
-    { mime = "application/x-bzip2", fg = "#ffb000" },
-    { mime = "application/x-7z-compressed", fg = "#ffb000" },
-    { mime = "application/x-rar", fg = "#ffb000" },
+    { mime = "application/*zip", fg = "#2dd4bf" },
+    { mime = "application/x-tar", fg = "#2dd4bf" },
+    { mime = "application/x-bzip2", fg = "#2dd4bf" },
+    { mime = "application/x-7z-compressed", fg = "#2dd4bf" },
+    { mime = "application/x-rar", fg = "#2dd4bf" },
     # Code & Configs
-    { url = "*.rs", fg = "#e63946" },
-    { url = "*.kdl", fg = "#ffb000" },
-    { url = "*.toml", fg = "#ffd166" },
-    { url = "*.json", fg = "#ffd166" },
-    { url = "*.sh", fg = "#7bc47f" },
-    { url = "*.zsh", fg = "#7bc47f" },
-    { url = "*.md", fg = "#8b949e" },
+    { url = "*.rs", fg = "#2dd4bf" },
+    { url = "*.kdl", fg = "#2dd4bf" },
+    { url = "*.toml", fg = "#fbbf24" },
+    { url = "*.json", fg = "#fbbf24" },
+    { url = "*.sh", fg = "#10b981" },
+    { url = "*.zsh", fg = "#10b981" },
+    { url = "*.md", fg = "#94a3a0" },
     # Directories
-    { url = "*/", fg = "#ffb000", bold = true },
+    { url = "*/", fg = "#2dd4bf", bold = true },
 ]

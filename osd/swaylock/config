@@ -1,6 +1,6 @@
 # Swaylock configuration managed by Dotfield
-# BLACKSITE Industrial Noir — Tactical Interface
-# Void #08080A · Obsidian #111216 · Graphite #181920 · Iron #282A36 · Bone #E6E6EB · Amber #FFB000 · Crimson #E63946
+# Obsidian Mint — Tactical Interface
+# Void #080B0B · Obsidian #0E1413 · Graphite #16201E · Iron #23322F · Minted White #ECFDF5 · Mint #2DD4BF · Rose #F43F5E
 
 daemonize
 ignore-empty-password
@@ -16,22 +16,22 @@ indicator-radius=110
 indicator-thickness=8
 
 # Base Canvas (Default Void Black)
-color=08080A
+color=080B0B
 scaling=fill
 
 # Indicator Center Disc (Semi-translucent Obsidian & Graphite)
-inside-color=111216ee
-inside-clear-color=181920ee
-inside-ver-color=181920ee
-inside-wrong-color=282A36ee
-inside-caps-lock-color=282A36ee
+inside-color=0E1413ee
+inside-clear-color=16201Eee
+inside-ver-color=16201Eee
+inside-wrong-color=23322Fee
+inside-caps-lock-color=23322Fee
 
-# Indicator Ring Outer Boundary (Hairline Iron & Tactical Amber)
-ring-color=282A36
-ring-clear-color=FFB000
-ring-ver-color=FFB000
-ring-wrong-color=E63946
-ring-caps-lock-color=E63946
+# Indicator Ring Outer Boundary (Hairline Iron & Tactical Mint)
+ring-color=23322F
+ring-clear-color=2DD4BF
+ring-ver-color=2DD4BF
+ring-wrong-color=F43F5E
+ring-caps-lock-color=F43F5E
 
 # Inner Separator Line
 line-color=00000000
@@ -42,19 +42,19 @@ line-caps-lock-color=00000000
 separator-color=00000000
 
 # Keypress & Backspace Glowing Arc Highlights
-key-hl-color=FFB000
-bs-hl-color=E63946
-caps-lock-key-hl-color=FFB000
-caps-lock-bs-hl-color=E63946
+key-hl-color=2DD4BF
+bs-hl-color=F43F5E
+caps-lock-key-hl-color=2DD4BF
+caps-lock-bs-hl-color=F43F5E
 
 # Center Text & Status Labels
-text-color=E6E6EB
-text-clear-color=FFB000
-text-ver-color=FFB000
-text-wrong-color=E63946
-text-caps-lock-color=E63946
+text-color=ECFDF5
+text-clear-color=2DD4BF
+text-ver-color=2DD4BF
+text-wrong-color=F43F5E
+text-caps-lock-color=F43F5E
 
 # Keyboard Layout Badge Box
-layout-bg-color=181920ee
-layout-border-color=282A36
-layout-text-color=E6E6EB
+layout-bg-color=16201Eee
+layout-border-color=23322F
+layout-text-color=ECFDF5

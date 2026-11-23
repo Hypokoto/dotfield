@@ -1,18 +1,19 @@
-# Ly Display Manager: BLACKSITE Industrial Noir Theme
+# Ly Display Manager: Obsidian Mint Theme
 
 Dotfield provides unified configuration for **Ly**, a lightweight TUI display manager for modern Wayland/Linux desktop environments.
 
 ## Color Palette Mapping
 
-The configuration binds strictly to the **BLACKSITE Industrial Noir** 65-20-8-5-2 token hierarchy:
+The configuration binds strictly to the **Obsidian Mint** 60-30-10 token hierarchy:
 
 | Token | Hex Code | TrueColor (0xSSRRGGBB) | Ly Role |
 | :--- | :--- | :--- | :--- |
-| **Void Black** | `#08080A` | `0x0008080A` | Background canvas (`bg`), error background (`error_bg`) |
-| **Bone** | `#E6E6EB` | `0x00E6E6EB` | Primary text (`fg`, `text_fg`) |
-| **Tactical Amber** | `#FFB000` | `0x01FFB000` | Focused border (`border_fg`), matrix highlight (`cmatrix_fg`) |
-| **Crimson** | `#E63946` | `0x01E63946` | Error alerts (`error_fg`), failed authentication attempts |
-| **Iron** | `#282A36` | `0x00282A36` | Outer frame boundary and subtle dividers |
+| **Void Black** | `#080B0B` | `0x00080B0B` | Background canvas (`bg`), error background (`error_bg`) |
+| **Minted White** | `#ECFDF5` | `0x00ECFDF5` | Primary text (`fg`, `text_fg`) |
+| **Mint** | `#2DD4BF` | `0x012DD4BF` | Focused border (`border_fg`) |
+| **Emerald** | `#10B981` | `0x0010B981` | Matrix highlight (`cmatrix_fg`) |
+| **Rose** | `#F43F5E` | `0x01F43F5E` | Error alerts (`error_fg`), failed authentication attempts |
+| **Iron** | `#23322F` | `0x0023322F` | Outer frame boundary and subtle dividers |
 
 ## Deployment
 

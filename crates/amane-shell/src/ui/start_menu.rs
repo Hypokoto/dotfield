@@ -350,7 +350,8 @@ pub fn start_menu_overlay() -> LayerWindow {
             .visible(false)
             .layer(Layer::Overlay)
             .target_output(OutputTarget::Active)
-            .namespace("dotfield-shell-start-menu");
+            .namespace("dotfield-shell-start-menu")
+            .child(Rectangle::new().width(Parent).height(Parent));
     }
 
     let tokens = ThemeTokens::from_manifest(&manifest);

@@ -55,6 +55,9 @@ struct WaylandState {
     // plain layer views registered with app.window(), kept so they can be recreated if outputs reset
     plain_views: Vec<fn() -> LayerWindow>,
 
+    // Circuit breaker tracking recreation attempts: view_id -> (last_attempt_time, consecutive_failures)
+    recreate_attempts: std::collections::HashMap<usize, (std::time::Instant, u32)>,
+
     // each of these gets a window on every monitor, including ones plugged in later
     per_monitor: Vec<fn(&Monitor) -> LayerWindow>,
 
@@ -156,6 +159,7 @@ impl WaylandApp {
             windows: Vec::new(),
 
             plain_views,
+            recreate_attempts: std::collections::HashMap::new(),
 
             per_monitor,
 

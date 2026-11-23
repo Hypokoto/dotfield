@@ -178,7 +178,8 @@ pub fn powermenu_overlay() -> LayerWindow {
             .target_output(OutputTarget::Active)
             .layer(Layer::Overlay)
             .visible(false)
-            .namespace("dotfield-shell-powermenu");
+            .namespace("dotfield-shell-powermenu")
+            .child(Rectangle::new().width(Parent).height(Parent));
     }
 
     let tokens = crate::ui::tokens::ThemeTokens::from_manifest(&manifest);

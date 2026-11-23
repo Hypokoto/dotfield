@@ -80,7 +80,8 @@ pub fn overview_overlay() -> LayerWindow {
             .visible(false)
             .layer(Layer::Overlay)
             .target_output(OutputTarget::Active)
-            .namespace("dotfield-shell-overview");
+            .namespace("dotfield-shell-overview")
+            .child(Rectangle::new().width(Parent).height(Parent));
     }
 
     let tokens = ThemeTokens::from_manifest(&manifest);

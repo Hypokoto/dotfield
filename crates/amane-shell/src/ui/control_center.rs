@@ -103,7 +103,8 @@ pub fn control_center_panel() -> LayerWindow {
             .target_output(OutputTarget::Active)
             .layer(Layer::Overlay)
             .visible(false)
-            .namespace("dotfield-shell-control-center");
+            .namespace("dotfield-shell-control-center")
+            .child(Rectangle::new().width(Parent).height(Parent));
     }
 
     let tokens = ThemeTokens::from_manifest(&manifest);

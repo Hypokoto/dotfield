@@ -459,7 +459,8 @@ pub fn display_config_overlay() -> LayerWindow {
             .target_output(OutputTarget::Active)
             .layer(Layer::Overlay)
             .visible(false)
-            .namespace("dotfield-shell-display-config");
+            .namespace("dotfield-shell-display-config")
+            .child(Rectangle::new().width(Parent).height(Parent));
     }
 
     let selected_idx = svc.selected;

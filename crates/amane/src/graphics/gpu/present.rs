@@ -7,6 +7,10 @@ use super::{Gpu, texture};
 impl Gpu {
     // false when the frame was skipped, so nothing was committed
     pub fn draw(&mut self, commands: Vec<Command>, width: u32, height: u32) -> bool {
+        if width == 0 || height == 0 {
+            return false;
+        }
+
         if self.config.width != width || self.config.height != height {
             self.config.width = width;
             self.config.height = height;

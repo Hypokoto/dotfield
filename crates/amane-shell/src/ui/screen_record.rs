@@ -176,7 +176,8 @@ pub fn screen_record_overlay() -> LayerWindow {
             .target_output(OutputTarget::Active)
             .layer(Layer::Overlay)
             .visible(false)
-            .namespace("dotfield-shell-screen-record");
+            .namespace("dotfield-shell-screen-record")
+            .child(Rectangle::new().width(Parent).height(Parent));
     }
 
     let tokens = ThemeTokens::from_manifest(&manifest);

@@ -1,8 +1,8 @@
 use std::time::{Duration, Instant};
 
 use amane::{
-    Align, Center, Horizontal, Layer, LayerWindow, Margin, OutputTarget, Padding, Rectangle, Row,
-    Service, Text, Vertical, Zone,
+    Align, Center, Horizontal, Layer, LayerWindow, Margin, OutputTarget, Padding, Parent,
+    Rectangle, Row, Service, Text, Vertical, Zone,
 };
 
 use crate::config::ConfigService;
@@ -68,8 +68,10 @@ pub fn osd_overlay() -> LayerWindow {
             .width(1.0)
             .height(1.0)
             .target_output(OutputTarget::Active)
+            .layer(Layer::Overlay)
             .visible(false)
-            .namespace("dotfield-shell-osd");
+            .namespace("dotfield-shell-osd")
+            .child(Rectangle::new().width(Parent).height(Parent));
     }
 
     let tokens = crate::ui::tokens::ThemeTokens::from_manifest(&manifest);

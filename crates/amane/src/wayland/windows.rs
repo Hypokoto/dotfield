@@ -160,11 +160,40 @@ impl WaylandState {
             .retain(|window| window.role.wl_surface() != surface);
 
         // If a plain layer window was closed by the compositor (e.g. output renegotiation/sleep),
-        // and an active output is still available, recreate the window so overlays are never lost
+        // and an active output is still available, recreate the window with circuit-breaker protection
         if let Some((View::Plain { id, view }, _)) = closed_window {
-            let active_output = self.current_focused_output();
-            if let Some(output) = active_output {
-                self.open(View::Plain { id, view }, Some(output));
+            let now = std::time::Instant::now();
+            let should_recreate = match self.recreate_attempts.get_mut(&id) {
+                Some((last_time, failures)) => {
+                    let elapsed = now.duration_since(*last_time);
+                    if elapsed < std::time::Duration::from_millis(1500) {
+                        *failures += 1;
+                        *last_time = now;
+                        if *failures >= 3 {
+                            eprintln!(
+                                "amane: view {id} closed {failures} times rapidly; suppressing recreation loop"
+                            );
+                            false
+                        } else {
+                            true
+                        }
+                    } else {
+                        *failures = 0;
+                        *last_time = now;
+                        true
+                    }
+                }
+                None => {
+                    self.recreate_attempts.insert(id, (now, 0));
+                    true
+                }
+            };
+
+            if should_recreate {
+                let active_output = self.current_focused_output();
+                if let Some(output) = active_output {
+                    self.open(View::Plain { id, view }, Some(output));
+                }
             }
         }
 

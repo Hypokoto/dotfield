@@ -121,6 +121,12 @@ pub fn apply(layer_surface: &LayerSurface, settings: &Settings, scale_factor: Sc
     let mut width = to_pixels(settings.width, scale_factor);
     let mut height = to_pixels(settings.height, scale_factor);
 
+    // Hidden windows must never request 0x0 size under any circumstances
+    if !settings.visible {
+        width = width.max(1);
+        height = height.max(1);
+    }
+
     // Protocol guard: width 0 is only valid if both left and right anchors are set
     if width == 0 && !anchor.contains(Anchor::LEFT | Anchor::RIGHT) {
         width = 1;

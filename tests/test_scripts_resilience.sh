@@ -46,15 +46,15 @@ header "Test 1: Wayland Socket Auto-Discovery"
     mkdir -p "${MOCK_RUNTIME}"
     create_mock_socket "${MOCK_RUNTIME}/wayland-3"
     touch "${MOCK_RUNTIME}/wayland-3.lock"
-    
+
     # Run subshell with isolated environment
     export XDG_RUNTIME_DIR="${MOCK_RUNTIME}"
     unset WAYLAND_DISPLAY
-    
+
     # Source env.sh
     # shellcheck disable=SC1091
     source "${SCRIPT_DIR}/scripts/lib/env.sh"
-    
+
     auto_discover_wayland_display || true
     if [[ "${WAYLAND_DISPLAY:-}" == "wayland-3" ]]; then
         pass "auto_discover_wayland_display correctly identified 'wayland-3' and ignored '.lock'"
@@ -71,13 +71,13 @@ header "Test 2: Sway IPC Socket Auto-Discovery"
     MOCK_RUNTIME="${TEST_TMP}/runtime_sway"
     mkdir -p "${MOCK_RUNTIME}"
     create_mock_socket "${MOCK_RUNTIME}/sway-ipc.1000.12345.sock"
-    
+
     export XDG_RUNTIME_DIR="${MOCK_RUNTIME}"
     unset SWAYSOCK
-    
+
     # shellcheck disable=SC1091
     source "${SCRIPT_DIR}/scripts/lib/env.sh"
-    
+
     auto_discover_swaysock || true
     if [[ "${SWAYSOCK:-}" == "${MOCK_RUNTIME}/sway-ipc.1000.12345.sock" ]]; then
         pass "auto_discover_swaysock correctly detected Sway IPC socket"
@@ -94,13 +94,13 @@ header "Test 3: Niri IPC Socket Auto-Discovery"
     MOCK_RUNTIME="${TEST_TMP}/runtime_niri"
     mkdir -p "${MOCK_RUNTIME}"
     create_mock_socket "${MOCK_RUNTIME}/niri-1000.sock"
-    
+
     export XDG_RUNTIME_DIR="${MOCK_RUNTIME}"
     unset NIRI_SOCKET
-    
+
     # shellcheck disable=SC1091
     source "${SCRIPT_DIR}/scripts/lib/env.sh"
-    
+
     auto_discover_niri_socket || true
     if [[ "${NIRI_SOCKET:-}" == "${MOCK_RUNTIME}/niri-1000.sock" ]]; then
         pass "auto_discover_niri_socket correctly detected Niri IPC socket"
@@ -116,14 +116,14 @@ header "Test 4: Compositor Target Resolution"
 (
     # shellcheck disable=SC1091
     source "${SCRIPT_DIR}/scripts/lib/env.sh"
-    
+
     # Case A: Explicit sway
     if is_target_sway "sway" && is_target_sway "--sway"; then
         pass "is_target_sway recognized targets 'sway' and '--sway'"
     else
         fail "is_target_sway failed to recognize target 'sway'/'--sway'"
     fi
-    
+
     # Case B: Explicit niri
     if is_target_niri "niri" && is_target_niri "--niri"; then
         pass "is_target_niri recognized targets 'niri' and '--niri'"
@@ -139,7 +139,7 @@ header "Test 5: Safe Notification Resilience"
 (
     # shellcheck disable=SC1091
     source "${SCRIPT_DIR}/scripts/lib/env.sh"
-    
+
     # Test under restricted PATH where notify-send does not exist
     if (PATH="/nonexistent" safe_notify "dotfield-test" "normal" "Test" "Message"); then
         pass "safe_notify gracefully succeeded with exit code 0 when notify-send was unavailable"
@@ -157,17 +157,17 @@ header "Test 6: Battery Alert Debounced State Machine"
     MOCK_RUNTIME="${TEST_TMP}/runtime_bat"
     mkdir -p "${MOCK_SYSFS}/power_supply/BAT0"
     mkdir -p "${MOCK_RUNTIME}"
-    
+
     export XDG_RUNTIME_DIR="${MOCK_RUNTIME}"
     STATE_FILE="${MOCK_RUNTIME}/dotfield-battery.state"
-    
+
     # Helper to run a step of battery checking
     test_battery_step() {
         local cap="$1"
         local status="$2"
         echo "${cap}" > "${MOCK_SYSFS}/power_supply/BAT0/capacity"
         echo "${status}" > "${MOCK_SYSFS}/power_supply/BAT0/status"
-        
+
         # Override sysfs glob in a subshell running the battery logic
         (
             # shellcheck disable=SC1091
@@ -175,20 +175,20 @@ header "Test 6: Battery Alert Debounced State Machine"
             EMERGENCY_THRESHOLD=5
             CRITICAL_THRESHOLD=10
             LOW_THRESHOLD=20
-            
+
             # Read state
             current_state="none"
             if [[ -f "${STATE_FILE}" ]]; then
                 current_state="$(cat "${STATE_FILE}" 2>/dev/null || echo "none")"
             fi
-            
+
             if [[ "${status}" =~ (Charging|Full) ]]; then
                 if [[ "${current_state}" != "none" ]]; then
                     echo "none" > "${STATE_FILE}"
                 fi
                 exit 0
             fi
-            
+
             new_state="none"
             if (( cap <= EMERGENCY_THRESHOLD )); then
                 new_state="emergency"
@@ -197,7 +197,7 @@ header "Test 6: Battery Alert Debounced State Machine"
             elif (( cap <= LOW_THRESHOLD )); then
                 new_state="low"
             fi
-            
+
             if [[ "${new_state}" != "${current_state}" ]]; then
                 echo "${new_state}" > "${STATE_FILE}"
                 echo "NOTIFIED:${new_state}"
@@ -206,7 +206,7 @@ header "Test 6: Battery Alert Debounced State Machine"
             fi
         )
     }
-    
+
     # 1. 80% Discharging -> state: none
     out1=$(test_battery_step 80 "Discharging")
     state1=$(cat "${STATE_FILE}" 2>/dev/null || echo "none")
@@ -215,7 +215,7 @@ header "Test 6: Battery Alert Debounced State Machine"
     else
         fail "Expected state 'none', got '${state1}'"
     fi
-    
+
     # 2. 18% Discharging -> triggers low
     out2=$(test_battery_step 18 "Discharging")
     state2=$(cat "${STATE_FILE}" 2>/dev/null || echo "none")
@@ -224,7 +224,7 @@ header "Test 6: Battery Alert Debounced State Machine"
     else
         fail "Expected 'low' and 'NOTIFIED:low', got state='${state2}', out='${out2}'"
     fi
-    
+
     # 3. 17% Discharging -> debounced, no duplicate notification
     out3=$(test_battery_step 17 "Discharging")
     state3=$(cat "${STATE_FILE}" 2>/dev/null || echo "none")
@@ -233,7 +233,7 @@ header "Test 6: Battery Alert Debounced State Machine"
     else
         fail "Debounce failed: got state='${state3}', out='${out3}'"
     fi
-    
+
     # 4. 9% Discharging -> triggers critical
     out4=$(test_battery_step 9 "Discharging")
     state4=$(cat "${STATE_FILE}" 2>/dev/null || echo "none")
@@ -242,7 +242,7 @@ header "Test 6: Battery Alert Debounced State Machine"
     else
         fail "Expected 'critical', got state='${state4}', out='${out4}'"
     fi
-    
+
     # 5. 4% Discharging -> triggers emergency
     out5=$(test_battery_step 4 "Discharging")
     state5=$(cat "${STATE_FILE}" 2>/dev/null || echo "none")
@@ -251,7 +251,7 @@ header "Test 6: Battery Alert Debounced State Machine"
     else
         fail "Expected 'emergency', got state='${state5}', out='${out5}'"
     fi
-    
+
     # 6. Plugged in (Charging at 15%) -> resets state to none
     out6=$(test_battery_step 15 "Charging")
     state6=$(cat "${STATE_FILE}" 2>/dev/null || echo "none")

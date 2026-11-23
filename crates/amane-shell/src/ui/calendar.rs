@@ -113,7 +113,8 @@ pub fn calendar_overlay() -> LayerWindow {
             .target_output(OutputTarget::Active)
             .layer(Layer::Overlay)
             .visible(false)
-            .namespace("dotfield-shell-calendar");
+            .namespace("dotfield-shell-calendar")
+            .child(Rectangle::new().width(Parent).height(Parent));
     }
 
     let tokens = ThemeTokens::from_manifest(&manifest);

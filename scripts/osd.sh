@@ -207,7 +207,7 @@ show_volume_notify() {
         fi
     fi
 
-    if [[ -n "${vol}" ]]; then
+    if [[ -n "${vol}" ]] && has_cmd notify-send; then
         if [[ "${muted}" == "true" ]]; then
             notify-send -a dotfield -c volume -r 9991 -h "int:value:${vol}" -h "string:x-canonical-private-synchronous:volume" -t 1200 "Volume Muted" "Current level: ${vol}%"
         else

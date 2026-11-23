@@ -20,8 +20,17 @@ cache_wallpaper() {
     fi
 }
 
-is_niri() {
-    [[ -n "${NIRI_SOCKET:-}" ]] || pgrep -x niri >/dev/null 2>&1 || [[ "${TARGET}" == "--niri" ]]
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${SCRIPT_DIR}/lib/env.sh" ]]; then
+    # shellcheck source=/dev/null
+    source "${SCRIPT_DIR}/lib/env.sh"
+elif [[ -f "${HOME}/.config/dotfield/scripts/lib/env.sh" ]]; then
+    # shellcheck source=/dev/null
+    source "${HOME}/.config/dotfield/scripts/lib/env.sh"
+fi
+
+is_target_niri() {
+    [[ "${TARGET}" == "--niri" ]] || is_niri
 }
 
 find_gif() {
@@ -54,7 +63,7 @@ find_img() {
 }
 
 # 1. Niri Compositor Flow: awww-daemon + awww img (defaults to W4.png)
-if is_niri; then
+if is_target_niri; then
     pkill -x swaybg 2>/dev/null || true
 
     if ! command -v awww >/dev/null 2>&1; then
@@ -64,7 +73,7 @@ if is_niri; then
 
     # Ensure awww-daemon is active with ultra-low latency socket check
     runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-    wayland_disp="${WAYLAND_DISPLAY:-wayland-1}"
+    wayland_disp="${WAYLAND_DISPLAY:-wayland-0}"
     sock="${runtime_dir}/${wayland_disp}-awww-daemon.sock"
 
     if ! pgrep -x awww-daemon >/dev/null 2>&1; then

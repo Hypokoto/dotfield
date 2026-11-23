@@ -758,8 +758,9 @@ fi
 step "Deploying helper scripts to ~/.config/dotfield/scripts..."
 SCRIPTS_DEST="${HOME}/.config/dotfield/scripts"
 if [[ "${DRY_RUN}" == true ]]; then
-    info "[dry-run] mkdir -p ${SCRIPTS_DEST} ${PREFIX}"
-    info "[dry-run] install -m 0755 scripts/* ${SCRIPTS_DEST}/"
+    info "[dry-run] mkdir -p ${SCRIPTS_DEST}/lib ${PREFIX}"
+    info "[dry-run] install -m 0755 scripts/*.sh ${SCRIPTS_DEST}/"
+    info "[dry-run] install -m 0755 scripts/lib/*.sh ${SCRIPTS_DEST}/lib/"
     info "[dry-run] ln -sf ${SCRIPTS_DEST}/* ${PREFIX}/"
 else
     mkdir -p "${PREFIX}"
@@ -783,6 +784,8 @@ else
     ln -sf "${SCRIPTS_DEST}/gtk-sync.sh" "${PREFIX}/dotfield-gtk-sync" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/screenshot.sh" "${PREFIX}/dotfield-screenshot" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/screen-record.sh" "${PREFIX}/dotfield-record" 2>/dev/null || true
+    ln -sf "${SCRIPTS_DEST}/osd.sh" "${PREFIX}/dotfield-osd" 2>/dev/null || true
+    ln -sf "${SCRIPTS_DEST}/battery-alert.sh" "${PREFIX}/dotfield-battery-alert" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/sandbox-browser.sh" "${PREFIX}/sandbox-browser" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/sandbox-browser.sh" "${PREFIX}/dotfield-sandbox-browser" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/fw-open" "${PREFIX}/fw-open" 2>/dev/null || true

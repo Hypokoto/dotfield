@@ -47,9 +47,7 @@ fi
 
 notify() {
     local msg="$1"
-    if command -v notify-send >/dev/null 2>&1; then
-        notify-send -a "dotfield" -u normal "Display Configurator" "$msg"
-    fi
+    safe_notify "dotfield" "normal" "Display Configurator" "$msg"
 }
 
 detect_external() {

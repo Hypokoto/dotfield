@@ -8,9 +8,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFIELD_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-has_cmd() {
-    command -v "$1" >/dev/null 2>&1
-}
+if [[ -f "${SCRIPT_DIR}/lib/env.sh" ]]; then
+    # shellcheck source=/dev/null
+    source "${SCRIPT_DIR}/lib/env.sh"
+elif [[ -f "${HOME}/.config/dotfield/scripts/lib/env.sh" ]]; then
+    # shellcheck source=/dev/null
+    source "${HOME}/.config/dotfield/scripts/lib/env.sh"
+fi
 
 # 1. Do not start multiple lock sessions concurrently
 if pgrep -x swaylock >/dev/null 2>&1 || pgrep -x hyprlock >/dev/null 2>&1 || pgrep -x gtklock >/dev/null 2>&1; then

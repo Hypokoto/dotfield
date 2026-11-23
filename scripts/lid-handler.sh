@@ -17,9 +17,7 @@ ACTION="${1:-close}"
 
 notify() {
     local msg="$1"
-    if command -v notify-send >/dev/null 2>&1; then
-        notify-send -a "dotfield" -u normal "Display Manager" "$msg"
-    fi
+    safe_notify "dotfield" "normal" "Display Manager" "$msg"
 }
 
 detect_external() {

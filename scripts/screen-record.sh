@@ -4,6 +4,15 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${SCRIPT_DIR}/lib/env.sh" ]]; then
+    # shellcheck source=/dev/null
+    source "${SCRIPT_DIR}/lib/env.sh"
+elif [[ -f "${HOME}/.config/dotfield/scripts/lib/env.sh" ]]; then
+    # shellcheck source=/dev/null
+    source "${HOME}/.config/dotfield/scripts/lib/env.sh"
+fi
+
 umask 077
 XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 PID_FILE="${XDG_RUNTIME_DIR}/dotfield-recording.pid"
@@ -84,9 +93,7 @@ stop_recording() {
         local file_size
         file_size="$(du -h "${output_file}" | cut -f1)"
         echo "Recording saved: ${output_file} (${file_size})"
-        if command -v notify-send >/dev/null 2>&1; then
-            notify-send -u normal -i video-x-generic "Screen Recording Saved" "Saved to $(basename "${output_file}") (${file_size})"
-        fi
+        safe_notify "screen-record" "normal" "Screen Recording Saved" "Saved to $(basename "${output_file}") (${file_size})" "video-x-generic" "record"
     fi
 }
 
@@ -113,9 +120,7 @@ start_recording() {
 
     if ! command -v wf-recorder >/dev/null 2>&1; then
         echo "Error: wf-recorder is required for Wayland screen recording." >&2
-        if command -v notify-send >/dev/null 2>&1; then
-            notify-send -u critical "Screen Recorder" "wf-recorder is not installed."
-        fi
+        safe_notify "screen-record" "critical" "Screen Recorder" "wf-recorder is not installed." "" "error"
         exit 1
     fi
 
@@ -153,9 +158,7 @@ start_recording() {
     sleep 0.3
     if kill -0 "${rec_pid}" 2>/dev/null; then
         echo "Recording started (PID: ${rec_pid}) -> ${output_file}"
-        if command -v notify-send >/dev/null 2>&1; then
-            notify-send -u low -i media-record "Screen Recording Started" "Press hotkey or click REC indicator to stop"
-        fi
+        safe_notify "screen-record" "low" "Screen Recording Started" "Press hotkey or click REC indicator to stop" "media-record" "record"
     else
         echo "Error: wf-recorder failed to start" >&2
         rm -f "${PID_FILE}" "${META_FILE}" 2>/dev/null || true

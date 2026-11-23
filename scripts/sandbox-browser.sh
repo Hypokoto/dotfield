@@ -5,9 +5,14 @@
 
 set -euo pipefail
 
-has_cmd() {
-    command -v "$1" >/dev/null 2>&1
-}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${SCRIPT_DIR}/lib/env.sh" ]]; then
+    # shellcheck source=/dev/null
+    source "${SCRIPT_DIR}/lib/env.sh"
+elif [[ -f "${HOME}/.config/dotfield/scripts/lib/env.sh" ]]; then
+    # shellcheck source=/dev/null
+    source "${HOME}/.config/dotfield/scripts/lib/env.sh"
+fi
 
 if ! has_cmd bwrap; then
     echo "[dotfield:error] bubblewrap (bwrap) is not installed." >&2

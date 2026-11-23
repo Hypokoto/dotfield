@@ -4,6 +4,15 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${SCRIPT_DIR}/lib/env.sh" ]]; then
+    # shellcheck source=/dev/null
+    source "${SCRIPT_DIR}/lib/env.sh"
+elif [[ -f "${HOME}/.config/dotfield/scripts/lib/env.sh" ]]; then
+    # shellcheck source=/dev/null
+    source "${HOME}/.config/dotfield/scripts/lib/env.sh"
+fi
+
 umask 077
 TARGET_DIR="${HOME}/Pictures/Screenshots"
 mkdir -p "${TARGET_DIR}"
@@ -56,7 +65,7 @@ case "${MODE}" in
         ;;
     --window)
         # Obtain active window capture from compositor (Niri / Sway)
-        if command -v niri >/dev/null 2>&1 && [[ -n "${NIRI_SOCKET:-}" ]] && niri msg action screenshot-window --path "${OUTPUT_FILE}" 2>/dev/null; then
+        if is_niri && command -v niri >/dev/null 2>&1 && niri msg action screenshot-window --path "${OUTPUT_FILE}" 2>/dev/null; then
             # Niri IPC returns before asynchronous write finishes; poll until file is written
             CAPTURED=false
             for _ in {1..40}; do
@@ -71,7 +80,7 @@ case "${MODE}" in
                 echo "Error: Timed out waiting for Niri window capture at ${OUTPUT_FILE}" >&2
                 exit 1
             fi
-        elif command -v swaymsg >/dev/null 2>&1 && [[ -n "${SWAYSOCK:-}" ]] && command -v jq >/dev/null 2>&1; then
+        elif is_sway && command -v swaymsg >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
             GEOMETRY="$(swaymsg -t get_tree 2>/dev/null | jq -r '.. | select(.focused? == true).rect? | select(. != null) | "\(.x),\(.y) \(.width)x\(.height)"' 2>/dev/null || true)"
             if [[ -n "${GEOMETRY:-}" && "${GEOMETRY}" != "null" ]]; then
                 grim -g "${GEOMETRY}" "${OUTPUT_FILE}"
@@ -94,10 +103,10 @@ case "${MODE}" in
 esac
 
 if [[ -s "${OUTPUT_FILE}" ]]; then
-    wl-copy < "${OUTPUT_FILE}" &
-    if command -v notify-send >/dev/null 2>&1; then
-        notify-send -a "Dotfield Screenshot" -h string:x-canonical-private-synchronous:screenshot "Screenshot Captured" "Saved to ${OUTPUT_FILE} and copied to clipboard." &
+    if has_cmd wl-copy; then
+        wl-copy < "${OUTPUT_FILE}" 2>/dev/null &
     fi
+    safe_notify "Dotfield Screenshot" "normal" "Screenshot Captured" "Saved to ${OUTPUT_FILE} and copied to clipboard." "" "screenshot"
 elif [[ -f "${OUTPUT_FILE}" && "${TIMED_OUT}" != "true" ]]; then
     rm -f "${OUTPUT_FILE}"
 fi

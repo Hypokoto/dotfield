@@ -3,10 +3,10 @@
 # High-Performance, Hardened & Productive Shell Environment
 
 ### 1. Security & System Hardening
-umask 027
+umask 022
 
-# Prevent accidental file truncation through redirection (use >! or >| for intentional overwrite)
-setopt NO_CLOBBER
+# Allow standard file redirection and overwrites for developer tools and AI agents
+setopt CLOBBER
 
 # Terminal cleanliness
 setopt NO_BEEP
@@ -15,9 +15,10 @@ setopt NO_BEEP
 limit coredumpsize 0 2>/dev/null || true
 
 # Safe PATH Construction & Poisoning Prevention:
-# Only retain paths that exist, are owned by root or current user, and are not world-writable.
+# Preserves global path, prepends user toolchain binaries (~/.local/bin, ~/.cargo/bin, ~/.bun/bin, ~/go/bin),
+# and sanitizes against non-existent or world-writable directories.
+typeset -gU path fpath cdpath
 _dotfield_sanitize_path() {
-    typeset -U path fpath cdpath
     local -a candidate_paths=(
         "$HOME/.local/bin"
         "$HOME/.cargo/bin"
@@ -31,8 +32,8 @@ _dotfield_sanitize_path() {
     for p in "${candidate_paths[@]}"; do
         [[ -z "$p" || "$p" == "." ]] && continue
         if [[ -d "$p" ]]; then
-            owner_uid="$(stat -c '%u' "$p" 2>/dev/null)"
-            perm="$(stat -c '%a' "$p" 2>/dev/null)"
+            owner_uid="$(/usr/bin/stat -c '%u' "$p" 2>/dev/null)"
+            perm="$(/usr/bin/stat -c '%a' "$p" 2>/dev/null)"
             if [[ ("$owner_uid" == "$EUID" || "$owner_uid" == "0") && "$perm" != *[2367] ]]; then
                 clean_paths+=("$p")
             fi

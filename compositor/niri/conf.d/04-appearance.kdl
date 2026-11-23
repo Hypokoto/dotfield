@@ -48,11 +48,11 @@ animations {
     }
 }
 
-// Terminal Geometry (Ghostty, Foot, Kitty, Alacritty)
-// Terminals manage their own internal background opacity; window-level opacity is kept 1.0 for crisp font rendering
+// Terminal Geometry & Translucent Surfaces (Ghostty, Foot, Kitty, Alacritty)
 window-rule {
-    match app-id=r#"^(com\.mitchellh\.ghostty|floating-term|foot|kitty|Alacritty)$"#
+    match app-id=r#"^(com\.mitchellh\.ghostty|ghostty|floating-term|foot|kitty|Alacritty)$"#
 
+    opacity 0.82
     geometry-corner-radius 12
     clip-to-geometry true
 }

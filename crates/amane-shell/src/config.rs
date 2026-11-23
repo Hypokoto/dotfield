@@ -15,7 +15,7 @@ impl Default for ThemeConfig {
         Self {
             font_family: "Inter".to_string(),
             font_size: 10.0,
-            style: "obsidian-mint".to_string(),
+            style: "cyber-synthwave".to_string(),
         }
     }
 }
@@ -40,18 +40,18 @@ pub struct PaletteConfig {
 impl Default for PaletteConfig {
     fn default() -> Self {
         Self {
-            background: "#080B0B".to_string(),
-            surface: "#0E1413".to_string(),
-            overlay: "#16201E".to_string(),
-            muted: "#94A3A0".to_string(),
-            accent: "#2DD4BF".to_string(),
-            highlight: "#FBBF24".to_string(),
-            foreground: "#ECFDF5".to_string(),
-            border: "#23322F".to_string(),
-            hover: "#10B981".to_string(),
-            steel: "#71827E".to_string(),
-            success: "#10B981".to_string(),
-            danger_critical: "#F43F5E".to_string(),
+            background: "#000000".to_string(),
+            surface: "#140e29".to_string(),
+            overlay: "#251b4a".to_string(),
+            muted: "#ffbe74".to_string(),
+            accent: "#04C5F0".to_string(),
+            highlight: "#FF7F41".to_string(),
+            foreground: "#14B9B5".to_string(),
+            border: "#251b4a".to_string(),
+            hover: "#11AEB3".to_string(),
+            steel: "#ffbe74".to_string(),
+            success: "#7cd699".to_string(),
+            danger_critical: "#CE4F48".to_string(),
         }
     }
 }
@@ -230,8 +230,8 @@ mod tests {
         assert_eq!(manifest.bar.height, 48.0);
         assert!(manifest.bar.enabled);
         assert_eq!(manifest.theme.font_size, 10.0);
-        assert_eq!(manifest.theme.style, "obsidian-mint");
-        assert_eq!(manifest.palette.accent, "#2DD4BF");
+        assert_eq!(manifest.theme.style, "cyber-synthwave");
+        assert_eq!(manifest.palette.accent, "#04C5F0");
         assert_eq!(manifest.terminal.default, "ghostty");
     }
 
@@ -251,8 +251,8 @@ mod tests {
         assert_eq!(manifest.bar.position, "bottom");
         assert_eq!(manifest.theme.font_size, 12.0);
         assert_eq!(manifest.theme.font_family, "Inter");
-        assert_eq!(manifest.theme.style, "obsidian-mint");
-        assert_eq!(manifest.palette.accent, "#2DD4BF");
+        assert_eq!(manifest.theme.style, "cyber-synthwave");
+        assert_eq!(manifest.palette.accent, "#04C5F0");
     }
 
     #[test]

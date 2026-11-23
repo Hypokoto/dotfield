@@ -2,10 +2,11 @@
 // Controlled Chaos Theme: Void Black · Crimson · Industrial Amber · Steel
 
 binds {
-    // Core Windows 11 Workflow Keybindings
+    // Core Workflow Keybindings
     Super_L { spawn "amane-msg" "start-menu"; }
-    Mod+D { focus-workspace "05 SCRATCH"; }       // Win+D: Show Desktop / Clean Scratch
-    Mod+S { spawn "amane-msg" "start-menu"; }     // Win+S: Windows Search & Start
+    Mod+D { spawn "amane-msg" "start-menu"; }     // Win+D: Application Launcher & Search
+    Mod+C { spawn "amane-msg" "control-center"; } // Win+C: Control Center & Quick Settings
+    Mod+S { spawn "amane-msg" "start-menu"; }     // Win+S: Search & Start
     Mod+Space { spawn "amane-msg" "start-menu"; }
     Mod+E { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-ror.sh files"; }      // Win+E: Run-or-Raise File Explorer
     Mod+B { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-ror.sh browser"; }    // Win+B: Run-or-Raise Web Browser

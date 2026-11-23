@@ -404,14 +404,88 @@ impl ThemeTokens {
         }
     }
 
+    pub fn cyber_synthwave() -> Self {
+        let bg = Color::from("#000000"); // base00
+        let surface = Color::from("#140e29"); // base01
+        let surface_elevated = Color::from("#251b4a"); // base02
+        let border_subtle = Color::from("#251b4a"); // base02
+        let text_primary = Color::from("#14B9B5"); // base05
+        let text_secondary = Color::from("#11AEB3"); // base04
+        let text_muted = Color::from("#ffbe74"); // base03
+        let accent = Color::from("#04C5F0"); // base0D
+        let accent_hover = Color::from("#14B9B5"); // base05
+        let danger = Color::from("#BE3F50"); // base08
+        let danger_critical = Color::from("#CE4F48"); // base0F
+        let warning = Color::from("#FF7F41"); // base09
+        let warning_subtle = Color::from("#331a0e");
+        let success = Color::from("#7cd699"); // base0B
+        let steel = Color::from("#ffbe74"); // base07
+
+        let acrylic_bg = Color::from("#140e29fa");
+        let acrylic_border = Color::from("#251b4a");
+        let card_bg = surface_elevated;
+        let card_border = Color::from("#362768");
+        let indicator_active = accent;
+
+        let surface_hover = Color::from("#2e205c");
+        let surface_active = Color::from("#3b2975");
+        let surface_selected = Color::from("#332366");
+        let surface_track = bg;
+
+        let border_hover = Color::from("#9147a8"); // base0E
+        let border_focus = Color::rgba(0x04, 0xC5, 0xF0, 0x88); // base0D
+        let border_danger = Color::rgba(0xBE, 0x3F, 0x50, 0x88); // base08
+
+        let accent_subtle = Color::from("#102e3b");
+        let danger_subtle = Color::from("#301217");
+
+        Self {
+            bg,
+            surface,
+            surface_elevated,
+            surface_hover,
+            surface_active,
+            surface_selected,
+            surface_track,
+            border_subtle,
+            border_hover,
+            border_focus,
+            border_danger,
+            text_primary,
+            text_secondary,
+            text_muted,
+            accent,
+            accent_hover,
+            accent_subtle,
+            danger,
+            danger_critical,
+            danger_subtle,
+            warning,
+            warning_subtle,
+            success,
+            steel,
+            acrylic_bg,
+            acrylic_border,
+            card_bg,
+            card_border,
+            indicator_active,
+            font_family: "Inter".to_string(),
+            font_sans: "Inter".to_string(),
+            font_mono: "JetBrainsMono Nerd Font".to_string(),
+            accent_tint: Color::from("#04C5F026"),
+        }
+    }
+
     pub fn from_manifest(manifest: &ShellManifest) -> Self {
         let style = manifest.theme.style.to_lowercase();
         let mut tokens = if style.contains("clay") || style.contains("playful") {
             Self::playful_clay()
         } else if style.contains("chaos") || style.contains("controlled") {
             Self::dark_controlled_chaos()
-        } else {
+        } else if style.contains("mint") || style.contains("obsidian-mint") {
             Self::obsidian_mint()
+        } else {
+            Self::cyber_synthwave()
         };
 
         if !manifest.theme.font_family.is_empty() && manifest.theme.font_family != "monospace" {
@@ -428,15 +502,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_tokens_from_manifest_defaults_to_obsidian_mint() {
+    fn test_tokens_from_manifest_defaults_to_cyber_synthwave() {
         let manifest = ShellManifest::default();
+        let tokens = ThemeTokens::from_manifest(&manifest);
+        assert_eq!(tokens.bg, Color::from("#000000"));
+        assert_eq!(tokens.text_primary, Color::from("#14B9B5"));
+        assert_eq!(tokens.accent, Color::from("#04C5F0"));
+        assert_eq!(tokens.font_sans, "Inter");
+    }
+
+    #[test]
+    fn test_tokens_from_manifest_obsidian_mint_style() {
+        let mut manifest = ShellManifest::default();
+        manifest.theme.style = "obsidian-mint".to_string();
         let tokens = ThemeTokens::from_manifest(&manifest);
         assert_eq!(
             tokens.text_primary,
             Color::from(palette::OBSIDIAN_MINT_PRIMARY_TEXT)
         );
         assert_eq!(tokens.accent, Color::from(palette::OBSIDIAN_MINT_ACCENT));
-        assert_eq!(tokens.font_sans, "Inter");
     }
 
     #[test]

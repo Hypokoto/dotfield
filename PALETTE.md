@@ -1,48 +1,49 @@
-# Obsidian Mint
+# Cyber Synthwave
 
-> **Obsidian · Bioluminescent Mint · Emerald · Amber Gold · Rose Critical**
+> **Void Black · Deep Violet · Rich Purple · Cyan-Teal · Neon Blue · Emerald**
 
-A dark, high-contrast bioluminescent cyber-botanical color system for `dotfield`, designed around focus, deep clarity, and effortless visual hierarchy.
+A high-contrast cyber-synthwave color system for `dotfield` and `amane`, designed around maximum readability, deep atmospheric depth, and neon precision.
 
-The interface pairs an ultra-deep mineral obsidian substrate with crisp mint and emerald accents, delivering zero eye strain and strict WCAG 2.2 AAA contrast across all Wayland and CLI surfaces.
+The interface pairs a pitch-black void substrate (`#000000`) and deep violet/purple surfaces (`#140e29`, `#251b4a`) with high-contrast cyan-teal (`#14B9B5`), electric blue (`#04C5F0`), amber gold (`#FF7F41`, `#ffbe74`), and purple highlights (`#9147a8`).
 
 ## 1. Philosophy
 
 | Principle | Color | Meaning |
 |---|---|---|
-| Focus | Deep Void (`#080B0B`) | Minimal distraction, infinite depth |
-| Growth / Action | Bioluminescent Mint (`#2DD4BF`) | Primary interactive state, high-contrast focal points |
-| Stability | Emerald (`#10B981`) | Success, confirmed states, secondary guidance |
-| Awareness | Amber Gold (`#FBBF24`) | Warnings, pending states, highlights |
-| Urgency | Rose Critical (`#F43F5E`) | Critical alarms, destruction, system errors |
-| Structure | Obsidian / Graphite | Layered spatial depth without high-frequency visual noise |
-| Clarity | Minted White (`#ECFDF5`) | Ultra-crisp typography (14.8:1 contrast ratio) |
-
-**Design principle:** 60-30-10 Balance with WCAG AAA precision. 60% Void/Canvas, 30% Obsidian/Graphite surfaces, 10% Mint/Emerald accents.
+| Focus | Pitch Void (`#000000`) | Clean infinite contrast, true OLED blacks |
+| Structure | Deep Violet (`#140e29`) & Rich Purple (`#251b4a`) | Atmospheric layering without gray wash |
+| Foreground | Cyan-Teal (`#14B9B5`) | Razor-sharp text and active reading clarity |
+| Action | Neon Blue (`#04C5F0`) | High-priority interactive indicators and focus borders |
+| Guidance | Emerald (`#7cd699`) | Success states, strings, validated operations |
+| Warmth | Amber Peach (`#ffbe74`) | Muted comments, keycap hints, secondary icons |
+| Urgency | Crimson & Rose (`#BE3F50`, `#CE4F48`) | Alarms, destructive actions, battery critical |
+| Magic | Electric Purple (`#9147a8`) | Active borders, keywords, visual highlights |
 
 ---
 
 ## 2. Core Color Palette
 
-| Token | Hex | Contrast vs `#080B0B` | Purpose |
-|---|---|---|---|
-| Void | `#080B0B` | 1:1 | Deep canvas / root background |
-| Obsidian | `#0E1413` | 1.1:1 | Panels, windows, base cards |
-| Graphite | `#16201E` | 1.3:1 | Elevated surfaces, hover states, chips |
-| Iron | `#23322F` | 1.8:1 | Subtle borders, hairpins, dividers |
-| Steel | `#71827E` | 4.6:1 (AA) | Neutral icons, metadata, inactive indicators |
-| Ash | `#94A3A0` | 5.8:1 (AA) | Secondary text, muted labels |
-| Minted White | `#ECFDF5` | 14.8:1 (AAA) | Primary typography, prominent headers |
-| Mint | `#2DD4BF` | 9.1:1 (AAA) | Primary accent, focused borders, active tabs |
-| Emerald | `#10B981` | 7.4:1 (AAA) | Success, confirmed states, secondary highlights |
-| Amber Gold | `#FBBF24` | 9.6:1 (AAA) | Warning states, search match, telemetry alerts |
-| Rose Critical | `#F43F5E` | 7.0:1 (AAA) | Urgency, error, destructive operations |
-| Deep Rose | `#9F1239` | 2.5:1 | Urgent backgrounds, danger highlights |
+| Token | Hex | Role |
+|---|---|---|
+| Background (`base00`) | `#000000` | Deep canvas / root background |
+| Surface (`base01`) | `#140e29` | Top bar, modal backdrops, window chrome |
+| Overlay (`base02`) | `#251b4a` | Elevated cards, calendar, popovers, borders |
+| Muted (`base03` / `base07`) | `#ffbe74` | Comments, subtle captions, keycaps |
+| Statusline (`base04`) | `#11AEB3` | Secondary text, status indicators |
+| Foreground (`base05`) | `#14B9B5` | Primary text typography, titles, clock |
+| Pure Fallback (`base06`) | `#ffffff` | High-contrast fallback text |
+| Red Accent (`base08`) | `#BE3F50` | Variables, danger accents |
+| Warning Orange (`base09`) | `#FF7F41` | Warnings, telemetry alerts |
+| Yellow Amber (`base0A`) | `#ffbe74` | Classes, search highlights |
+| Strings Green (`base0B`) | `#7cd699` | Success, battery healthy, active connections |
+| Cyan Blue (`base0D`) | `#04C5F0` | Primary accent, focused rings, workspace pills |
+| Purple (`base0E`) | `#9147a8` | Active border hover glows, keywords |
+| Dark Red (`base0F`) | `#CE4F48` | Deprecated, critical system errors |
 
 ### Tints & Translucency
 
-- **Mint Tint**: `#2DD4BF26` (15% opacity overlay)
-- **Acrylic Background**: `#0E1413fa` (98% acrylic blur surface)
+- **Accent Tint**: `#04C5F026` (15% opacity neon blue glow)
+- **Acrylic Background**: `#140e29fa` (98% acrylic blur surface)
 - **Drop Shadow**: `rgba(0, 0, 0, 0.40)`
 
 ---

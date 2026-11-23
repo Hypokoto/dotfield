@@ -10,8 +10,8 @@ binds {
     Mod+K         { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh up w"; }
     Mod+Left      { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh left"; }
     Mod+Right     { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh right"; }
-    Mod+Down      { reset-window-height; }
-    Mod+Up        { maximize-column; }
+    Mod+Down      { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh down w"; }
+    Mod+Up        { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh up w"; }
 
     // Moving Columns & Windows
     Mod+Shift+H         { move-column-left; }

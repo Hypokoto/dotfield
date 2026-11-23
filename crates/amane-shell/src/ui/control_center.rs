@@ -1107,7 +1107,46 @@ fn render_appearance(tokens: &ThemeTokens, _font: &str) -> Rectangle {
             .align(Align::Center),
         );
 
-    let row = Row::new(vec![Box::new(theme_badge), Box::new(wallpaper_btn)])
+    let session_btn = Rectangle::new()
+        .width(96.0)
+        .height(26.0)
+        .radius(radius::PILL)
+        .fill(tokens.surface_active)
+        .border(1.0, tokens.border_subtle)
+        .cursor(Pointer)
+        .align_child(Center, Center)
+        .on_click(|_| {
+            let _ = std::process::Command::new("sh")
+                .args([
+                    "-c",
+                    "command -v dotfield-session >/dev/null 2>&1 && dotfield-session save || ~/.config/dotfield/scripts/session-manager.sh save",
+                ])
+                .spawn();
+        })
+        .child(
+            Row::new(vec![
+                Box::new(
+                    Text::new("󰆓")
+                        .size(12.0)
+                        .color(tokens.accent)
+                        .font(&tokens.font_mono),
+                ),
+                Box::new(
+                    Text::new("Save State")
+                        .size(typography::BADGE)
+                        .color(tokens.text_primary)
+                        .font(&tokens.font_sans),
+                ),
+            ])
+            .gap(spacing::GAP_XS)
+            .align(Align::Center),
+        );
+
+    let actions_row = Row::new(vec![Box::new(wallpaper_btn), Box::new(session_btn)])
+        .gap(spacing::GAP_SM)
+        .align(Align::Center);
+
+    let row = Row::new(vec![Box::new(theme_badge), Box::new(actions_row)])
         .width(Parent)
         .justify(Justify::SpaceBetween)
         .align(Align::Center);

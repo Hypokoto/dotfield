@@ -1,0 +1,15 @@
+# Dotfield Miri (Modal Niri) Configuration
+# Master-Stack & Hybrid Tiling Engine for Niri
+# Controlled Chaos Theme: Void Black · Crimson · Industrial Amber · Steel
+
+[global]
+default_workspace_mode = "scroll"
+
+[master]
+column_width_percentage = 50.0
+maximize_single_window = true
+
+[scroll]
+maintain_focus_on_new_window = false
+spread_windows_on_enter = false
+column_width_percentage = 50.0

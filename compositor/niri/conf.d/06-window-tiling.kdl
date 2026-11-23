@@ -2,11 +2,11 @@
 // Fluid scrollable tiling navigation, column stacking, and ergonomic resizing
 
 binds {
-    // Column & Window Navigation (Vi + Arrow Keys)
-    Mod+H     { focus-column-left; }
-    Mod+L     { focus-column-right; }
-    Mod+J     { focus-window-or-workspace-down; }
-    Mod+K     { focus-window-or-workspace-up; }
+    // Column & Window Navigation (Seamless Neovim + Niri Vi Integration)
+    Mod+H     { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh left"; }
+    Mod+L     { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh right"; }
+    Mod+J     { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh down w"; }
+    Mod+K     { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh up w"; }
     Mod+Left  { focus-column-left; }
     Mod+Right { focus-column-right; }
     Mod+Down  { reset-window-height; }

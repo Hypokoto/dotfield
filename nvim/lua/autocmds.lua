@@ -1,5 +1,9 @@
 require "nvchad.autocmds"
 
+pcall(function()
+  require("configs.niri_nav").setup()
+end)
+
 vim.api.nvim_create_autocmd("BufDelete", {
   group = vim.api.nvim_create_augroup("DashboardAutoOpen", { clear = true }),
   callback = function(ev)

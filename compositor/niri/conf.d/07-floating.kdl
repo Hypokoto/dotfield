@@ -13,7 +13,7 @@ window-rule {
 }
 
 window-rule {
-    match app-id="floating-term"
+    match app-id=r#"^(floating-term|scratchpad-term)$"#
     open-floating true
     default-column-width { fixed 960; }
     default-window-height { fixed 600; }

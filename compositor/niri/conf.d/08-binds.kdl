@@ -7,7 +7,8 @@ binds {
     Mod+D { focus-workspace "05 SCRATCH"; }       // Win+D: Show Desktop / Clean Scratch
     Mod+S { spawn "amane-msg" "start-menu"; }     // Win+S: Windows Search & Start
     Mod+Space { spawn "amane-msg" "start-menu"; }
-    Mod+E { spawn "ghostty" "-e" "yazi"; }      // Win+E: File Explorer
+    Mod+E { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-ror.sh files"; }      // Win+E: Run-or-Raise File Explorer
+    Mod+B { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-ror.sh browser"; }    // Win+B: Run-or-Raise Web Browser
     Mod+A { spawn "amane-msg" "control-center"; } // Win+A: Quick Settings
     Mod+N { spawn "amane-msg" "action-center"; }  // Win+N: Notification Center / Calendar
     Mod+I { spawn "amane-msg" "control-center"; } // Win+I: Settings
@@ -25,10 +26,16 @@ binds {
     Ctrl+Mod+Down { focus-workspace-down; }
     Ctrl+Mod+D { focus-workspace "05 SCRATCH"; }
 
-    // Terminal Launchers
+    // Terminal Launchers & Scratchpad
     Mod+Return { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
+    Mod+Shift+Return { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-cwd.sh"; } // Spawn Terminal in Focused Window CWD
+    Mod+U { spawn "sh" "-c" "~/.config/dotfield/scripts/scratchpad.sh"; }               // Dynamic Floating Scratchpad
     Ctrl+Alt+T { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
     Mod+Ctrl+Return { spawn "ghostty" "--class=floating-term"; }
+
+    // Session Management (Snapshot & Restore)
+    Mod+Ctrl+S { spawn "sh" "-c" "~/.config/dotfield/scripts/session-manager.sh save"; }
+    Mod+Ctrl+R { spawn "sh" "-c" "~/.config/dotfield/scripts/session-manager.sh restore"; }
 
     // Dotfield Interactive Hardware & System Widgets
     Mod+Shift+N { spawn "amane-msg" "network"; }

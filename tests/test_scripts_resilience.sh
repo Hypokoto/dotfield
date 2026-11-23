@@ -337,9 +337,224 @@ EOF
 )
 
 # ------------------------------------------------------------------------------
-# Test 8: Shellcheck across all repository scripts
+# Test 8: Terminal CWD Launcher
 # ------------------------------------------------------------------------------
-header "Test 8: ShellCheck Verification Across Repository"
+header "Test 8: Terminal CWD Resolution & Fallback"
+(
+    # Mock niri msg focused-window returning mock PID
+    MOCK_BIN="${TEST_TMP}/bin_cwd"
+    mkdir -p "${MOCK_BIN}"
+    cat << EOF > "${MOCK_BIN}/niri"
+#!/usr/bin/env bash
+if [[ "\$1" == "msg" && "\$2" == "--json" && "\$3" == "focused-window" ]]; then
+    echo '{"id":99,"title":"test-window","app_id":"mock-term","pid":\$\$}'
+    exit 0
+fi
+exit 0
+EOF
+    chmod +x "${MOCK_BIN}/niri"
+
+    export PATH="${MOCK_BIN}:${PATH}"
+    resolved_dir="$("${SCRIPT_DIR}/scripts/terminal-cwd.sh" --print-cwd)"
+    if [[ -d "${resolved_dir}" ]]; then
+        pass "terminal-cwd resolved valid directory for active process: ${resolved_dir}"
+    else
+        fail "terminal-cwd returned non-directory: '${resolved_dir}'"
+    fi
+
+    # When Niri reports null, fallback to HOME
+    cat << EOF > "${MOCK_BIN}/niri"
+#!/usr/bin/env bash
+echo "null"
+exit 0
+EOF
+    resolved_fallback="$("${SCRIPT_DIR}/scripts/terminal-cwd.sh" --print-cwd)"
+    if [[ "${resolved_fallback}" == "${HOME}" ]]; then
+        pass "terminal-cwd gracefully fell back to HOME when no window focused"
+    else
+        fail "Expected HOME (${HOME}), got '${resolved_fallback}'"
+    fi
+)
+
+# ------------------------------------------------------------------------------
+# Test 9: Run-or-Raise (RoR) Application Switcher
+# ------------------------------------------------------------------------------
+header "Test 9: Run-or-Raise (RoR) Window Focus & Cycling"
+(
+    MOCK_BIN="${TEST_TMP}/bin_ror"
+    mkdir -p "${MOCK_BIN}"
+    OUTPUT_LOG="${TEST_TMP}/ror_niri_actions.log"
+
+    cat << EOF > "${MOCK_BIN}/niri"
+#!/usr/bin/env bash
+if [[ "\$1" == "msg" && "\$2" == "--json" && "\$3" == "windows" ]]; then
+    echo '[{"id":101,"title":"Zen Browser","app_id":"zen-alpha"},{"id":102,"title":"Files","app_id":"thunar"}]'
+    exit 0
+fi
+if [[ "\$1" == "msg" && "\$2" == "--json" && "\$3" == "focused-window" ]]; then
+    echo '{"id":102,"title":"Files","app_id":"thunar"}'
+    exit 0
+fi
+if [[ "\$1" == "msg" && "\$2" == "action" ]]; then
+    echo "\$@" >> "${OUTPUT_LOG}"
+    exit 0
+fi
+exit 0
+EOF
+    chmod +x "${MOCK_BIN}/niri"
+
+    export PATH="${MOCK_BIN}:${PATH}"
+    export NIRI_SOCKET="${TEST_TMP}/mock-niri.sock"
+    touch "${NIRI_SOCKET}"
+
+    # 1. Raising browser should focus window 101
+    "${SCRIPT_DIR}/scripts/niri-ror.sh" browser >/dev/null 2>&1 || true
+    last_action="$(tail -n 1 "${OUTPUT_LOG}" 2>/dev/null || echo "")"
+    if [[ "${last_action}" == *"focus-window --id 101"* ]]; then
+        pass "niri-ror correctly focused existing browser window (id 101)"
+    else
+        fail "Expected focus-window --id 101, got '${last_action}'"
+    fi
+)
+
+# ------------------------------------------------------------------------------
+# Test 10: Dynamic Floating Scratchpad
+# ------------------------------------------------------------------------------
+header "Test 10: Scratchpad Summon & Stash State Machine"
+(
+    MOCK_BIN="${TEST_TMP}/bin_scratch"
+    mkdir -p "${MOCK_BIN}"
+    OUTPUT_LOG="${TEST_TMP}/scratch_actions.log"
+
+    cat << EOF > "${MOCK_BIN}/niri"
+#!/usr/bin/env bash
+if [[ "\$1" == "msg" && "\$2" == "--json" && "\$3" == "windows" ]]; then
+    echo '[{"id":888,"title":"scratch","app_id":"scratchpad-term"}]'
+    exit 0
+fi
+if [[ "\$1" == "msg" && "\$2" == "--json" && "\$3" == "focused-window" ]]; then
+    echo '{"id":888,"title":"scratch","app_id":"scratchpad-term"}'
+    exit 0
+fi
+if [[ "\$1" == "msg" && "\$2" == "--json" && "\$3" == "workspaces" ]]; then
+    echo '[{"id":1,"idx":1,"name":"01 DEV","is_focused":true}]'
+    exit 0
+fi
+if [[ "\$1" == "msg" && "\$2" == "action" ]]; then
+    echo "\$@" >> "${OUTPUT_LOG}"
+    exit 0
+fi
+exit 0
+EOF
+    chmod +x "${MOCK_BIN}/niri"
+
+    export PATH="${MOCK_BIN}:${PATH}"
+    export NIRI_SOCKET="${TEST_TMP}/mock-niri.sock"
+    touch "${NIRI_SOCKET}"
+
+    # Invoking while scratchpad is focused -> should move to scratch workspace
+    "${SCRIPT_DIR}/scripts/scratchpad.sh" >/dev/null 2>&1 || true
+    last_action="$(tail -n 1 "${OUTPUT_LOG}" 2>/dev/null || echo "")"
+    if [[ "${last_action}" == *"move-window-to-workspace 05 SCRATCH"* ]]; then
+        pass "scratchpad stashed focused scratchpad to '05 SCRATCH'"
+    else
+        fail "Expected move-window-to-workspace 05 SCRATCH, got '${last_action}'"
+    fi
+)
+
+# ------------------------------------------------------------------------------
+# Test 11: Niri Session Snapshot & Restore
+# ------------------------------------------------------------------------------
+header "Test 11: Session Manager Snapshot & Restore"
+(
+    MOCK_HOME="${TEST_TMP}/home_sess"
+    mkdir -p "${MOCK_HOME}/.cache/dotfield"
+    MOCK_BIN="${TEST_TMP}/bin_sess"
+    mkdir -p "${MOCK_BIN}"
+
+    cat << EOF > "${MOCK_BIN}/niri"
+#!/usr/bin/env bash
+if [[ "\$1" == "msg" && "\$2" == "--json" && "\$3" == "windows" ]]; then
+    echo '[{"id":1,"title":"Term","app_id":"ghostty","workspace_id":1},{"id":2,"title":"Browser","app_id":"zen-alpha","workspace_id":3}]'
+    exit 0
+fi
+exit 0
+EOF
+    chmod +x "${MOCK_BIN}/niri"
+
+    export HOME="${MOCK_HOME}"
+    export PATH="${MOCK_BIN}:${PATH}"
+    export NIRI_SOCKET="${TEST_TMP}/mock-niri.sock"
+    touch "${NIRI_SOCKET}"
+
+    # 1. Save session
+    "${SCRIPT_DIR}/scripts/session-manager.sh" save >/dev/null 2>&1 || true
+    sess_file="${MOCK_HOME}/.cache/dotfield/session.json"
+    if [[ -f "${sess_file}" ]] && grep -q "ghostty" "${sess_file}"; then
+        pass "session-manager save captured open windows to session.json"
+    else
+        fail "session.json was not created or does not contain windows"
+    fi
+
+    # 2. Clear session
+    "${SCRIPT_DIR}/scripts/session-manager.sh" clear >/dev/null 2>&1 || true
+    if [[ ! -f "${sess_file}" ]]; then
+        pass "session-manager clear successfully removed session.json"
+    else
+        fail "session.json was not removed by clear action"
+    fi
+)
+
+# ------------------------------------------------------------------------------
+# Test 12: Niri & Neovim Seamless Navigation Dispatcher
+# ------------------------------------------------------------------------------
+header "Test 12: Niri Navigation Dispatcher Fallback"
+(
+    MOCK_BIN="${TEST_TMP}/bin_nav"
+    mkdir -p "${MOCK_BIN}"
+    OUTPUT_LOG="${TEST_TMP}/nav_actions.log"
+
+    cat << EOF > "${MOCK_BIN}/niri"
+#!/usr/bin/env bash
+if [[ "\$1" == "msg" && "\$2" == "--json" && "\$3" == "focused-window" ]]; then
+    echo '{"id":77,"title":"Terminal","app_id":"ghostty","pid":123}'
+    exit 0
+fi
+if [[ "\$1" == "msg" && "\$2" == "action" ]]; then
+    echo "\$@" >> "${OUTPUT_LOG}"
+    exit 0
+fi
+exit 0
+EOF
+    chmod +x "${MOCK_BIN}/niri"
+
+    export PATH="${MOCK_BIN}:${PATH}"
+    export NIRI_SOCKET="${TEST_TMP}/mock-niri.sock"
+    touch "${NIRI_SOCKET}"
+
+    # Navigation left outside vim -> focuses column left
+    "${SCRIPT_DIR}/scripts/niri-nav.sh" left >/dev/null 2>&1 || true
+    last_action="$(tail -n 1 "${OUTPUT_LOG}" 2>/dev/null || echo "")"
+    if [[ "${last_action}" == *"focus-column-left"* ]]; then
+        pass "niri-nav dispatched focus-column-left when outside Neovim"
+    else
+        fail "Expected focus-column-left, got '${last_action}'"
+    fi
+
+    # Navigation down with workspace mod -> focus-window-or-workspace-down
+    "${SCRIPT_DIR}/scripts/niri-nav.sh" down w >/dev/null 2>&1 || true
+    last_action="$(tail -n 1 "${OUTPUT_LOG}" 2>/dev/null || echo "")"
+    if [[ "${last_action}" == *"focus-window-or-workspace-down"* ]]; then
+        pass "niri-nav dispatched focus-window-or-workspace-down"
+    else
+        fail "Expected focus-window-or-workspace-down, got '${last_action}'"
+    fi
+)
+
+# ------------------------------------------------------------------------------
+# Test 13: Shellcheck across all repository scripts
+# ------------------------------------------------------------------------------
+header "Test 13: ShellCheck Verification Across Repository"
 if command -v shellcheck >/dev/null 2>&1; then
     # shellcheck disable=SC2046
     if shellcheck $(find "${SCRIPT_DIR}/scripts" -name "*.sh") "${SCRIPT_DIR}/setup.sh" "${SCRIPT_DIR}/tests/test_scripts_resilience.sh"; then

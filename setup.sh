@@ -787,8 +787,12 @@ else
     ln -sf "${SCRIPTS_DEST}/osd.sh" "${PREFIX}/dotfield-osd" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/battery-alert.sh" "${PREFIX}/dotfield-battery-alert" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/sandbox-browser.sh" "${PREFIX}/sandbox-browser" 2>/dev/null || true
-    ln -sf "${SCRIPTS_DEST}/sandbox-browser.sh" "${PREFIX}/dotfield-sandbox-browser" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/wallpaper.sh" "${PREFIX}/dotfield-wallpaper" 2>/dev/null || true
+    ln -sf "${SCRIPTS_DEST}/terminal-cwd.sh" "${PREFIX}/dotfield-terminal-cwd" 2>/dev/null || true
+    ln -sf "${SCRIPTS_DEST}/niri-ror.sh" "${PREFIX}/dotfield-ror" 2>/dev/null || true
+    ln -sf "${SCRIPTS_DEST}/scratchpad.sh" "${PREFIX}/dotfield-scratchpad" 2>/dev/null || true
+    ln -sf "${SCRIPTS_DEST}/session-manager.sh" "${PREFIX}/dotfield-session" 2>/dev/null || true
+    ln -sf "${SCRIPTS_DEST}/niri-nav.sh" "${PREFIX}/dotfield-niri-nav" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/fw-open" "${PREFIX}/fw-open" 2>/dev/null || true
     success "Helper scripts deployed to ${SCRIPTS_DEST}"
 fi
@@ -910,6 +914,7 @@ ensure_config_link_or_dir "${SCRIPT_DIR}/nvim" "${HOME}/.config/nvim"
 ensure_config_link_or_dir "${SCRIPT_DIR}/multiplexer/tmux" "${HOME}/.config/tmux"
 ensure_config_link_or_dir "${SCRIPT_DIR}/multiplexer/zellij" "${HOME}/.config/zellij"
 ensure_config_link_or_dir "${SCRIPT_DIR}/wlogout" "${HOME}/.config/wlogout"
+ensure_config_link_or_dir "${SCRIPT_DIR}/miri" "${HOME}/.config/miri"
 ensure_config_link_or_dir "${SCRIPT_DIR}/fastfetch" "${HOME}/.config/fastfetch"
 ensure_config_link_or_dir "${SCRIPT_DIR}/shell/starship/starship.toml" "${HOME}/.config/starship.toml"
 ensure_config_link_or_dir "${SCRIPT_DIR}/shell/zsh/.zshrc" "${HOME}/.zshrc"
@@ -937,6 +942,7 @@ if [[ "${TARGET}" == "all" || "${TARGET}" == "niri" ]]; then
         fi
     fi
     ensure_config_link_or_dir "${SCRIPT_DIR}/systemd/user/amane.service" "${HOME}/.config/systemd/user/amane.service"
+    ensure_config_link_or_dir "${SCRIPT_DIR}/systemd/user/miri.service" "${HOME}/.config/systemd/user/miri.service"
     ensure_config_link_or_dir "${SCRIPT_DIR}/systemd/user/kanshi.service" "${HOME}/.config/systemd/user/kanshi.service"
     if [[ ! -e "${HOME}/.config/systemd/user/dotfield-shell.service" || -L "${HOME}/.config/systemd/user/dotfield-shell.service" ]]; then
         if [[ "${DRY_RUN}" != true ]]; then
@@ -1026,6 +1032,11 @@ if [[ "${DRY_RUN}" != true ]]; then
         if systemctl --user is-active --quiet amane.service 2>/dev/null; then
             systemctl --user restart amane.service 2>/dev/null || true
             info "Restarted amane.service"
+        fi
+        if command -v miri >/dev/null 2>&1 && pgrep -x niri >/dev/null 2>&1; then
+            systemctl --user daemon-reload 2>/dev/null || true
+            systemctl --user enable --now miri.service 2>/dev/null || true
+            info "Activated miri.service"
         fi
     fi
 

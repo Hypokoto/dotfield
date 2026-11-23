@@ -110,10 +110,10 @@ zstyle ':completion:*' use-cache on
 zstyle ':completion:*' cache-path "$ZSH_CACHE_DIR/zcompcache"
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
 
-# Section headers — Obsidian Mint bold (used in fzf-tab group labels)
-zstyle ':completion:*:descriptions' format $'\e[1;38;2;45;212;191m %d \e[0m'
-zstyle ':completion:*:messages'     format $'\e[0;38;2;56;189;248m %d \e[0m'
-zstyle ':completion:*:warnings'     format $'\e[0;38;2;244;63;94m No matches: %d \e[0m'
+# Section headers — Cyber Synthwave bold (used in fzf-tab group labels)
+zstyle ':completion:*:descriptions' format $'\e[1;38;2;4;197;240m %d \e[0m'
+zstyle ':completion:*:messages'     format $'\e[0;38;2;20;185;181m %d \e[0m'
+zstyle ':completion:*:warnings'     format $'\e[0;38;2;190;63;80m No matches: %d \e[0m'
 
 zstyle ':completion:*' extra-verbose yes
 zstyle ':completion:*:options' auto-description '%d'
@@ -132,8 +132,8 @@ if command -v carapace >/dev/null 2>&1; then
     fi
     source "$CARAPACE_CACHE"
     # Re-assert themed formats after carapace sourcing (carapace sets its own generic format)
-    zstyle ':completion:*' format $'\e[1;38;2;45;212;191m %d \e[0m'
-    zstyle ':completion:*:descriptions' format $'\e[1;38;2;45;212;191m %d \e[0m'
+    zstyle ':completion:*' format $'\e[1;38;2;4;197;240m %d \e[0m'
+    zstyle ':completion:*:descriptions' format $'\e[1;38;2;4;197;240m %d \e[0m'
 fi
 
 # fzf-tab: replace Tab completion menu with fzf popup (prompt never moves up)
@@ -142,12 +142,12 @@ local FZF_TAB_DIR="$HOME/.local/share/zsh/plugins/fzf-tab"
 if [[ -r "$FZF_TAB_DIR/fzf-tab.plugin.zsh" ]]; then
     source "$FZF_TAB_DIR/fzf-tab.plugin.zsh"
 
-    # Obsidian Mint palette — matches FZF_DEFAULT_OPTS in section 8
+    # Cyber Synthwave palette — matches FZF_DEFAULT_OPTS in section 8
     zstyle ':fzf-tab:*' fzf-flags \
-        --color='bg+:#16201E,bg:#080B0B,hl:#F43F5E,hl+:#2DD4BF' \
-        --color='fg:#ECFDF5,fg+:#FFFFFF,border:#23322F,separator:#23322F' \
-        --color='header:#2DD4BF,info:#2DD4BF,prompt:#2DD4BF,pointer:#2DD4BF' \
-        --color='marker:#10B981,spinner:#2DD4BF,query:#ECFDF5' \
+        --color='bg+:#251B4A,bg:#000000,hl:#BE3F50,hl+:#04C5F0' \
+        --color='fg:#14B9B5,fg+:#FFFFFF,border:#251B4A,separator:#251B4A' \
+        --color='header:#04C5F0,info:#11AEB3,prompt:#04C5F0,pointer:#04C5F0' \
+        --color='marker:#7CD699,spinner:#04C5F0,query:#FFFFFF' \
         --prompt='❯ ' --pointer='▶' --marker='✔' \
         --border=sharp --height=~40% --layout=reverse \
         --min-height=6 --bind='tab:accept'
@@ -247,19 +247,19 @@ alias ....="cd ../../.."
 alias .....="cd ../../../.."
 alias -- -="cd -"
 
-### 5. Environment Variables & Obsidian Mint Theme Pager
+### 5. Environment Variables & Cyber Synthwave Theme Pager
 export EDITOR="nvim"
 export VISUAL="nvim"
 export TERMINAL="foot"
 export PAGER="less -RF"
 export MANPAGER="nvim +Man!"
 
-export LESS_TERMCAP_mb=$'\e[1;38;2;244;63;94m'                 # Rose Critical bold
-export LESS_TERMCAP_md=$'\e[1;38;2;45;212;191m'                 # Mint bold
+export LESS_TERMCAP_mb=$'\e[1;38;2;190;63;80m'                 # Red accent bold
+export LESS_TERMCAP_md=$'\e[1;38;2;4;197;240m'                 # Neon Blue bold
 export LESS_TERMCAP_me=$'\e[0m'
-export LESS_TERMCAP_so=$'\e[01;48;2;22;32;30;38;2;45;212;191m' # Mint standout on Dark Void
+export LESS_TERMCAP_so=$'\e[01;48;2;37;27;74;38;2;20;185;181m' # Cyan-Teal on Purple Overlay
 export LESS_TERMCAP_se=$'\e[0m'
-export LESS_TERMCAP_us=$'\e[1;38;2;16;185;129m'                 # Emerald underline
+export LESS_TERMCAP_us=$'\e[1;38;2;124;214;153m'               # Emerald underline
 export LESS_TERMCAP_ue=$'\e[0m'
 
 ### 6. Modern Productivity Replacements & Safety Aliases
@@ -412,16 +412,16 @@ ipinfo() {
     whois "$ip" 2>/dev/null | grep -E "^(NetName|OrgName|Country|CIDR|inetnum|netname|descr|country):" | head -20
 }
 
-### 8. FZF Interactive Fuzzy Finder (Obsidian Mint Theme)
+### 8. FZF Interactive Fuzzy Finder (Cyber Synthwave Theme)
 if command -v fzf >/dev/null 2>&1; then
     [[ -r /usr/share/fzf/key-bindings.zsh ]] && source /usr/share/fzf/key-bindings.zsh
     [[ -r /usr/share/fzf/completion.zsh ]] && source /usr/share/fzf/completion.zsh
 
     export FZF_DEFAULT_OPTS=" \
-        --color=bg+:#16201E,bg:#080B0B,spinner:#2DD4BF,hl:#F43F5E \
-        --color=fg:#ECFDF5,header:#71827E,info:#2DD4BF,pointer:#2DD4BF \
-        --color=marker:#10B981,fg+:#FFFFFF,prompt:#2DD4BF,hl+:#2DD4BF \
-        --color=border:#23322F,separator:#23322F \
+        --color=bg+:#251B4A,bg:#000000,spinner:#04C5F0,hl:#BE3F50 \
+        --color=fg:#14B9B5,header:#11AEB3,info:#04C5F0,pointer:#04C5F0 \
+        --color=marker:#7CD699,fg+:#FFFFFF,prompt:#04C5F0,hl+:#04C5F0 \
+        --color=border:#251B4A,separator:#251B4A \
         --border=sharp --height=50% --layout=reverse --prompt='❯ ' --pointer='▶' --marker='✔'"
 
     if command -v fd >/dev/null 2>&1; then
@@ -510,18 +510,18 @@ elif [[ -r "$HOME/.local/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-
 elif [[ -r /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
     source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
     typeset -A ZSH_HIGHLIGHT_STYLES
-    ZSH_HIGHLIGHT_STYLES[command]='fg=#2DD4BF,bold'           # Mint
-    ZSH_HIGHLIGHT_STYLES[builtin]='fg=#10B981,bold'           # Emerald
-    ZSH_HIGHLIGHT_STYLES[alias]='fg=#10B981'                  # Emerald
-    ZSH_HIGHLIGHT_STYLES[function]='fg=#2DD4BF'               # Mint
-    ZSH_HIGHLIGHT_STYLES[single-hyphen-option]='fg=#38BDF8'   # Sky Blue flags
-    ZSH_HIGHLIGHT_STYLES[double-hyphen-option]='fg=#38BDF8'   # Sky Blue flags
-    ZSH_HIGHLIGHT_STYLES[command-substitution]='fg=#71827E'   # Steel
-    ZSH_HIGHLIGHT_STYLES[path]='fg=#2DD4BF,underline'         # Mint path
-    ZSH_HIGHLIGHT_STYLES[path_prefix]='fg=#2DD4BF'            # Path prefix
-    ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=#F43F5E,bold'     # Rose error
-    ZSH_HIGHLIGHT_STYLES[single-quoted-argument]='fg=#10B981' # Emerald string
-    ZSH_HIGHLIGHT_STYLES[double-quoted-argument]='fg=#10B981' # Emerald string
+    ZSH_HIGHLIGHT_STYLES[command]='fg=#04C5F0,bold'           # Neon Blue
+    ZSH_HIGHLIGHT_STYLES[builtin]='fg=#7CD699,bold'           # Emerald Green
+    ZSH_HIGHLIGHT_STYLES[alias]='fg=#7CD699'                  # Emerald Green
+    ZSH_HIGHLIGHT_STYLES[function]='fg=#04C5F0'               # Neon Blue
+    ZSH_HIGHLIGHT_STYLES[single-hyphen-option]='fg=#11AEB3'   # Teal flags
+    ZSH_HIGHLIGHT_STYLES[double-hyphen-option]='fg=#11AEB3'   # Teal flags
+    ZSH_HIGHLIGHT_STYLES[command-substitution]='fg=#9147A8'   # Purple
+    ZSH_HIGHLIGHT_STYLES[path]='fg=#14B9B5,underline'         # Cyan-Teal path
+    ZSH_HIGHLIGHT_STYLES[path_prefix]='fg=#14B9B5'            # Path prefix
+    ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=#BE3F50,bold'     # Red accent error
+    ZSH_HIGHLIGHT_STYLES[single-quoted-argument]='fg=#7CD699' # Green string
+    ZSH_HIGHLIGHT_STYLES[double-quoted-argument]='fg=#7CD699' # Green string
 fi
 
 ### 11. Developer Toolchains & Environments

@@ -1,5 +1,5 @@
 # Dotfield Starship Prompt Configuration
-# Obsidian Mint Specification — Void · Mint · Emerald · Amber Gold · Rose Critical
+# Cyber Synthwave Specification — Void · Deep Violet · Cyan-Teal · Neon Blue · Purple · Emerald
 
 format = """
 $username\
@@ -22,23 +22,25 @@ $character"""
 scan_timeout = 250
 command_timeout = 500
 
-palette = "obsidian_mint"
+palette = "cyber_synthwave"
 
-[palettes.obsidian_mint]
-void = "#080B0B"
-obsidian = "#0E1413"
-graphite = "#16201E"
-iron = "#23322F"
-ash = "#94A3A0"
-bone = "#ECFDF5"
-crimson = "#F43F5E"
-blood_red = "#9F1239"
-amber = "#FBBF24"
-mint = "#2DD4BF"
-emerald = "#10B981"
-steel = "#71827E"
-green = "#10B981"
-blue = "#38BDF8"
+[palettes.cyber_synthwave]
+void = "#000000"
+surface = "#140e29"
+overlay = "#251b4a"
+ash = "#11AEB3"
+bone = "#14B9B5"
+crimson = "#BE3F50"
+blood_red = "#CE4F48"
+amber = "#FF7F41"
+peach = "#ffbe74"
+cyan = "#14B9B5"
+blue = "#04C5F0"
+purple = "#9147a8"
+emerald = "#7cd699"
+steel = "#11AEB3"
+mint = "#04C5F0"
+green = "#7cd699"
 
 [character]
 success_symbol = "[❯](bold mint)"

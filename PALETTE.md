@@ -54,59 +54,59 @@ The interface pairs a pitch-black void substrate (`#000000`) and deep violet/pur
 
 | Element | Color |
 |---|---|
-| Background | `#080B0B` |
-| Inactive window border | `#23322F` |
-| Active window border | `#2DD4BF` |
-| Urgent window border | `#F43F5E` |
-| Primary text | `#ECFDF5` |
-| Secondary text | `#94A3A0` |
+| Background | `#000000` |
+| Inactive window border | `#251b4a` |
+| Active window border | `#04C5F0` |
+| Urgent window border | `#BE3F50` |
+| Primary text | `#14B9B5` |
+| Secondary text | `#11AEB3` |
 
 ### Terminals (Foot, Ghostty, Kitty)
 
 | Element | Color |
 |---|---|
-| Background | `#080B0B` |
-| Foreground | `#ECFDF5` |
-| Cursor | `#2DD4BF` |
-| Cursor Text | `#080B0B` |
-| Selection background | `#16201E` |
-| Selection foreground | `#ECFDF5` |
+| Background | `#000000` |
+| Foreground | `#14B9B5` |
+| Cursor | `#04C5F0` |
+| Cursor Text | `#000000` |
+| Selection background | `#251B4A` |
+| Selection foreground | `#FFFFFF` |
 
 ### Fuzzel & App Launcher
 
 | Element | Color |
 |---|---|
-| Background | `#080B0Bf2` |
-| Prompt / Border | `#2DD4BFff` |
-| Primary text | `#ECFDF5ff` |
-| Selection background | `#16201Eff` |
-| Selection text | `#2DD4Bfff` |
-| Matching text | `#10B981ff` |
+| Background | `#000000f2` |
+| Prompt / Border | `#04C5F0ff` |
+| Primary text | `#14B9B5ff` |
+| Selection background | `#251B4Aff` |
+| Selection text | `#FFFFFFff` |
+| Matching text | `#04C5F0ff` |
 
 ### Mako & Notification HUD
 
 | Element | Color |
 |---|---|
-| Background | `#080B0B` |
-| Text | `#ECFDF5` |
-| Normal border | `#2DD4BF` |
-| Urgent border | `#F43F5E` |
-| Progress bar | `#2DD4BF` |
+| Background | `#000000` |
+| Text | `#14B9B5` |
+| Normal border | `#04C5F0` |
+| Urgent border | `#BE3F50` |
+| Progress bar | `#04C5F0` |
 
 ### Amane Desktop Shell (Niri Status Bar, Flyouts, Control Center, Overview)
 
 | Element | Color |
 |---|---|
-| Background / Panels | `#080B0B` / `#0E1413` |
-| Cards / Elevated surfaces | `#16201E` |
-| Borders & Dividers | `#23322F` |
-| Primary text / Headings | `#ECFDF5` |
-| Secondary / Muted labels | `#94A3A0` |
-| Primary Accent & Active Pips | `#2DD4BF` (Bioluminescent Mint) |
-| Accent Hover & Highlights | `#10B981` (Emerald) |
-| Warnings & Notifications | `#FBBF24` (Amber Gold) |
-| Critical / Alarms / Mute | `#F43F5E` (Rose Critical) |
-| Neutral Controls & Muted Dots | `#71827E` (Steel) |
+| Background / Panels | `#000000` / `#140e29` |
+| Cards / Elevated surfaces | `#251b4a` |
+| Borders & Dividers | `#251b4a` |
+| Primary text / Headings | `#14B9B5` |
+| Secondary / Muted labels | `#11AEB3` |
+| Primary Accent & Active Pips | `#04C5F0` (Electric Neon Blue) |
+| Accent Hover & Highlights | `#9147a8` (Electric Purple) |
+| Warnings & Notifications | `#FF7F41` (Warning Orange) |
+| Critical / Alarms / Mute | `#BE3F50` (Red Accent) |
+| Success & Status | `#7cd699` (Emerald Green) |
 
 ---
 
@@ -114,12 +114,12 @@ The interface pairs a pitch-black void substrate (`#000000`) and deep violet/pur
 
 | State | Color | Hex |
 |---|---|---|
-| Active / Focused | Bioluminescent Mint | `#2DD4BF` |
-| Success / Confirmed | Emerald | `#10B981` |
-| Warning / Pending | Amber Gold | `#FBBF24` |
-| Error / Critical | Rose Critical | `#F43F5E` |
-| Destructive Operation | Deep Rose | `#9F1239` |
-| Neutral / Inactive | Steel | `#71827E` |
+| Active / Focused | Electric Neon Blue | `#04C5F0` |
+| Success / Confirmed | Emerald Green | `#7cd699` |
+| Warning / Pending | Warning Orange | `#FF7F41` |
+| Error / Critical | Red Accent | `#BE3F50` |
+| Deprecated / Severe | Dark Red | `#CE4F48` |
+| Secondary / Status | Cyan-Teal | `#11AEB3` |
 
 ---
 
@@ -127,20 +127,20 @@ The interface pairs a pitch-black void substrate (`#000000`) and deep violet/pur
 
 | ANSI Color | Normal | Bright |
 |---|---|---|
-| Black | `#16201E` | `#23322F` |
-| Red | `#F43F5E` | `#FB7185` |
-| Green | `#10B981` | `#34D399` |
-| Yellow | `#FBBF24` | `#FDE047` |
-| Blue | `#38BDF8` | `#7DD3FC` |
-| Magenta | `#C084FC` | `#E879F9` |
-| Cyan | `#2DD4BF` | `#5EEAD4` |
-| White | `#ECFDF5` | `#FFFFFF` |
+| Black | `#140E29` | `#251B4A` |
+| Red | `#BE3F50` | `#CE4F48` |
+| Green | `#7CD699` | `#7CD699` |
+| Yellow | `#FF7F41` | `#FFBE74` |
+| Blue | `#04C5F0` | `#61E6FF` |
+| Magenta | `#9147A8` | `#9147A8` |
+| Cyan | `#11AEB3` | `#14B9B5` |
+| White | `#14B9B5` | `#FFFFFF` |
 
 ---
 
 ## 6. Implementation Rules
 
-1. **One canonical palette:** Every tool and compositor surface resolves to Obsidian Mint tokens.
+1. **One canonical palette:** Every tool and compositor surface resolves to Cyber Synthwave tokens.
 2. **WCAG AAA Compliance:** Primary text and key interaction targets strictly maintain ≥ 7:1 contrast against canvas.
-3. **Restrained Glow:** Bioluminescent accents highlight state changes without aggressive over-saturation.
-4. **Semantic Rigor:** Errors are Rose (`#F43F5E`), Warnings are Amber (`#FBBF24`), Active elements are Mint (`#2DD4BF`), Success is Emerald (`#10B981`).
+3. **Restrained Glow:** Neon Blue and Purple accents highlight state changes without aggressive over-saturation.
+4. **Semantic Rigor:** Errors are Red (`#BE3F50`), Warnings are Orange (`#FF7F41`), Active elements are Neon Blue (`#04C5F0`), Success is Green (`#7CD699`).

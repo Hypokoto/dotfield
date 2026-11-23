@@ -16,22 +16,22 @@ indicator-radius=110
 indicator-thickness=8
 
 # Base Canvas (Default Void Black)
-color=080B0B
+color=000000
 scaling=fill
 
-# Indicator Center Disc (Semi-translucent Obsidian & Graphite)
-inside-color=0E1413ee
-inside-clear-color=16201Eee
-inside-ver-color=16201Eee
-inside-wrong-color=23322Fee
-inside-caps-lock-color=23322Fee
+# Indicator Center Disc (Semi-translucent Surface & Overlay)
+inside-color=140E29ee
+inside-clear-color=251B4Aee
+inside-ver-color=251B4Aee
+inside-wrong-color=251B4Aee
+inside-caps-lock-color=251B4Aee
 
-# Indicator Ring Outer Boundary (Hairline Iron & Tactical Mint)
-ring-color=23322F
-ring-clear-color=2DD4BF
-ring-ver-color=2DD4BF
-ring-wrong-color=F43F5E
-ring-caps-lock-color=F43F5E
+# Indicator Ring Outer Boundary (Hairline Overlay & Neon Blue)
+ring-color=251B4A
+ring-clear-color=04C5F0
+ring-ver-color=04C5F0
+ring-wrong-color=BE3F50
+ring-caps-lock-color=BE3F50
 
 # Inner Separator Line
 line-color=00000000
@@ -42,19 +42,19 @@ line-caps-lock-color=00000000
 separator-color=00000000
 
 # Keypress & Backspace Glowing Arc Highlights
-key-hl-color=2DD4BF
-bs-hl-color=F43F5E
-caps-lock-key-hl-color=2DD4BF
-caps-lock-bs-hl-color=F43F5E
+key-hl-color=04C5F0
+bs-hl-color=BE3F50
+caps-lock-key-hl-color=04C5F0
+caps-lock-bs-hl-color=BE3F50
 
 # Center Text & Status Labels
-text-color=ECFDF5
-text-clear-color=2DD4BF
-text-ver-color=2DD4BF
-text-wrong-color=F43F5E
-text-caps-lock-color=F43F5E
+text-color=14B9B5
+text-clear-color=04C5F0
+text-ver-color=04C5F0
+text-wrong-color=BE3F50
+text-caps-lock-color=BE3F50
 
 # Keyboard Layout Badge Box
-layout-bg-color=16201Eee
-layout-border-color=23322F
-layout-text-color=ECFDF5
+layout-bg-color=251B4Aee
+layout-border-color=251B4A
+layout-text-color=14B9B5

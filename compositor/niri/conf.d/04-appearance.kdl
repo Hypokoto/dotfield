@@ -48,12 +48,11 @@ animations {
     }
 }
 
-// Terminal Glass & Smooth Geometry (Ghostty, Foot, Kitty, Alacritty)
-// Native Wayland sub-surface transparency without broken dmabuf shader overrides
+// Terminal Geometry (Ghostty, Foot, Kitty, Alacritty)
+// Terminals manage their own internal background opacity; window-level opacity is kept 1.0 for crisp font rendering
 window-rule {
     match app-id=r#"^(com\.mitchellh\.ghostty|floating-term|foot|kitty|Alacritty)$"#
 
-    opacity 0.78
     geometry-corner-radius 12
     clip-to-geometry true
 }

@@ -1,31 +1,31 @@
-# Obsidian Mint Palette Theme for Ghostty
-# Obsidian · Mint · Emerald · Amber Gold · Rose Critical
+# Cyber Synthwave Palette Theme for Ghostty
+# Void Black · Deep Violet · Purple · Cyan-Teal · Neon Blue · Emerald
 # Canonical definition: PALETTE.md
 
-background = 080B0B
-foreground = ECFDF5
-selection-background = 16201E
-selection-foreground = ECFDF5
+background = 000000
+foreground = 14B9B5
+selection-background = 251B4A
+selection-foreground = FFFFFF
 
-cursor-color = 2DD4BF
-cursor-text = 080B0B
+cursor-color = 04C5F0
+cursor-text = 000000
 
 # Normal Colors (0-7)
-palette = 0=#16201E
-palette = 1=#F43F5E
-palette = 2=#10B981
-palette = 3=#FBBF24
-palette = 4=#38BDF8
-palette = 5=#C084FC
-palette = 6=#2DD4BF
-palette = 7=#ECFDF5
+palette = 0=#140E29
+palette = 1=#BE3F50
+palette = 2=#7CD699
+palette = 3=#FF7F41
+palette = 4=#04C5F0
+palette = 5=#9147A8
+palette = 6=#11AEB3
+palette = 7=#14B9B5
 
 # Bright Colors (8-15)
-palette = 8=#23322F
-palette = 9=#FB7185
-palette = 10=#34D399
-palette = 11=#FDE047
-palette = 12=#7DD3FC
-palette = 13=#E879F9
-palette = 14=#5EEAD4
+palette = 8=#251B4A
+palette = 9=#CE4F48
+palette = 10=#7CD699
+palette = 11=#FFBE74
+palette = 12=#61E6FF
+palette = 13=#9147A8
+palette = 14=#14B9B5
 palette = 15=#FFFFFF

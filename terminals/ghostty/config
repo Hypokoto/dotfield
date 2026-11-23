@@ -4,7 +4,7 @@
 
 # --- Theme & Colors ---
 theme = dotfield-theme
-background-opacity = 0.78
+background-opacity = 0.95
 background-opacity-cells = false
 background-blur = false
 
@@ -14,7 +14,8 @@ font-style = Regular
 font-style-bold = Bold
 font-style-italic = Italic
 font-style-bold-italic = Bold Italic
-font-synthetic-style = false
+font-synthetic-style = bold,italic,bold-italic
+font-thicken = true
 font-size = 11
 font-feature = calt
 font-feature = liga

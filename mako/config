@@ -25,26 +25,26 @@ icons=1
 max-icon-size=48
 icon-location=left
 
-# Default Normal Urgency (Obsidian Mint Accent & Hairline Border)
-background-color=#080B0B
-text-color=#ECFDF5
-border-color=#2DD4BF
-progress-color=source #2DD4BF
+# Default Normal Urgency (Cyber Synthwave Accent & Hairline Border)
+background-color=#000000
+text-color=#14B9B5
+border-color=#04C5F0
+progress-color=source #04C5F0
 
-# Low Urgency (Subdued Steel & Iron)
+# Low Urgency (Subdued Violet & Teal)
 [urgency=low]
-background-color=#0E1413
-text-color=#94A3A0
-border-color=#23322F
-progress-color=source #71827E
+background-color=#140E29
+text-color=#11AEB3
+border-color=#251B4A
+progress-color=source #11AEB3
 default-timeout=4000
 
-# Critical Urgency (Rose Critical & Zero-Timeout)
+# Critical Urgency (Red Accent & Zero-Timeout)
 [urgency=critical]
-background-color=#0E1413
-text-color=#ECFDF5
-border-color=#F43F5E
-progress-color=source #F43F5E
+background-color=#140E29
+text-color=#FFFFFF
+border-color=#BE3F50
+progress-color=source #BE3F50
 default-timeout=0
 ignore-timeout=1
 
@@ -66,27 +66,27 @@ group-by=category
 
 # Dotfield Engine Notifications
 [app-name=dotfield]
-border-color=#2DD4BF
+border-color=#04C5F0
 
 # Screenshot Notifications
 [app-name=Screenshot]
-border-color=#2DD4BF
+border-color=#04C5F0
 
-# Battery Alerts (Obsidian Mint Low & Critical Warnings)
+# Battery Alerts (Cyber Synthwave Low & Critical Warnings)
 [app-name=battery-alert]
-border-color=#2DD4BF
+border-color=#04C5F0
 default-timeout=8000
 
 [category=battery-low]
-border-color=#FBBF24
-background-color=#0E1413
-text-color=#ECFDF5
+border-color=#FF7F41
+background-color=#140E29
+text-color=#14B9B5
 default-timeout=10000
 
 [category=battery-critical]
-border-color=#F43F5E
-background-color=#16201E
-text-color=#ECFDF5
+border-color=#BE3F50
+background-color=#251B4A
+text-color=#FFFFFF
 default-timeout=0
 ignore-timeout=1
 

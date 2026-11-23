@@ -1,28 +1,28 @@
 /*
  * Dotfield SwayOSD GTK Theme
- * Obsidian Mint — Tactical Interface
+ * Cyber Synthwave — Tactical Interface
  */
 
 window {
-    background: alpha(#080B0B, 0.96);
-    border: 1px solid #2DD4BF;
+    background: alpha(#000000, 0.96);
+    border: 1px solid #04C5F0;
     border-radius: 4px;
     padding: 12px 16px;
 }
 
 progressbar {
-    background-color: #16201E;
+    background-color: #251B4A;
     border-radius: 4px;
 }
 
 progressbar trough {
-    background-color: #16201E;
+    background-color: #251B4A;
     border-radius: 4px;
     min-height: 6px;
 }
 
 progressbar progress {
-    background-color: #2DD4BF;
+    background-color: #04C5F0;
     border-radius: 4px;
     min-height: 6px;
 }
@@ -31,10 +31,10 @@ label {
     font-family: 'JetBrainsMono Nerd Font', monospace;
     font-size: 12px;
     font-weight: 700;
-    color: #ECFDF5;
+    color: #14B9B5;
 }
 
 image {
-    color: #2DD4BF;
+    color: #04C5F0;
     margin-right: 8px;
 }

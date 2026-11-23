@@ -64,3 +64,24 @@ window-rule {
     match app-id="zenity"
     open-floating true
 }
+
+// Smart Application Tiling Rules: Default Column Proportions
+// Web browsers: Wide 60% viewport for comfortable web page rendering
+window-rule {
+    match app-id=r#"^(firefox|firefox-developer-edition|zen|zen-browser|chromium|google-chrome|brave-browser)$"#
+    default-column-width { proportion 0.6; }
+}
+
+// Terminals and Editors: Balanced 50% split for side-by-side workflows
+window-rule {
+    match app-id=r#"^(ghostty|foot|footclient|kitty|Alacritty)$"#
+    default-column-width { proportion 0.5; }
+}
+
+// Compact utilities & Calculators: Open floating with centered default geometries
+window-rule {
+    match app-id=r#"^(gnome-calculator|kcalc|galculator|org.gnome.Calculator)$"#
+    open-floating true
+    default-column-width { fixed 400; }
+    default-window-height { fixed 500; }
+}

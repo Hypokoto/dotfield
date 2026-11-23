@@ -19,10 +19,19 @@ binds {
     Mod+Shift+Semicolon { move-column-right; }
     Mod+Shift+J         { move-window-down; }
     Mod+Shift+K         { move-window-up; }
-    Mod+Alt+Left    { move-column-left; }
-    Mod+Alt+Right   { move-column-right; }
+    // Windows 11 Snap: Directional 50% & 100% Column Snapping
+    Mod+Alt+Left  { set-column-width "50%"; }
+    Mod+Alt+Right { set-column-width "50%"; }
+    Mod+Alt+Up    { set-column-width "100%"; }
+    Mod+Alt+Down  { set-column-width "50%"; }
 
-    // Windows Snap: Consume & Expel Columns
+    // Proportional Quick-Snap Column Controls (One-Third, Half, Two-Thirds, Full)
+    Mod+Alt+1 { set-column-width "33.333%"; }
+    Mod+Alt+2 { set-column-width "50%"; }
+    Mod+Alt+3 { set-column-width "66.667%"; }
+    Mod+Alt+4 { set-column-width "100%"; }
+
+    // Windows Snap: Consume & Expel Columns into Stacks
     Mod+Shift+Left   { consume-or-expel-window-left; }
     Mod+Shift+Right  { consume-or-expel-window-right; }
     Mod+BracketLeft  { consume-or-expel-window-left; }
@@ -31,16 +40,17 @@ binds {
     Mod+Period       { expel-window-from-column; }
 
     // Column Sizing & Fullscreen
-    Mod+R       { switch-preset-column-width; }
-    Mod+Alt+R   { switch-preset-column-width-back; }
+    Mod+R            { switch-preset-column-width; }
+    Mod+Alt+R        { switch-preset-column-width-back; }
     Mod+Ctrl+Shift+R { switch-preset-window-height; }
     Mod+Ctrl+R       { reset-window-height; }
 
-    Mod+F              { maximize-column; }
-    Mod+Shift+F        { maximize-window-to-edges; }
-    Mod+Ctrl+Shift+F   { fullscreen-window; }
-    Mod+C              { center-column; }
-    Mod+Ctrl+F         { expand-column-to-available-width; }
+    Mod+F            { maximize-column; }
+    Mod+Shift+F      { maximize-window-to-edges; }
+    Mod+Ctrl+Shift+F { fullscreen-window; }
+    Mod+C            { center-column; }
+    Mod+M            { center-column; }
+    Mod+Ctrl+F       { expand-column-to-available-width; }
 
     // Tabbed Column Mode
     Mod+T { toggle-column-tabbed-display; }

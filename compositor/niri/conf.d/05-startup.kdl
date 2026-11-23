@@ -4,4 +4,4 @@
 spawn-at-startup "awww-daemon"
 spawn-at-startup "sh" "-c" "~/.config/dotfield/scripts/wallpaper.sh"
 spawn-at-startup "swayidle" "-w"
-spawn-at-startup "sh" "-c" "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP NIRI_SOCKET && systemctl --user start kanshi.service && systemctl --user start amane.service && systemctl --user start miri.service"
+spawn-at-startup "sh" "-c" "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP NIRI_SOCKET && systemctl --user start kanshi.service && systemctl --user start amane.service"

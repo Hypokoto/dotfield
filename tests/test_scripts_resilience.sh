@@ -552,21 +552,18 @@ EOF
 )
 
 # ------------------------------------------------------------------------------
-# Test 13: Miri Toggle Script Resilience
+# Test 13: Declarative Niri Master Configuration Validation
 # ------------------------------------------------------------------------------
-header "Test 13: Miri Toggle Script Execution Resilience"
+header "Test 13: Declarative Niri Configuration Validation"
 (
-    # Ensure miri-toggle runs cleanly without crashing even if daemon action fails
-    if "${SCRIPT_DIR}/scripts/miri-toggle.sh" cycle >/dev/null 2>&1; then
-        pass "miri-toggle cycle executed cleanly with 0 exit code"
+    if command -v niri >/dev/null 2>&1; then
+        if niri validate -c "${SCRIPT_DIR}/compositor/niri/config.kdl" >/dev/null 2>&1; then
+            pass "Niri master configuration passed syntax and semantic validation"
+        else
+            fail "Niri master configuration failed validation"
+        fi
     else
-        fail "miri-toggle cycle failed"
-    fi
-
-    if "${SCRIPT_DIR}/scripts/miri-toggle.sh" master >/dev/null 2>&1; then
-        pass "miri-toggle master executed cleanly with 0 exit code"
-    else
-        fail "miri-toggle master failed"
+        echo "  [SKIPPED] niri command not found"
     fi
 )
 

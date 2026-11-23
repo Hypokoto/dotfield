@@ -1,5 +1,5 @@
-/* Obsidian Mint styling for wlogout
- * Void Black · Mint · Emerald · Steel · Rose
+/* Cyber Synthwave styling for wlogout
+ * Void Black · Deep Violet · Purple · Cyan-Teal · Neon Blue · Red
  */
 
 * {
@@ -9,15 +9,15 @@
 }
 
 window {
-    background-color: rgba(8, 11, 11, 0.94);
+    background-color: rgba(0, 0, 0, 0.94);
 }
 
 button {
     font-size: 15px;
     font-weight: bold;
-    color: #ECFDF5;
-    background-color: #16201E;
-    border: 2px solid #23322F;
+    color: #14B9B5;
+    background-color: #251B4A;
+    border: 2px solid #251B4A;
     border-radius: 8px;
     margin: 16px;
     padding: 24px;
@@ -25,37 +25,37 @@ button {
 }
 
 button:focus, button:active, button:hover {
-    background-color: #0E1413;
-    border-color: #2DD4BF;
-    color: #2DD4BF;
+    background-color: #140E29;
+    border-color: #04C5F0;
+    color: #04C5F0;
 }
 
 #lock:hover, #lock:focus {
-    border-color: #2DD4BF;
-    color: #2DD4BF;
+    border-color: #04C5F0;
+    color: #04C5F0;
 }
 
 #logout:hover, #logout:focus {
-    border-color: #10B981;
-    color: #10B981;
+    border-color: #7CD699;
+    color: #7CD699;
 }
 
 #suspend:hover, #suspend:focus {
-    border-color: #71827E;
-    color: #71827E;
+    border-color: #11AEB3;
+    color: #11AEB3;
 }
 
 #hibernate:hover, #hibernate:focus {
-    border-color: #71827E;
-    color: #71827E;
+    border-color: #11AEB3;
+    color: #11AEB3;
 }
 
 #reboot:hover, #reboot:focus {
-    border-color: #FBBF24;
-    color: #FBBF24;
+    border-color: #FF7F41;
+    color: #FF7F41;
 }
 
 #shutdown:hover, #shutdown:focus {
-    border-color: #F43F5E;
-    color: #F43F5E;
+    border-color: #BE3F50;
+    color: #BE3F50;
 }

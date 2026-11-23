@@ -269,5 +269,5 @@ if [[ -n "${SWAY_WALLPAPER}" && -f "${SWAY_WALLPAPER}" ]]; then
     fi
 else
     # Fallback to Void Black canvas
-    setsid swaybg -c "#080B0B" </dev/null >/dev/null 2>&1 &
+    setsid swaybg -c "#000000" </dev/null >/dev/null 2>&1 &
 fi

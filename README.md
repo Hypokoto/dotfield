@@ -18,24 +18,26 @@ In traditional Linux desktop customization (ricing), changing a default terminal
 
 ---
 
-## Aesthetic: Obsidian Mint Palette
+## Aesthetic: Cyber Synthwave Palette
 
-Dotfield is styled around the **Obsidian Mint** theme — a bioluminescent cyber-botanical aesthetic balancing Void Black, Mint, and Emerald:
+Dotfield is styled around the **Cyber Synthwave** theme — a high-contrast cybernetic aesthetic balancing Void Black, Deep Violet, Cyan-Teal, Neon Blue, and Emerald:
 
 | Token | Hex | Role | Visual Preview |
 | :--- | :--- | :--- | :--- |
-| **Void Black** | `#080B0B` | Deep canvas & background (60%) | `██████` |
-| **Obsidian** | `#0E1413` | Panel / Surface background (30%) | `██████` |
-| **Graphite** | `#16201E` | Active cards / popups / elevated | `██████` |
-| **Iron** | `#23322F` | Hairline borders & subtle dividers | `██████` |
-| **Steel** | `#71827E` | Muted icons, paths & comments | `██████` |
-| **Ash** | `#94A3A0` | Inactive text & secondary labels | `██████` |
-| **Minted White**| `#ECFDF5` | Primary foreground & headings | `██████` |
-| **Mint** | `#2DD4BF` | Primary accent & active highlights (10%) | `██████` |
-| **Emerald** | `#10B981` | Secondary accent & success states | `██████` |
-| **Amber Gold** | `#FBBF24` | Warm highlights, warnings & status | `██████` |
-| **Rose** | `#F43F5E` | Errors, alarms & critical indicators | `██████` |
-| **Sky Blue** | `#38BDF8` | Informational links & flag tokens | `██████` |
+| **Void Black** (`base00`) | `#000000` | Deep canvas & background (60%) | `██████` |
+| **Surface** (`base01`) | `#140E29` | Deep violet panel & surface background | `██████` |
+| **Overlay** (`base02`) | `#251B4A` | Active cards, elevated surfaces, borders | `██████` |
+| **Muted** (`base03`) | `#FFBE74` | Peach amber comments & subtle labels | `██████` |
+| **Statusline** (`base04`) | `#11AEB3` | Secondary text & status indicators | `██████` |
+| **Cyan-Teal** (`base05`) | `#14B9B5` | Primary foreground text & headings | `██████` |
+| **Pure Fallback** (`base06`) | `#FFFFFF` | High-contrast fallback text | `██████` |
+| **Red Accent** (`base08`) | `#BE3F50` | Variables, alarms & danger accents | `██████` |
+| **Warning Orange** (`base09`) | `#FF7F41` | Constants, warnings & telemetry alerts | `██████` |
+| **Yellow Amber** (`base0A`) | `#FFBE74` | Classes & search highlights | `██████` |
+| **Emerald** (`base0B`) | `#7CD699` | Success states, strings & active status | `██████` |
+| **Neon Blue** (`base0D`) | `#04C5F0` | Primary accent, focused rings & pills | `██████` |
+| **Purple** (`base0E`) | `#9147A8` | Keywords, storage & electric hover glows | `██████` |
+| **Dark Red** (`base0F`) | `#CE4F48` | Deprecated & critical errors | `██████` |
 
 For design tokens across tools, see [PALETTE.md](PALETTE.md).
 

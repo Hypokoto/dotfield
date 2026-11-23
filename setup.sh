@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Dotfield Environment Setup & Deployment Script
 # Idempotent bootstrap for Sway, Niri, Amane Shell, and desktop tools
-# Controlled Chaos Theme: Void Black · Crimson · Industrial Amber · Steel
+# Cyber Synthwave Theme: Void Black · Deep Violet · Purple · Cyan-Teal · Neon Blue
 
 set -euo pipefail
 
-# ANSI color styling (Controlled Chaos palette)
+# ANSI color styling (Cyber Synthwave palette)
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 AMBER='\033[0;33m'
@@ -967,7 +967,7 @@ if [[ -d "/etc/ly" && -f "${SCRIPT_DIR}/ly/config.ini" ]]; then
         elif run_privileged cp "${SCRIPT_DIR}/ly/config.ini" "/etc/ly/config.ini" 2>/dev/null; then
             success "Synced Ly display manager configuration to /etc/ly/config.ini"
         else
-            info "Ly display manager detected at /etc/ly. To sync Controlled Chaos theme, run: sudo cp ${SCRIPT_DIR}/ly/config.ini /etc/ly/config.ini"
+            info "Ly display manager detected at /etc/ly. To sync Cyber Synthwave theme, run: sudo cp ${SCRIPT_DIR}/ly/config.ini /etc/ly/config.ini"
         fi
     fi
 fi

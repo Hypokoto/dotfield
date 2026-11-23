@@ -482,9 +482,9 @@ fi
 # Smart Command Not Found Handler with Arch Package Search
 command_not_found_handler() {
     local cmd="$1"
-    print -P "%F{#F43F5E}zsh: command not found: %B$cmd%b%f" >&2
+    print -P "%F{#BE3F50}zsh: command not found: %B$cmd%b%f" >&2
     if [[ -x /usr/bin/pacman ]]; then
-        print -P "%F{#71827E}Tip: Search Arch packages with:%f %F{#2DD4BF}pacman -F $cmd%f" >&2
+        print -P "%F{#11AEB3}Tip: Search Arch packages with:%f %F{#04C5F0}pacman -F $cmd%f" >&2
     fi
     return 127
 }

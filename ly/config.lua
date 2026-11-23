@@ -1,16 +1,16 @@
 -- Ly Display Manager Configuration managed by Dotfield
--- Obsidian Mint — Cyber-Botanical Interface (60-30-10 palette)
+-- Cyber Synthwave — Void Black · Cyan-Teal · Neon Blue · Red Accent
 -- Target installation: /etc/ly/config.lua
 
 return {
-    -- Terminal & Colors (Dotfield Obsidian Mint: Void #080B0B, Mint #2DD4BF, Rose #F43F5E, Minted White #ECFDF5)
-    bg = 0x080B0B,
-    fg = 0xECFDF5,
-    border_fg = 0x2DD4BF,
-    border_bg = 0x080B0B,
-    text_fg = 0xECFDF5,
-    error_fg = 0xF43F5E,
-    error_bg = 0x080B0B,
+    -- Terminal & Colors (Dotfield Cyber Synthwave: Void #000000, Cyan-Teal #14B9B5, Neon Blue #04C5F0, Danger #BE3F50)
+    bg = 0x000000,
+    fg = 0x14B9B5,
+    border_fg = 0x04C5F0,
+    border_bg = 0x000000,
+    text_fg = 0x14B9B5,
+    error_fg = 0xBE3F50,
+    error_bg = 0x000000,
 
     -- Visual Styling & Frame
     box_title = "ARCH LINUX // DOTFIELD",

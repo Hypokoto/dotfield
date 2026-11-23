@@ -1,59 +1,59 @@
 ---@type Base46Theme
 -- lua/themes/dotfield.lua — Base46 theme for NvChad
--- Obsidian Mint Theme — Single Source of Truth
+-- Cyber Synthwave Theme — Void Black · Deep Violet · Purple · Cyan-Teal · Neon Blue
 
 local M = {}
 
 M.base_30 = {
-  white         = "#ECFDF5", -- Minted White
-  darker_black  = "#080B0B", -- Void
-  black         = "#080B0B", -- Void
-  black2        = "#0E1413", -- Obsidian
-  one_bg        = "#0E1413", -- Obsidian
-  one_bg2       = "#16201E", -- Graphite
-  one_bg3       = "#23322F", -- Iron
-  grey          = "#23322F", -- Iron
-  grey_fg       = "#71827E", -- Steel
-  grey_fg2      = "#94A3A0", -- Ash
-  light_grey    = "#94A3A0", -- Ash
-  red           = "#F43F5E", -- Rose Critical
-  baby_pink     = "#F43F5E", -- Rose
-  pink          = "#9F1239", -- Deep Rose
-  line          = "#23322F", -- Iron
-  green         = "#10B981", -- Emerald
-  vibrant_green = "#10B981", -- Emerald
-  nord_blue     = "#71827E", -- Steel
-  blue          = "#38BDF8", -- Sky Blue
-  yellow        = "#FBBF24", -- Amber Gold
-  sun           = "#FBBF24", -- Amber Gold
-  purple        = "#818CF8", -- Violet
-  dark_purple   = "#6366F1", -- Deep Violet
-  teal          = "#2DD4BF", -- Mint
-  orange        = "#F59E0B", -- Warm Amber
-  cyan          = "#2DD4BF", -- Mint
-  statusline_bg = "#0E1413", -- Obsidian
-  lightbg       = "#16201E", -- Graphite
-  pmenu_bg      = "#0E1413", -- Obsidian
-  folder_bg     = "#2DD4BF", -- Mint
+  white         = "#ffffff", -- Pure White
+  darker_black  = "#000000", -- Void Black
+  black         = "#000000", -- Void Black
+  black2        = "#140e29", -- Surface
+  one_bg        = "#140e29", -- Surface
+  one_bg2       = "#251b4a", -- Overlay
+  one_bg3       = "#251b4a", -- Overlay
+  grey          = "#251b4a", -- Overlay
+  grey_fg       = "#11AEB3", -- Statusline Text
+  grey_fg2      = "#ffbe74", -- Muted / Comments
+  light_grey    = "#ffbe74", -- Comments
+  red           = "#BE3F50", -- Red Accent
+  baby_pink     = "#BE3F50", -- Coral Red
+  pink          = "#CE4F48", -- Dark Red
+  line          = "#251b4a", -- Borders & Dividers
+  green         = "#7cd699", -- Strings / Green
+  vibrant_green = "#7cd699", -- Emerald
+  nord_blue     = "#11AEB3", -- Teal
+  blue          = "#04C5F0", -- Functions / Blue
+  yellow        = "#FF7F41", -- Constants / Orange
+  sun           = "#ffbe74", -- Peach / Yellow-Orange
+  purple        = "#9147a8", -- Keywords / Purple
+  dark_purple   = "#9147a8", -- Purple
+  teal          = "#14B9B5", -- Cyan-Teal Foreground
+  orange        = "#FF7F41", -- Constants / Orange
+  cyan          = "#04C5F0", -- Neon Blue
+  statusline_bg = "#140e29", -- Surface
+  lightbg       = "#251b4a", -- Overlay
+  pmenu_bg      = "#140e29", -- Surface
+  folder_bg     = "#04C5F0", -- Neon Blue Accent
 }
 
 M.base_16 = {
-  base00 = "#080B0B", -- Void (Default Background)
-  base01 = "#0E1413", -- Obsidian (Lighter Background)
-  base02 = "#16201E", -- Graphite (Selection Background)
-  base03 = "#23322F", -- Iron (Comments, Invisibles, LineHighlight)
-  base04 = "#71827E", -- Steel (Dark Foreground / Statusline)
-  base05 = "#ECFDF5", -- Minted White (Default Foreground / Caret)
-  base06 = "#ECFDF5", -- Minted White (Light Foreground)
-  base07 = "#FFFFFF", -- Pure White (Light Background)
-  base08 = "#F43F5E", -- Rose (Variables, XML Tags, Markup Bold)
-  base09 = "#FBBF24", -- Amber Gold (Integers, Boolean, Constants)
-  base0A = "#2DD4BF", -- Mint (Classes, Markup Bold, Search Text)
-  base0B = "#10B981", -- Emerald (Strings, Inherited Class)
-  base0C = "#2DD4BF", -- Mint (Support, Regex, Escape Characters)
-  base0D = "#38BDF8", -- Sky Blue (Functions, Methods)
-  base0E = "#2DD4BF", -- Mint (Keywords, Storage, Selector)
-  base0F = "#9F1239", -- Deep Rose (Deprecated, Opening/Closing Embedded Tags)
+  base00 = "#000000", -- background
+  base01 = "#140e29", -- surface
+  base02 = "#251b4a", -- overlay
+  base03 = "#ffbe74", -- muted/comments
+  base04 = "#11AEB3", -- statusline text
+  base05 = "#14B9B5", -- foreground text
+  base06 = "#ffffff", -- pure white fallback
+  base07 = "#ffbe74", -- extra light accent
+  base08 = "#BE3F50", -- variables / red accent
+  base09 = "#FF7F41", -- constants / orange
+  base0A = "#ffbe74", -- classes / yellow-orange
+  base0B = "#7cd699", -- strings / green
+  base0C = "#11AEB3", -- regex / teal
+  base0D = "#04C5F0", -- functions / blue
+  base0E = "#9147a8", -- keywords / purple
+  base0F = "#CE4F48", -- deprecated / dark red
 }
 
 M.type = "dark"

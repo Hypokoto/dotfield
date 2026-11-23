@@ -1,19 +1,19 @@
--- Obsidian Mint raw color tokens
+-- Cyber Synthwave raw color tokens
 -- Single source of truth palette managed by Dotfield
 local M = {
-    void           = "#080B0B",
-    obsidian       = "#0E1413",
-    graphite       = "#16201E",
-    iron           = "#23322F",
-    steel          = "#71827E",
-    ash            = "#94A3A0",
-    bone           = "#ECFDF5",
-    crimson        = "#F43F5E",
-    blood_red      = "#9F1239",
-    amber          = "#2DD4BF", -- Primary Accent: Mint
-    pale_amber     = "#10B981", -- Secondary Accent: Emerald
-    gold           = "#FBBF24", -- Highlight: Amber Gold
-    success        = "#10B981", -- Success: Emerald
+    void           = "#000000",
+    obsidian       = "#140e29",
+    graphite       = "#251b4a",
+    iron           = "#251b4a",
+    steel          = "#11AEB3",
+    ash            = "#ffbe74",
+    bone           = "#14B9B5",
+    crimson        = "#BE3F50",
+    blood_red      = "#CE4F48",
+    amber          = "#04C5F0", -- Primary Accent: Neon Blue
+    pale_amber     = "#9147a8", -- Secondary Accent: Purple
+    gold           = "#FF7F41", -- Highlight: Orange
+    success        = "#7cd699", -- Success: Emerald Green
 }
 
 return M

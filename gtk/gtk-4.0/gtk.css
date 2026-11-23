@@ -1,56 +1,56 @@
-/* Dotfield Obsidian Mint Theme — GTK 4.0 / Libadwaita CSS
- * Void Black (#080B0B) · Obsidian (#0E1413) · Graphite (#16201E)
- * Mint (#2DD4BF) · Emerald (#10B981) · Iron (#23322F)
+/* Dotfield Cyber Synthwave Theme — GTK 4.0 / Libadwaita CSS
+ * Void Black (#000000) · Deep Violet (#140E29) · Purple (#251B4A)
+ * Cyan-Teal (#14B9B5) · Neon Blue (#04C5F0) · Emerald (#7CD699)
  */
 
-@define-color accent_color #2DD4BF;
-@define-color accent_bg_color #2DD4BF;
-@define-color accent_fg_color #080B0B;
+@define-color accent_color #04C5F0;
+@define-color accent_bg_color #04C5F0;
+@define-color accent_fg_color #000000;
 
-@define-color secondary_accent #10B981;
-@define-color destructive_color #F43F5E;
-@define-color destructive_bg_color #F43F5E;
+@define-color secondary_accent #9147A8;
+@define-color destructive_color #BE3F50;
+@define-color destructive_bg_color #BE3F50;
 @define-color destructive_fg_color #FFFFFF;
 
-@define-color success_color #10B981;
-@define-color success_bg_color #10B981;
-@define-color success_fg_color #080B0B;
+@define-color success_color #7CD699;
+@define-color success_bg_color #7CD699;
+@define-color success_fg_color #000000;
 
-@define-color warning_color #FBBF24;
-@define-color warning_bg_color #FBBF24;
-@define-color warning_fg_color #080B0B;
+@define-color warning_color #FF7F41;
+@define-color warning_bg_color #FF7F41;
+@define-color warning_fg_color #000000;
 
-@define-color error_color #F43F5E;
-@define-color error_bg_color #F43F5E;
+@define-color error_color #BE3F50;
+@define-color error_bg_color #BE3F50;
 @define-color error_fg_color #FFFFFF;
 
-@define-color window_bg_color #080B0B;
-@define-color window_fg_color #ECFDF5;
+@define-color window_bg_color #000000;
+@define-color window_fg_color #14B9B5;
 
-@define-color view_bg_color #0E1413;
-@define-color view_fg_color #ECFDF5;
+@define-color view_bg_color #140E29;
+@define-color view_fg_color #14B9B5;
 
-@define-color headerbar_bg_color #0E1413;
-@define-color headerbar_fg_color #ECFDF5;
-@define-color headerbar_border_color #23322F;
-@define-color headerbar_backdrop_color #080B0B;
+@define-color headerbar_bg_color #140E29;
+@define-color headerbar_fg_color #14B9B5;
+@define-color headerbar_border_color #251B4A;
+@define-color headerbar_backdrop_color #000000;
 
-@define-color card_bg_color #16201E;
-@define-color card_fg_color #ECFDF5;
-@define-color card_border_color #23322F;
+@define-color card_bg_color #251B4A;
+@define-color card_fg_color #14B9B5;
+@define-color card_border_color #251B4A;
 
-@define-color dialog_bg_color #0E1413;
-@define-color dialog_fg_color #ECFDF5;
+@define-color dialog_bg_color #140E29;
+@define-color dialog_fg_color #14B9B5;
 
-@define-color popover_bg_color #16201E;
-@define-color popover_fg_color #ECFDF5;
+@define-color popover_bg_color #251B4A;
+@define-color popover_fg_color #14B9B5;
 
 @define-color shade_color rgba(0, 0, 0, 0.40);
 @define-color scrollbar_outline_color rgba(0, 0, 0, 0.5);
 
 /* Selection & Focus */
-@define-color theme_selected_bg_color #2DD4BF;
-@define-color theme_selected_fg_color #080B0B;
+@define-color theme_selected_bg_color #04C5F0;
+@define-color theme_selected_fg_color #000000;
 
 /* Window & general widget styling */
 window {
@@ -69,7 +69,7 @@ headerbar {
 entry, textview text {
     background-color: @view_bg_color;
     color: @view_fg_color;
-    border: 1px solid #23322F;
+    border: 1px solid #251B4A;
     border-radius: 8px;
     padding: 6px 10px;
 }
@@ -83,12 +83,12 @@ button {
     background-color: @card_bg_color;
     color: @window_fg_color;
     border-radius: 8px;
-    border: 1px solid #23322F;
+    border: 1px solid #251B4A;
     transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 button:hover {
-    background-color: #1f2c29;
+    background-color: #251B4A;
     border-color: @accent_color;
 }
 
@@ -99,7 +99,7 @@ button.suggested-action, .accent {
 }
 
 button.suggested-action:hover {
-    background-color: #5eead4;
+    background-color: #61E6FF;
 }
 
 button.destructive-action {
@@ -116,7 +116,7 @@ button.destructive-action {
 }
 
 row:selected {
-    background-color: #1f2c29;
+    background-color: #251B4A;
     color: @accent_color;
 }
 
@@ -124,7 +124,7 @@ row:selected {
 popover, .popover {
     background-color: @popover_bg_color;
     color: @popover_fg_color;
-    border: 1px solid #23322F;
+    border: 1px solid #251B4A;
     border-radius: 12px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }

@@ -1,19 +1,19 @@
-# Ly Display Manager: Obsidian Mint Theme
+# Ly Display Manager: Cyber Synthwave Theme
 
 Dotfield provides unified configuration for **Ly**, a lightweight TUI display manager for modern Wayland/Linux desktop environments.
 
 ## Color Palette Mapping
 
-The configuration binds strictly to the **Obsidian Mint** 60-30-10 token hierarchy:
+The configuration binds strictly to the **Cyber Synthwave** token hierarchy:
 
 | Token | Hex Code | TrueColor (0xSSRRGGBB) | Ly Role |
 | :--- | :--- | :--- | :--- |
-| **Void Black** | `#080B0B` | `0x00080B0B` | Background canvas (`bg`), error background (`error_bg`) |
-| **Minted White** | `#ECFDF5` | `0x00ECFDF5` | Primary text (`fg`, `text_fg`) |
-| **Mint** | `#2DD4BF` | `0x012DD4BF` | Focused border (`border_fg`) |
-| **Emerald** | `#10B981` | `0x0010B981` | Matrix highlight (`cmatrix_fg`) |
-| **Rose** | `#F43F5E` | `0x01F43F5E` | Error alerts (`error_fg`), failed authentication attempts |
-| **Iron** | `#23322F` | `0x0023322F` | Outer frame boundary and subtle dividers |
+| **Void Black** | `#000000` | `0x00000000` | Background canvas (`bg`), error background (`error_bg`) |
+| **Cyan-Teal** | `#14B9B5` | `0x0014B9B5` | Primary text (`fg`, `text_fg`) |
+| **Neon Blue** | `#04C5F0` | `0x0104C5F0` | Focused border (`border_fg`) |
+| **Emerald** | `#7CD699` | `0x007CD699` | Matrix highlight (`cmatrix_fg`) |
+| **Red Accent** | `#BE3F50` | `0x01BE3F50` | Error alerts (`error_fg`), failed authentication attempts |
+| **Purple** | `#251B4A` | `0x00251B4A` | Outer frame boundary and subtle dividers |
 
 ## Deployment
 

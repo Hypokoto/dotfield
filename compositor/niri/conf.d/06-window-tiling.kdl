@@ -2,21 +2,23 @@
 // Fluid scrollable tiling navigation, column stacking, and ergonomic resizing
 
 binds {
-    // Column & Window Navigation (Seamless Neovim + Niri Vi Integration)
-    Mod+H     { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh left"; }
-    Mod+L     { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh right"; }
-    Mod+J     { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh down w"; }
-    Mod+K     { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh up w"; }
-    Mod+Left  { focus-column-left; }
-    Mod+Right { focus-column-right; }
-    Mod+Down  { reset-window-height; }
-    Mod+Up    { maximize-column; }
+    // Column & Window Navigation (Seamless Neovim + Niri Vi & Arrow Integration)
+    // Note: Mod+L is strictly reserved for Lock Screen (Win+L) in 08-binds.kdl
+    Mod+H         { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh left"; }
+    Mod+Semicolon { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh right"; }
+    Mod+J         { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh down w"; }
+    Mod+K         { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh up w"; }
+    Mod+Left      { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh left"; }
+    Mod+Right     { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh right"; }
+    Mod+Down      { reset-window-height; }
+    Mod+Up        { maximize-column; }
 
     // Moving Columns & Windows
-    Mod+Shift+H     { move-column-left; }
-    Mod+Shift+L     { move-column-right; }
-    Mod+Shift+J     { move-window-down; }
-    Mod+Shift+K     { move-window-up; }
+    Mod+Shift+H         { move-column-left; }
+    Mod+Shift+L         { move-column-right; }
+    Mod+Shift+Semicolon { move-column-right; }
+    Mod+Shift+J         { move-window-down; }
+    Mod+Shift+K         { move-window-up; }
     Mod+Alt+Left    { move-column-left; }
     Mod+Alt+Right   { move-column-right; }
 

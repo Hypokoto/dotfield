@@ -788,6 +788,7 @@ else
     ln -sf "${SCRIPTS_DEST}/battery-alert.sh" "${PREFIX}/dotfield-battery-alert" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/sandbox-browser.sh" "${PREFIX}/sandbox-browser" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/sandbox-browser.sh" "${PREFIX}/dotfield-sandbox-browser" 2>/dev/null || true
+    ln -sf "${SCRIPTS_DEST}/wallpaper.sh" "${PREFIX}/dotfield-wallpaper" 2>/dev/null || true
     ln -sf "${SCRIPTS_DEST}/fw-open" "${PREFIX}/fw-open" 2>/dev/null || true
     success "Helper scripts deployed to ${SCRIPTS_DEST}"
 fi

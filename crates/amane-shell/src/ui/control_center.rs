@@ -1076,7 +1076,16 @@ fn render_appearance(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         .align_child(Center, Center)
         .on_click(|_| {
             let _ = std::process::Command::new("sh")
-                .args(["-c", "~/.config/dotfield/scripts/wallpaper.sh"])
+                .args([
+                    "-c",
+                    "if command -v dotfield-wallpaper >/dev/null 2>&1; then \
+                        dotfield-wallpaper next; \
+                     elif [ -x \"$HOME/.config/dotfield/scripts/wallpaper.sh\" ]; then \
+                        \"$HOME/.config/dotfield/scripts/wallpaper.sh\" next; \
+                     elif [ -x \"$HOME/dev/projects/dotfield/scripts/wallpaper.sh\" ]; then \
+                        \"$HOME/dev/projects/dotfield/scripts/wallpaper.sh\" next; \
+                     fi",
+                ])
                 .spawn();
         })
         .child(

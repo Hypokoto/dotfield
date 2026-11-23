@@ -263,9 +263,83 @@ header "Test 6: Battery Alert Debounced State Machine"
 )
 
 # ------------------------------------------------------------------------------
-# Test 7: Shellcheck across all repository scripts
+# Test 7: Wallpaper Cycling (next / prev)
 # ------------------------------------------------------------------------------
-header "Test 7: ShellCheck Verification Across Repository"
+header "Test 7: Wallpaper Cycling State Machine"
+(
+    MOCK_HOME="${TEST_TMP}/home_wp"
+    mkdir -p "${MOCK_HOME}/.config/dotfield/background/Wallpapers/Imgs"
+    mkdir -p "${MOCK_HOME}/.cache/dotfield"
+    mkdir -p "${MOCK_HOME}/.local/bin"
+
+    # Create dummy images
+    touch "${MOCK_HOME}/.config/dotfield/background/Wallpapers/Imgs/W1.jpeg"
+    touch "${MOCK_HOME}/.config/dotfield/background/Wallpapers/Imgs/W2.png"
+    touch "${MOCK_HOME}/.config/dotfield/background/Wallpapers/Imgs/W3.png"
+
+    # Mock awww and swaybg
+    cat << "EOF" > "${MOCK_HOME}/.local/bin/awww"
+#!/usr/bin/env bash
+if [[ "$1" == "query" ]]; then
+    cat "${XDG_CACHE_HOME:-$HOME/.cache}/dotfield/current_niri_wallpaper" 2>/dev/null || echo "empty"
+    exit 0
+fi
+exit 0
+EOF
+    chmod +x "${MOCK_HOME}/.local/bin/awww"
+
+    cat << "EOF" > "${MOCK_HOME}/.local/bin/swaybg"
+#!/usr/bin/env bash
+exit 0
+EOF
+    chmod +x "${MOCK_HOME}/.local/bin/swaybg"
+
+    export HOME="${MOCK_HOME}"
+    export PATH="${MOCK_HOME}/.local/bin:${PATH}"
+    export NIRI_SOCKET="${TEST_TMP}/mock-niri.sock"
+    touch "${NIRI_SOCKET}"
+
+    # Initial next from empty cache -> picks W1.jpeg
+    "${SCRIPT_DIR}/scripts/wallpaper.sh" next >/dev/null 2>&1 || true
+    curr1=$(cat "${MOCK_HOME}/.cache/dotfield/current_niri_wallpaper" 2>/dev/null || echo "")
+    if [[ "$(basename "${curr1}")" == "W1.jpeg" ]]; then
+        pass "Initial 'next' selected first wallpaper (W1.jpeg)"
+    else
+        fail "Expected W1.jpeg, got '${curr1}'"
+    fi
+
+    # Next -> W2.png
+    "${SCRIPT_DIR}/scripts/wallpaper.sh" next >/dev/null 2>&1 || true
+    curr2=$(cat "${MOCK_HOME}/.cache/dotfield/current_niri_wallpaper" 2>/dev/null || echo "")
+    if [[ "$(basename "${curr2}")" == "W2.png" ]]; then
+        pass "Second 'next' advanced to W2.png"
+    else
+        fail "Expected W2.png, got '${curr2}'"
+    fi
+
+    # Prev -> W1.jpeg
+    "${SCRIPT_DIR}/scripts/wallpaper.sh" prev >/dev/null 2>&1 || true
+    curr3=$(cat "${MOCK_HOME}/.cache/dotfield/current_niri_wallpaper" 2>/dev/null || echo "")
+    if [[ "$(basename "${curr3}")" == "W1.jpeg" ]]; then
+        pass "'prev' reverted to W1.jpeg"
+    else
+        fail "Expected W1.jpeg, got '${curr3}'"
+    fi
+
+    # Prev from W1.jpeg -> Wraparound to W3.png
+    "${SCRIPT_DIR}/scripts/wallpaper.sh" prev >/dev/null 2>&1 || true
+    curr4=$(cat "${MOCK_HOME}/.cache/dotfield/current_niri_wallpaper" 2>/dev/null || echo "")
+    if [[ "$(basename "${curr4}")" == "W3.png" ]]; then
+        pass "'prev' wraparound correctly selected W3.png"
+    else
+        fail "Expected W3.png, got '${curr4}'"
+    fi
+)
+
+# ------------------------------------------------------------------------------
+# Test 8: Shellcheck across all repository scripts
+# ------------------------------------------------------------------------------
+header "Test 8: ShellCheck Verification Across Repository"
 if command -v shellcheck >/dev/null 2>&1; then
     # shellcheck disable=SC2046
     if shellcheck $(find "${SCRIPT_DIR}/scripts" -name "*.sh") "${SCRIPT_DIR}/setup.sh" "${SCRIPT_DIR}/tests/test_scripts_resilience.sh"; then

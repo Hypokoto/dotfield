@@ -918,6 +918,7 @@ ensure_config_link_or_dir "${SCRIPT_DIR}/wlogout" "${HOME}/.config/wlogout"
 ensure_config_link_or_dir "${SCRIPT_DIR}/fastfetch" "${HOME}/.config/fastfetch"
 ensure_config_link_or_dir "${SCRIPT_DIR}/shell/starship/starship.toml" "${HOME}/.config/starship.toml"
 ensure_config_link_or_dir "${SCRIPT_DIR}/shell/zsh/.zshrc" "${HOME}/.zshrc"
+ensure_config_link_or_dir "${SCRIPT_DIR}/shell/atuin/config.toml" "${HOME}/.config/atuin/config.toml"
 
 # Compile/prime Neovim NvChad base46 highlights if nvim is available
 if [[ "${DRY_RUN}" != true ]] && command -v nvim >/dev/null 2>&1; then

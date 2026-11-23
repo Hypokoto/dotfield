@@ -1,5 +1,5 @@
 # Dotfield Zsh Configuration
-# Controlled Chaos Theme — Void Black · Crimson · Industrial Amber · Steel
+# Obsidian Mint Theme — Void Black · Mint · Emerald · Amber Gold · Rose Critical
 # High-Performance, Hardened & Productive Shell Environment
 
 ### 1. Security & System Hardening
@@ -10,6 +10,40 @@ setopt NO_CLOBBER
 
 # Terminal cleanliness
 setopt NO_BEEP
+
+# Prevent core dumps in interactive shell to stop memory leakage of secrets
+limit coredumpsize 0 2>/dev/null || true
+
+# Safe PATH Construction & Poisoning Prevention:
+# Only retain paths that exist, are owned by root or current user, and are not world-writable.
+_dotfield_sanitize_path() {
+    typeset -U path fpath cdpath
+    local -a candidate_paths=(
+        "$HOME/.local/bin"
+        "$HOME/.cargo/bin"
+        "$HOME/.bun/bin"
+        "$HOME/go/bin"
+        "${path[@]}"
+    )
+
+    local -a clean_paths=()
+    local p owner_uid perm
+    for p in "${candidate_paths[@]}"; do
+        [[ -z "$p" || "$p" == "." ]] && continue
+        if [[ -d "$p" ]]; then
+            owner_uid="$(stat -c '%u' "$p" 2>/dev/null)"
+            perm="$(stat -c '%a' "$p" 2>/dev/null)"
+            if [[ ("$owner_uid" == "$EUID" || "$owner_uid" == "0") && "$perm" != *[2367] ]]; then
+                clean_paths+=("$p")
+            fi
+        fi
+    done
+
+    path=("${clean_paths[@]}")
+    export PATH
+}
+_dotfield_sanitize_path
+unfunction _dotfield_sanitize_path
 
 # History storage with strict permissions
 HISTFILE="${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history"
@@ -36,9 +70,12 @@ zshaddhistory() {
     local line="${1%%$'\n'}"
     # Omit commands starting with whitespace
     [[ "$line" =~ ^[[:space:]] ]] && return 1
-    # Omit commands containing sensitive authentication tokens and private keys
+
     local lower="${(L)line}"
-    if [[ "$lower" =~ (bearer|api[_-]?key|access_token|password|passwd|ghp_|glpat-|begin[[:space:]]+private|private_key|aws_secret|id_rsa) ]]; then
+    local secret_pattern="(bearer|api[_-]?key|access_token|password|passwd|ghp_|glpat-|begin[[:space:]]+private|private_key|aws_secret|id_rsa|secret_key|deploy_key)"
+    local token_pattern="(^export[[:space:]]+[A-Za-z0-9_]*(SECRET|TOKEN|KEY|PASS|AUTH|CREDENTIAL)|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{16,}|curl.*-H)"
+
+    if [[ "$lower" =~ $secret_pattern || "$line" =~ $token_pattern ]]; then
         return 1
     fi
     return 0
@@ -47,20 +84,23 @@ zshaddhistory() {
 ### 2. High-Performance Caching & Completion Initialization
 zmodload -i zsh/complist
 
-# Ensure local user binaries are available for completions and helpers
-[[ -d "$HOME/.local/bin" ]] && path=("$HOME/.local/bin" $path)
-[[ -d "$HOME/.cargo/bin" ]] && path=("$HOME/.cargo/bin" $path)
-typeset -U path fpath
-
-local ZSH_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
+typeset ZSH_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
 [[ -d "$ZSH_CACHE_DIR" ]] || mkdir -p "$ZSH_CACHE_DIR"
-local ZCOMPDUMP="$ZSH_CACHE_DIR/zcompdump"
+typeset ZCOMPDUMP="$ZSH_CACHE_DIR/zcompdump"
 
-# Standard compinit with 24h cache (fast — fzf-tab manages the UI, not zsh-autocomplete)
+# Compinit with automated permission hardening and 24h cache
 autoload -Uz compinit
 if [[ -s "$ZCOMPDUMP" && -n "$ZCOMPDUMP"(N.mh-24) ]]; then
     compinit -C -d "$ZCOMPDUMP"
 else
+    # Automatically remediate insecure completion directories owned by user
+    autoload -Uz compaudit
+    local -a insecure_dirs=($(compaudit 2>/dev/null))
+    if [[ ${#insecure_dirs[@]} -gt 0 ]]; then
+        for idir in "${insecure_dirs[@]}"; do
+            [[ -O "$idir" ]] && chmod g-w,o-w "$idir" 2>/dev/null || true
+        done
+    fi
     compinit -i -d "$ZCOMPDUMP"
     { zcompile "$ZCOMPDUMP" 2>/dev/null } &!
 fi
@@ -207,22 +247,25 @@ alias ....="cd ../../.."
 alias .....="cd ../../../.."
 alias -- -="cd -"
 
-### 5. Environment Variables & Controlled Chaos Theme Pager
+### 5. Environment Variables & Obsidian Mint Theme Pager
 export EDITOR="nvim"
 export VISUAL="nvim"
 export TERMINAL="foot"
 export PAGER="less -RF"
 export MANPAGER="nvim +Man!"
 
-export LESS_TERMCAP_mb=$'\e[1;31m'     # Crimson bold
-export LESS_TERMCAP_md=$'\e[1;33m'     # Amber bold
+export LESS_TERMCAP_mb=$'\e[1;38;2;244;63;94m'                 # Rose Critical bold
+export LESS_TERMCAP_md=$'\e[1;38;2;45;212;191m'                 # Mint bold
 export LESS_TERMCAP_me=$'\e[0m'
-export LESS_TERMCAP_so=$'\e[01;40;33m' # Amber standout
+export LESS_TERMCAP_so=$'\e[01;48;2;22;32;30;38;2;45;212;191m' # Mint standout on Dark Void
 export LESS_TERMCAP_se=$'\e[0m'
-export LESS_TERMCAP_us=$'\e[1;32m'     # Green underline
+export LESS_TERMCAP_us=$'\e[1;38;2;16;185;129m'                 # Emerald underline
 export LESS_TERMCAP_ue=$'\e[0m'
 
 ### 6. Modern Productivity Replacements & Safety Aliases
+# Safe Sudo (Preserves alias expansion behind sudo)
+alias sudo="sudo "
+
 # File Listing (Eza)
 if command -v eza >/dev/null 2>&1; then
     alias ls="eza --icons=auto --group-directories-first"
@@ -425,6 +468,27 @@ if command -v starship >/dev/null 2>&1; then
     source "$STARSHIP_CACHE"
 fi
 
+# Atuin: Encrypted SQLite Shell History with Zero-Lag Caching & Secret Filtering
+if command -v atuin >/dev/null 2>&1; then
+    local ATUIN_CACHE="$ZSH_CACHE_DIR/atuin_init.zsh"
+    local ATUIN_BIN="$(whence -p atuin)"
+    if [[ ! -s "$ATUIN_CACHE" || "$ATUIN_CACHE" -ot "$ATUIN_BIN" ]]; then
+        atuin init zsh --disable-up-arrow >| "$ATUIN_CACHE"
+        zcompile "$ATUIN_CACHE" 2>/dev/null || true
+    fi
+    source "$ATUIN_CACHE"
+fi
+
+# Smart Command Not Found Handler with Arch Package Search
+command_not_found_handler() {
+    local cmd="$1"
+    print -P "%F{#F43F5E}zsh: command not found: %B$cmd%b%f" >&2
+    if [[ -x /usr/bin/pacman ]]; then
+        print -P "%F{#71827E}Tip: Search Arch packages with:%f %F{#2DD4BF}pacman -F $cmd%f" >&2
+    fi
+    return 127
+}
+
 ### Plugins (Autosuggestions & Syntax Highlighting)
 # Fish-like autosuggestions
 if [[ -r /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
@@ -461,21 +525,11 @@ elif [[ -r /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlightin
 fi
 
 ### 11. Developer Toolchains & Environments
-# Bun
+# Bun runtime completions
 if [[ -d "$HOME/.bun" ]]; then
     export BUN_INSTALL="$HOME/.bun"
-    export PATH="$BUN_INSTALL/bin:$PATH"
     [[ -s "$HOME/.bun/_bun" ]] && source "$HOME/.bun/_bun"
 fi
-
-# Rust Cargo
-[[ -d "$HOME/.cargo/bin" ]] && export PATH="$HOME/.cargo/bin:$PATH"
-
-# Go
-[[ -d "$HOME/go/bin" ]] && export PATH="$HOME/go/bin:$PATH"
-
-# Local user binaries
-[[ -d "$HOME/.local/bin" ]] && export PATH="$HOME/.local/bin:$PATH"
 
 ### 12. Self-Compiling Optimization
 # Background-compile .zshrc if modified for instant bytecode loading

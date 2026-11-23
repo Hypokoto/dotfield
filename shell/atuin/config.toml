@@ -1,0 +1,53 @@
+# Dotfield Atuin Configuration
+# Encrypted SQLite Shell History with Built-in Secret Filtering & Obsidian Mint Aesthetics
+
+style = "compact"
+inline_height = 18
+show_preview = true
+enter_accept = false
+search_mode = "fuzzy"
+filter_mode = "global"
+filter_mode_shell_up_key_binding = "directory"
+workspaces = true
+
+# Security: Strip and ignore secrets, passwords, tokens and private keys
+secrets_filter = true
+history_filter = [
+    "^secret-cmd",
+    "^export[[:space:]]+[A-Za-z0-9_]*(SECRET|TOKEN|KEY|PASS|AUTH|CREDENTIAL)",
+    "(bearer|api[_-]?key|access_token|password|passwd|ghp_|glpat-|begin[[:space:]]+private|private_key|aws_secret|id_rsa)",
+    "curl.*-H[[:space:]]+[\"']?(Authorization|X-Api-Key)",
+]
+
+# Sensitive working directories where commands should never be recorded
+cwd_filter = [
+    "^/tmp",
+    "^/dev/shm",
+]
+
+store_failed = true
+auto_sync = false
+update_check = false
+
+[stats]
+common_prefix = ["sudo"]
+ignored_commands = [
+    "cd",
+    "ls",
+    "l",
+    "ll",
+    "la",
+    "v",
+    "vi",
+    "nvim",
+    "clear",
+    "exit",
+]
+
+[keys]
+scroll_exits = true
+exit_past_line_start = true
+accept_past_line_end = true
+
+[ui]
+columns = ["duration", "time", "command"]

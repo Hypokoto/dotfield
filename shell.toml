@@ -1,0 +1,48 @@
+[theme]
+font_family = "Inter"
+font_size = 10.0
+style = "obsidian-mint"
+
+[palette]
+background = "#080B0B"
+surface = "#0E1413"
+overlay = "#16201E"
+muted = "#94A3A0"
+accent = "#2DD4BF"
+highlight = "#FBBF24"
+foreground = "#ECFDF5"
+border = "#23322F"
+hover = "#10B981"
+steel = "#71827E"
+success = "#10B981"
+danger_critical = "#F43F5E"
+
+[bar]
+enabled = true
+height = 32.0
+position = "top"
+show_workspaces = true
+show_title = true
+show_telemetry = true
+
+[osd]
+enabled = true
+timeout_ms = 1200
+
+[notifications]
+enabled = true
+timeout_ms = 5000
+max_visible = 5
+
+[launcher]
+enabled = true
+max_results = 8
+
+[control_center]
+enabled = true
+show_mpris = true
+show_network = true
+show_bluetooth = true
+
+[terminal]
+default = "ghostty"

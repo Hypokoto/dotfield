@@ -281,27 +281,9 @@ pub fn calendar_overlay() -> LayerWindow {
         .align(Align::Center);
 
     // Calendar days grid: 6 rows x 7 days
-    let first_day = NaiveDate::from_ymd_opt(cal.view_year, cal.view_month, 1)
-        .unwrap_or_else(|| NaiveDate::from_ymd_opt(2026, 1, 1).unwrap());
+    let (first_day, days_in_month, days_in_prev_month) =
+        calculate_calendar_month_metrics(cal.view_year, cal.view_month);
     let start_col = first_day.weekday().num_days_from_monday() as usize; // 0 for Monday
-
-    let (next_y, next_m) = if cal.view_month == 12 {
-        (cal.view_year + 1, 1)
-    } else {
-        (cal.view_year, cal.view_month + 1)
-    };
-    let next_first = NaiveDate::from_ymd_opt(next_y, next_m, 1)
-        .unwrap_or_else(|| NaiveDate::from_ymd_opt(2026, 2, 1).unwrap());
-    let days_in_month = (next_first - first_day).num_days() as u32;
-
-    let (prev_y, prev_m) = if cal.view_month == 1 {
-        (cal.view_year - 1, 12)
-    } else {
-        (cal.view_year, cal.view_month - 1)
-    };
-    let prev_first = NaiveDate::from_ymd_opt(prev_y, prev_m, 1)
-        .unwrap_or_else(|| NaiveDate::from_ymd_opt(2025, 12, 1).unwrap());
-    let days_in_prev_month = (first_day - prev_first).num_days() as u32;
 
     let mut grid_cells: Vec<(u32, bool, bool)> = Vec::new(); // (day_number, is_current_month, is_today)
 
@@ -442,6 +424,35 @@ pub fn calendar_overlay() -> LayerWindow {
         })
         .child(calendar_panel)
 }
+/// Pure function computing first day NaiveDate, days in current month, and days in previous month.
+pub fn calculate_calendar_month_metrics(year: i32, month: u32) -> (NaiveDate, u32, u32) {
+    let month = month.clamp(1, 12);
+    let first_day = NaiveDate::from_ymd_opt(year, month, 1).unwrap_or_else(|| {
+        let today = Local::now().date_naive();
+        NaiveDate::from_ymd_opt(today.year(), today.month(), 1)
+            .unwrap_or_else(|| NaiveDate::from_ymd_opt(2026, 1, 1).unwrap())
+    });
+
+    let (next_y, next_m) = if month == 12 {
+        (year + 1, 1)
+    } else {
+        (year, month + 1)
+    };
+    let days_in_month = NaiveDate::from_ymd_opt(next_y, next_m, 1)
+        .map(|next| (next - first_day).num_days() as u32)
+        .unwrap_or(30);
+
+    let (prev_y, prev_m) = if month == 1 {
+        (year - 1, 12)
+    } else {
+        (year, month - 1)
+    };
+    let days_in_prev_month = NaiveDate::from_ymd_opt(prev_y, prev_m, 1)
+        .map(|prev| (first_day - prev).num_days() as u32)
+        .unwrap_or(30);
+
+    (first_day, days_in_month, days_in_prev_month)
+}
 
 #[cfg(test)]
 mod tests {
@@ -477,5 +488,25 @@ mod tests {
 
         close();
         assert!(!CalendarService::read().open);
+    }
+
+    #[test]
+    fn test_calculate_calendar_month_metrics() {
+        // Leap year February (2024 has 29 days, January has 31)
+        let (first, days, prev_days) = calculate_calendar_month_metrics(2024, 2);
+        assert_eq!(first, NaiveDate::from_ymd_opt(2024, 2, 1).unwrap());
+        assert_eq!(days, 29);
+        assert_eq!(prev_days, 31);
+
+        // Non-leap year February (2025 has 28 days)
+        let (first, days, _) = calculate_calendar_month_metrics(2025, 2);
+        assert_eq!(first, NaiveDate::from_ymd_opt(2025, 2, 1).unwrap());
+        assert_eq!(days, 28);
+
+        // Year boundary transition: January 2027 (previous month December 2026 has 31 days)
+        let (first, days, prev_days) = calculate_calendar_month_metrics(2027, 1);
+        assert_eq!(first, NaiveDate::from_ymd_opt(2027, 1, 1).unwrap());
+        assert_eq!(days, 31);
+        assert_eq!(prev_days, 31);
     }
 }

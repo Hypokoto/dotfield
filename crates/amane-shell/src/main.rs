@@ -92,7 +92,9 @@ fn parse_cli_args() -> Result<Cli, String> {
                     if next.starts_with('-') {
                         break;
                     }
-                    cli.action_args.push(args.next().unwrap());
+                    if let Some(arg) = args.next() {
+                        cli.action_args.push(arg);
+                    }
                 }
             }
             "ipc" => {

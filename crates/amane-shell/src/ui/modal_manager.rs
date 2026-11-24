@@ -49,13 +49,12 @@ impl ModalManager {
 
     /// Closes all open modals and reclaims heap memory back to OS.
     pub fn close_all() {
-        crate::ui::launcher::close();
+        crate::ui::start_menu::close();
         crate::ui::control_center::close();
         crate::ui::calendar::close();
         crate::ui::display_config::close();
         crate::ui::powermenu::close();
         crate::ui::screen_record::close();
-        crate::ui::start_menu::close();
         crate::ui::overview::close();
 
         #[cfg(target_os = "linux")]

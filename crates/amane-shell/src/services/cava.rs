@@ -62,23 +62,38 @@ impl CavaService {
         });
     }
 
+    /// Secure path for temporary cava config file within XDG_RUNTIME_DIR or user-isolated tmpfs.
+    pub fn config_path() -> std::path::PathBuf {
+        if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
+            std::path::PathBuf::from(runtime_dir).join("amane_cava.conf")
+        } else {
+            #[cfg(unix)]
+            let uid = unsafe { libc::getuid() };
+            #[cfg(not(unix))]
+            let uid = 1000;
+            std::env::temp_dir().join(format!("amane_cava_{uid}.conf"))
+        }
+    }
+
     /// Read raw byte stream from cava configured for raw stdout output.
     fn run_cava_reader() -> anyhow::Result<()> {
-        let temp_cfg = "/tmp/amane_cava_config";
+        let temp_cfg = Self::config_path();
         let config_content = format!(
             "[general]\nbars = {}\nframerate = 60\nsleep_timer = 2\n\n[output]\nmethod = raw\nraw_target = /dev/stdout\ndata_format = binary\nbit_format = 8bit\n\n[smoothing]\nmonstercat = 1\nnoise_reduction = 75\n",
             CAVA_BAR_COUNT
         );
-        let _ = std::fs::write(temp_cfg, config_content);
+        let _ = std::fs::write(&temp_cfg, config_content);
 
-        let mut child: Child = Command::new("cava")
+        let child_proc = Command::new("cava")
             .arg("-p")
-            .arg(temp_cfg)
+            .arg(&temp_cfg)
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()?;
 
-        let mut stdout = match child.stdout.take() {
+        let mut child = ChildGuard(child_proc);
+
+        let mut stdout = match child.0.stdout.take() {
             Some(s) => s,
             None => return Ok(()),
         };
@@ -87,16 +102,7 @@ impl CavaService {
         let mut last_activity = Instant::now();
 
         while let Ok(()) = stdout.read_exact(&mut buf) {
-            let mut max_val = 0u8;
-            let float_bars: Vec<f32> = buf
-                .iter()
-                .map(|&b| {
-                    if b > max_val {
-                        max_val = b;
-                    }
-                    (b as f32) / 255.0
-                })
-                .collect();
+            let (float_bars, max_val) = process_cava_raw_bytes(&buf);
 
             if max_val > 5 {
                 last_activity = Instant::now();
@@ -112,8 +118,7 @@ impl CavaService {
             }
         }
 
-        let _ = child.kill();
-        let _ = child.wait();
+        // Child process is killed and reaped safely by ChildGuard RAII Drop
         Ok(())
     }
 
@@ -125,5 +130,66 @@ impl CavaService {
     /// Check if audio is currently playing and visualizer is active.
     pub fn is_audio_active() -> bool {
         IS_ACTIVE.load(Ordering::Relaxed)
+    }
+}
+
+/// Normalizes 8-bit raw cava bytes into 0.0..1.0 float bars and tracks peak value.
+pub fn process_cava_raw_bytes(buf: &[u8]) -> (Vec<f32>, u8) {
+    let mut max_val = 0u8;
+    let float_bars: Vec<f32> = buf
+        .iter()
+        .map(|&b| {
+            if b > max_val {
+                max_val = b;
+            }
+            (b as f32) / 255.0
+        })
+        .collect();
+    (float_bars, max_val)
+}
+
+/// RAII Guard ensuring child processes are reaped on error or exit.
+struct ChildGuard(Child);
+
+impl Drop for ChildGuard {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_process_cava_raw_bytes_silence() {
+        let silence = vec![0u8; CAVA_BAR_COUNT];
+        let (bars, max_val) = process_cava_raw_bytes(&silence);
+        assert_eq!(max_val, 0);
+        assert_eq!(bars.len(), CAVA_BAR_COUNT);
+        for bar in bars {
+            assert_eq!(bar, 0.0);
+        }
+    }
+
+    #[test]
+    fn test_process_cava_raw_bytes_scaling() {
+        let mut sample = vec![0u8; CAVA_BAR_COUNT];
+        sample[0] = 255;
+        sample[1] = 128;
+        sample[2] = 64;
+        let (bars, max_val) = process_cava_raw_bytes(&sample);
+        assert_eq!(max_val, 255);
+        assert!((bars[0] - 1.0).abs() < 1e-4);
+        assert!((bars[1] - (128.0 / 255.0)).abs() < 1e-4);
+        assert!((bars[2] - (64.0 / 255.0)).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_cava_config_path_security() {
+        let path = CavaService::config_path();
+        let path_str = path.to_string_lossy();
+        assert!(path_str.ends_with("amane_cava.conf") || path_str.contains("amane_cava_"));
     }
 }

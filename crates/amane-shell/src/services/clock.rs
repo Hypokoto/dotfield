@@ -8,7 +8,7 @@ pub struct ClockService {
     formatted: String,
     time_formatted: String,
     date_formatted: String,
-    last_minute: u32,
+    last_minute_epoch: i64,
 }
 
 impl Service for ClockService {
@@ -18,7 +18,7 @@ impl Service for ClockService {
             formatted: now.format("%a %b %d  %H:%M").to_string(),
             time_formatted: now.format("%H:%M").to_string(),
             date_formatted: now.format("%d/%m/%Y").to_string(),
-            last_minute: now.minute(),
+            last_minute_epoch: now.timestamp() / 60,
         }
     }
 
@@ -42,10 +42,19 @@ impl Service for ClockService {
     }
 
     fn update(&mut self) -> bool {
-        let now = Local::now();
-        let minute = now.minute();
-        if minute != self.last_minute {
-            self.last_minute = minute;
+        self.update_with(Local::now())
+    }
+}
+
+impl ClockService {
+    /// Pure update logic parameterized by datetime for deterministic testing.
+    pub fn update_with<Tz: chrono::TimeZone>(&mut self, now: chrono::DateTime<Tz>) -> bool
+    where
+        Tz::Offset: std::fmt::Display,
+    {
+        let minute_epoch = now.timestamp() / 60;
+        if minute_epoch != self.last_minute_epoch {
+            self.last_minute_epoch = minute_epoch;
             self.formatted = now.format("%a %b %d  %H:%M").to_string();
             self.time_formatted = now.format("%H:%M").to_string();
             self.date_formatted = now.format("%d/%m/%Y").to_string();
@@ -54,9 +63,7 @@ impl Service for ClockService {
             false
         }
     }
-}
 
-impl ClockService {
     pub fn formatted(&self) -> &str {
         &self.formatted
     }
@@ -70,13 +77,14 @@ impl ClockService {
     }
 
     pub fn last_minute(&self) -> u32 {
-        self.last_minute
+        (self.last_minute_epoch.rem_euclid(60)) as u32
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::TimeZone;
 
     #[test]
     fn test_clock_service_initialization() {
@@ -88,8 +96,30 @@ mod tests {
     #[test]
     fn test_clock_service_update_idempotency() {
         let mut clock = ClockService::new();
-        // Since the minute hasn't changed immediately, update should return false
         let changed = clock.update();
         assert!(!changed);
+    }
+
+    #[test]
+    fn test_clock_service_hour_and_day_transition_with_identical_minute() {
+        let mut clock = ClockService::new();
+        let t1 = Local.with_ymd_and_hms(2026, 3, 15, 10, 30, 0).unwrap();
+        assert!(clock.update_with(t1));
+        assert_eq!(clock.time(), "10:30");
+        assert_eq!(clock.date(), "15/03/2026");
+
+        // Same minute one hour later (e.g. system wake)
+        let t2 = Local.with_ymd_and_hms(2026, 3, 15, 11, 30, 0).unwrap();
+        assert!(clock.update_with(t2));
+        assert_eq!(clock.time(), "11:30");
+
+        // Same minute next day
+        let t3 = Local.with_ymd_and_hms(2026, 3, 16, 11, 30, 0).unwrap();
+        assert!(clock.update_with(t3));
+        assert_eq!(clock.time(), "11:30");
+        assert_eq!(clock.date(), "16/03/2026");
+
+        // Same timestamp should not trigger update
+        assert!(!clock.update_with(t3));
     }
 }

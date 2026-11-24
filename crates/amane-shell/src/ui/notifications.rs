@@ -332,7 +332,7 @@ pub fn start_expiry_worker() {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     #[test]
@@ -344,8 +344,11 @@ mod tests {
         assert_eq!(manifest.notifications.max_visible, 5);
     }
 
+    pub(crate) static NOTIF_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     #[test]
     fn test_presentation_fifo_buffer_capping_and_drain() {
+        let _guard = NOTIF_TEST_LOCK.lock().unwrap();
         // Ensure clean initial state
         let _ = drain_presentation_buffer();
         assert_eq!(presentation_buffer_len(), 0);

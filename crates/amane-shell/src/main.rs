@@ -132,6 +132,9 @@ fn parse_cli_args() -> Result<Cli, String> {
             "--start-menu" | "start-menu" | "--start" | "start" => {
                 cli.target_action = Some("start-menu".to_string())
             }
+            "--terminal-manager" | "terminal-manager" | "--terminals" | "terminals"
+            | "--topology" | "topology" => cli.target_action = Some("terminal-manager".to_string()),
+            "--sidecar" | "sidecar" => cli.target_action = Some("sidecar".to_string()),
             "--action-center" | "action-center" => {
                 cli.target_action = Some("action-center".to_string())
             }
@@ -334,16 +337,12 @@ fn ipc_screen_record_handler(_args: &[String]) -> String {
 }
 
 fn ipc_presentation_handler(_args: &[String]) -> String {
-    let now_active = services::presentation::PresentationService::global().toggle();
+    let (now_active, drained) =
+        services::presentation::PresentationService::global().toggle_with_drained();
     if now_active {
-        let _ = services::niri::NiriService::quarantine_external_outputs_for_presentation();
         "presentation mode active".to_string()
     } else {
-        let drained = ui::notifications::drain_presentation_buffer();
-        format!(
-            "presentation mode disabled (drained {} notifications)",
-            drained.len()
-        )
+        format!("presentation mode disabled (drained {drained} notifications)")
     }
 }
 
@@ -365,6 +364,70 @@ fn ipc_action_center_handler(_args: &[String]) -> String {
 fn ipc_overview_handler(_args: &[String]) -> String {
     ui::overview::toggle();
     "overview toggled".to_string()
+}
+
+fn ipc_terminal_manager_handler(args: &[String]) -> String {
+    if !args.is_empty() {
+        let query = format!(": {}", args.join(" "));
+        ui::start_menu::open_with_query(&query);
+        "terminal command queued".to_string()
+    } else {
+        let is_open = ui::start_menu::StartMenuService::read().open;
+        if is_open {
+            ui::start_menu::close();
+            "terminal-manager closed".to_string()
+        } else {
+            ui::start_menu::open_terminal_mode();
+            "terminal-manager opened".to_string()
+        }
+    }
+}
+
+fn ipc_sidecar_handler(args: &[String]) -> String {
+    let has_ghostty = std::process::Command::new("which")
+        .arg("ghostty")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    let has_foot = !has_ghostty
+        && std::process::Command::new("which")
+            .arg("foot")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+    let has_kitty = !has_ghostty
+        && !has_foot
+        && std::process::Command::new("which")
+            .arg("kitty")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+
+    let mut cmd = if has_ghostty {
+        let mut c = std::process::Command::new("ghostty");
+        c.arg("--class=sidecar-term");
+        c
+    } else if has_foot {
+        let mut c = std::process::Command::new("foot");
+        c.arg("--app-id=sidecar-term");
+        c
+    } else if has_kitty {
+        let mut c = std::process::Command::new("kitty");
+        c.arg("--class=sidecar-term");
+        c
+    } else {
+        std::process::Command::new("xterm")
+    };
+
+    if !args.is_empty() {
+        cmd.arg("-e");
+        cmd.args(args);
+    }
+
+    match cmd.spawn() {
+        Ok(_) => "sidecar spawned".to_string(),
+        Err(e) => format!("failed to spawn sidecar: {e}"),
+    }
 }
 
 fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
@@ -423,6 +486,10 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         .ipc("widgets", ipc_widgets_handler)
         .ipc("start-menu", ipc_start_menu_handler)
         .ipc("start", ipc_start_menu_handler)
+        .ipc("terminal-manager", ipc_terminal_manager_handler)
+        .ipc("terminals", ipc_terminal_manager_handler)
+        .ipc("topology", ipc_terminal_manager_handler)
+        .ipc("sidecar", ipc_sidecar_handler)
         .ipc("action-center", ipc_action_center_handler)
         .ipc("overview", ipc_overview_handler)
         .ipc("powermenu", ipc_powermenu_handler)

@@ -146,7 +146,7 @@ fn render_compact_telemetry(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         tokens.text_primary
     };
 
-    let content_row = Row::new(vec![
+    let mut row_items: Vec<Box<dyn Widget>> = vec![
         Box::new(
             Text::new("󰍛")
                 .size(14.5)
@@ -171,12 +171,32 @@ fn render_compact_telemetry(tokens: &ThemeTokens, _font: &str) -> Rectangle {
                 .color(text_color)
                 .font(&tokens.font_mono),
         ),
-    ])
-    .gap(6.0)
-    .align(Align::Center);
+    ];
+
+    let has_culprit = (is_crit || is_anom || telem.anomaly_active) && telem.culprit_name.is_some();
+    let pill_width = if has_culprit {
+        if let Some(ref name) = telem.culprit_name {
+            let short_name = if name.len() > 8 {
+                format!("{:.7}…", name)
+            } else {
+                name.clone()
+            };
+            row_items.push(Box::new(
+                Text::new(format!("󰓅 {short_name}"))
+                    .size(typography::CAPTION)
+                    .color(if is_crit { Color::WHITE } else { tokens.accent })
+                    .font(&tokens.font_mono),
+            ));
+        }
+        186.0
+    } else {
+        116.0
+    };
+
+    let content_row = Row::new(row_items).gap(6.0).align(Align::Center);
 
     Rectangle::new()
-        .width(116.0)
+        .width(pill_width)
         .height(34.0)
         .radius(radius::MD)
         .fill(bg_color)

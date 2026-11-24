@@ -164,6 +164,28 @@ pub fn close() {
     menu.scroll_row = 0;
 }
 
+/// Open Start Menu prefilled with a query (e.g., for terminal command or action execution)
+pub fn open_with_query(initial_query: &str) {
+    let mut menu = StartMenuService::write();
+    menu.open = true;
+    menu.open_time = Some(Instant::now());
+    menu.query = initial_query.to_string();
+    menu.selected = 0;
+    menu.scroll_row = 0;
+    menu.view_mode = StartMenuViewMode::Pinned;
+    TextInput::set_text("start-menu-search", initial_query);
+    drop(menu);
+
+    crate::ui::modal_manager::ModalManager::open_exclusive(
+        crate::ui::modal_manager::ModalType::StartMenu,
+    );
+}
+
+/// Open Start Menu in Terminal Command Mode (": ")
+pub fn open_terminal_mode() {
+    open_with_query(": ");
+}
+
 /// Smart 2-line label formatter for pinned tiles.
 /// Avoids chopping words awkwardly; breaks cleanly across two lines with graceful ellipsis.
 pub fn format_tile_label(name: &str) -> (String, Option<String>) {

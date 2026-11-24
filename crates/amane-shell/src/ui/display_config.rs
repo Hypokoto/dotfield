@@ -114,18 +114,16 @@ pub fn toggle() {
 }
 
 pub fn open() {
+    crate::ui::modal_manager::ModalManager::open_exclusive(
+        crate::ui::modal_manager::ModalType::DisplayConfig,
+    );
+
     let mut svc = DisplayConfigService::write();
     svc.open = true;
     svc.open_time = Some(Instant::now());
     svc.selected = 0;
     svc.hover_index = None;
     svc.status_message = None;
-    drop(svc);
-
-    crate::ui::control_center::close();
-    crate::ui::calendar::close();
-    crate::ui::start_menu::close();
-    crate::ui::powermenu::close();
 }
 
 pub fn close() {

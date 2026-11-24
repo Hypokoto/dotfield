@@ -30,6 +30,7 @@ binds {
     // Terminal Launchers & Scratchpad
     Mod+Return { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
     Mod+Shift+Return { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-cwd.sh"; } // Spawn Terminal in Focused Window CWD
+    Mod+Alt+Return { spawn "amane-msg" "sidecar"; }                                     // Spawn Companion Terminal Sidecar
     Mod+U { spawn "sh" "-c" "~/.config/dotfield/scripts/scratchpad.sh"; }               // Dynamic Floating Scratchpad
     Ctrl+Alt+T { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
     Mod+Ctrl+Return { spawn "ghostty" "--class=floating-term"; }

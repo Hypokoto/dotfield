@@ -23,6 +23,8 @@ Usage:
 
 Fast-Path Opcodes (0-alloc byte frames, <0.2ms):
   launcher              Toggle application launcher modal
+  terminal-manager      Toggle Terminal Manager & CLI command mode
+  sidecar               Spawn companion terminal sidecar (1/3 width, unfocused)
   presentation          Toggle zero-disruption presentation mode shield
   widgets               Toggle left slide-in widgets board
   start-menu            Toggle centered Start Menu & application grid
@@ -146,6 +148,8 @@ mod tests {
     #[test]
     fn test_name_to_opcode_mappings() {
         assert!(name_to_opcode("launcher").is_some());
+        assert!(name_to_opcode("terminal-manager").is_some());
+        assert!(name_to_opcode("sidecar").is_some());
         assert!(name_to_opcode("start-menu").is_some());
         assert!(name_to_opcode("overview").is_some());
         assert!(name_to_opcode("control-center").is_some());

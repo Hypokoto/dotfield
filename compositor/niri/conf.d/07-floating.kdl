@@ -78,6 +78,19 @@ window-rule {
     default-column-width { proportion 0.5; }
 }
 
+// Primary development environments: 2/3 width default for main editing panes
+window-rule {
+    match app-id=r#"^dev\."#
+    default-column-width { proportion 0.66667; }
+}
+
+// Companion sidecars: 1/3 width, spawned without stealing active keyboard focus
+window-rule {
+    match app-id=r#"^(sidecar-term|sidecar-.*)$"#
+    default-column-width { proportion 0.33333; }
+    open-focused false
+}
+
 // Compact utilities & Calculators: Open floating with centered default geometries
 window-rule {
     match app-id=r#"^(gnome-calculator|kcalc|galculator|org.gnome.Calculator)$"#

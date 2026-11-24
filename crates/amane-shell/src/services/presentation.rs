@@ -86,13 +86,19 @@ impl PresentationService {
 
     /// Toggle presentation mode on/off. Returns the new active state.
     pub fn toggle(&self) -> bool {
-        let current = self.state.load();
-        let new_active = !current.active;
-        self.set_active(new_active);
-        new_active
+        let (active, _) = self.toggle_with_drained();
+        active
     }
 
-    pub fn set_active(&self, active: bool) {
+    /// Toggle presentation mode on/off and return (is_now_active, drained_notification_count).
+    pub fn toggle_with_drained(&self) -> (bool, usize) {
+        let current = self.state.load();
+        let new_active = !current.active;
+        let drained = self.set_active(new_active);
+        (new_active, drained)
+    }
+
+    pub fn set_active(&self, active: bool) -> usize {
         let new_state = PresentationState {
             active,
             start_time: if active { Some(Instant::now()) } else { None },
@@ -105,7 +111,17 @@ impl PresentationService {
             *guard = active;
             cvar.notify_one();
         }
+
+        let drained_count = if active {
+            let _ =
+                crate::services::niri::NiriService::quarantine_external_outputs_for_presentation();
+            0
+        } else {
+            crate::ui::notifications::drain_presentation_buffer().len()
+        };
+
         amane::request_frame();
+        drained_count
     }
 }
 
@@ -159,5 +175,36 @@ mod tests {
         let minutes = dur.as_secs() / 60;
         let seconds = dur.as_secs() % 60;
         assert_eq!(format!("{:02}:{:02}", minutes, seconds), "02:05");
+    }
+
+    #[test]
+    fn test_presentation_drain_buffer_integration() {
+        let _guard = crate::ui::notifications::tests::NOTIF_TEST_LOCK
+            .lock()
+            .unwrap();
+        let service = PresentationService::new();
+        // Buffer a test notification
+        crate::ui::notifications::buffer_notification(
+            crate::ui::notifications::BufferedNotification {
+                id: 9999,
+                app_name: "test".to_string(),
+                summary: "test alert".to_string(),
+                body: "presentation shield".to_string(),
+                urgency: amane::Urgency::Normal,
+                received: std::time::SystemTime::now(),
+            },
+        );
+        assert!(crate::ui::notifications::presentation_buffer_len() > 0);
+
+        // Enter presentation mode
+        let (active, drained) = service.toggle_with_drained();
+        assert!(active);
+        assert_eq!(drained, 0);
+
+        // Exit presentation mode — buffer must be drained
+        let (active, drained) = service.toggle_with_drained();
+        assert!(!active);
+        assert!(drained >= 1);
+        assert_eq!(crate::ui::notifications::presentation_buffer_len(), 0);
     }
 }

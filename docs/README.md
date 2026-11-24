@@ -16,7 +16,7 @@ Welcome to the **Dotfield** architecture, design specifications, and engineering
 ---
 
 ### Architectural Design Specifications (`docs/designs/`)
-Detailed architectural blueprints for active system capabilities:
+Detailed architectural blueprints for active system capabilities (local design RFCs and drafting specs managed under `.gitignore`):
 - **[Phase 12: Zero-Waste Vello Render Loop & GPU Power Profiles](designs/phase-12-layer-2-zero-waste-render.md)**: 0 Hz Wayland idle frame parking and top-of-minute aligned clock.
 - **[Phase 13: Distraction-Free Telemetry & Focus Architecture](designs/phase-13-layer-3-distraction-free-telemetry.md)**: Kernel PSI monitoring, culprit attribution, and Ghost HUD.
 - **[Phase 14: Compositor Window Choreography & Ergonomics](designs/phase-14-layer-4-window-choreography.md)**: Living worktree cell pair routing and floating scratchpads.

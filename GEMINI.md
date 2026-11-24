@@ -62,7 +62,6 @@ dotfield/
 ├── terminals/              # Terminal templates (Foot, Ghostty, Kitty)
 ├── multiplexer/            # Terminal multiplexers (Zellij, Tmux)
 ├── nvim/                   # Neovim configurations
-├── ly/                     # Ly TUI display manager configurations (config.ini, config.lua)
 ├── mako/                   # Notification daemon templates
 ├── osd/                    # On-screen display configs (SwayOSD / Avizo)
 ├── systemd/                # User systemd service templates (amane.service)

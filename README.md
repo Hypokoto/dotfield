@@ -91,7 +91,6 @@ Dotfield natively supports two distinct Wayland compositor workflows:
   - **[Starship](shell/starship)**: Fast prompt themed with Controlled Chaos tokens.
   - **FZF**: Configured with the Controlled Chaos palette and backed by `fd`.
   - **Modern CLI**: `eza`, `bat`, `ripgrep`, `fd`, `dust`, `duf`, `btop`, `xh`, `doggo`, `zoxide`, `direnv`.
-- **Display Manager ([Ly](ly))**: TUI login manager themed with the Controlled Chaos palette.
 - **Display Auto-Configuration ([Kanshi](kanshi))**: Automatic monitor profile switching for clamshell, dock, and multi-head setups.
 - **Notifications & OSD**: [Mako](mako) notification daemon with automated battery alerts ([`scripts/battery-alert.sh`](scripts/battery-alert.sh)) and [SwayOSD](osd/swayosd).
 
@@ -221,7 +220,6 @@ dotfield/
 ├── terminals/              # Terminal templates (Foot, Ghostty, Kitty)
 ├── multiplexer/            # Multiplexer configs (Zellij, Tmux)
 ├── nvim/                   # Neovim configuration (NvChad + core keymaps)
-├── ly/                     # Ly TUI display manager configuration
 ├── mako/                   # Notification daemon templates & rules
 ├── osd/                    # On-screen display configs (SwayOSD / Avizo)
 ├── systemd/user/           # Systemd user services (amane.service)

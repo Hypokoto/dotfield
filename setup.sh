@@ -909,7 +909,6 @@ ensure_config_link_or_dir "${SCRIPT_DIR}/imv" "${HOME}/.config/imv"
 ensure_config_link_or_dir "${SCRIPT_DIR}/yazi" "${HOME}/.config/yazi"
 ensure_config_link_or_dir "${SCRIPT_DIR}/btop" "${HOME}/.config/btop"
 ensure_config_link_or_dir "${SCRIPT_DIR}/cava" "${HOME}/.config/cava"
-ensure_config_link_or_dir "${SCRIPT_DIR}/ly" "${HOME}/.config/dotfield/ly"
 ensure_config_link_or_dir "${SCRIPT_DIR}/shell.toml" "${HOME}/.config/dotfield/shell.toml"
 ensure_config_link_or_dir "${SCRIPT_DIR}/nvim" "${HOME}/.config/nvim"
 ensure_config_link_or_dir "${SCRIPT_DIR}/multiplexer/tmux" "${HOME}/.config/tmux"
@@ -955,20 +954,6 @@ fi
 if [[ ! -e "${HOME}/.tmux.conf" || -L "${HOME}/.tmux.conf" ]]; then
     if [[ "${DRY_RUN}" != true ]]; then
         ln -sfn "${HOME}/.config/tmux/tmux.conf" "${HOME}/.tmux.conf"
-    fi
-fi
-
-# Detect Ly display manager and advise or sync system configuration
-if [[ -d "/etc/ly" && -f "${SCRIPT_DIR}/ly/config.ini" ]]; then
-    if ! cmp -s "${SCRIPT_DIR}/ly/config.ini" "/etc/ly/config.ini" 2>/dev/null; then
-        if [[ $EUID -eq 0 ]] || [ -w "/etc/ly/config.ini" ]; then
-            cp "${SCRIPT_DIR}/ly/config.ini" "/etc/ly/config.ini"
-            success "Synced Ly display manager configuration to /etc/ly/config.ini"
-        elif run_privileged cp "${SCRIPT_DIR}/ly/config.ini" "/etc/ly/config.ini" 2>/dev/null; then
-            success "Synced Ly display manager configuration to /etc/ly/config.ini"
-        else
-            info "Ly display manager detected at /etc/ly. To sync Cyber Synthwave theme, run: sudo cp ${SCRIPT_DIR}/ly/config.ini /etc/ly/config.ini"
-        fi
     fi
 fi
 

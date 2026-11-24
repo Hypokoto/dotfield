@@ -348,7 +348,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_presentation_fifo_buffer_capping_and_drain() {
-        let _guard = NOTIF_TEST_LOCK.lock().unwrap();
+        let _guard = NOTIF_TEST_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         // Ensure clean initial state
         let _ = drain_presentation_buffer();
         assert_eq!(presentation_buffer_len(), 0);

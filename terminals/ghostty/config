@@ -24,10 +24,15 @@ font-feature = liga
 window-padding-x = 12
 window-padding-y = 12
 window-padding-balance = true
-window-theme = dark
+window-theme = ghostty
+window-titlebar-background = 000000
+window-titlebar-foreground = 14B9B5
 window-decoration = false
 window-show-tab-bar = always
 gtk-wide-tabs = false
+gtk-toolbar-style = flat
+gtk-titlebar = false
+gtk-tabs-location = top
 
 # --- Cursor & Bell ---
 cursor-style = block
@@ -50,12 +55,15 @@ clipboard-trim-trailing-spaces = true
 copy-on-select = clipboard
 
 # --- Shell Integration ---
-shell-integration = detect
-shell-integration-features = cursor,sudo,title
+# Disabled to protect agent harnesses (Claude Code, Hermes, Codex, OpenCode) from OSC 133 escape sequence corruption
+shell-integration = none
 
 # --- Performance & Process Lifecycle ---
 auto-update = off
 gtk-single-instance = detect
+
+# --- Keybindings: Configuration & System ---
+keybind = ctrl+shift+comma=reload_config
 
 # --- Keybindings: Clipboard & Font Management ---
 keybind = ctrl+shift+c=copy_to_clipboard

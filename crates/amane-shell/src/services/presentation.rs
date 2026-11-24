@@ -137,6 +137,9 @@ mod tests {
 
     #[test]
     fn test_presentation_toggle_and_state() {
+        let _guard = crate::ui::notifications::tests::NOTIF_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|p| p.into_inner());
         let service = PresentationService::new();
         assert!(!service.is_active());
         assert!(service.elapsed().is_none());
@@ -159,6 +162,9 @@ mod tests {
 
     #[test]
     fn test_set_active_explicit() {
+        let _guard = crate::ui::notifications::tests::NOTIF_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|p| p.into_inner());
         let service = PresentationService::new();
         service.set_active(true);
         assert!(service.is_active());
@@ -181,7 +187,8 @@ mod tests {
     fn test_presentation_drain_buffer_integration() {
         let _guard = crate::ui::notifications::tests::NOTIF_TEST_LOCK
             .lock()
-            .unwrap();
+            .unwrap_or_else(|p| p.into_inner());
+        let _ = crate::ui::notifications::drain_presentation_buffer();
         let service = PresentationService::new();
         // Buffer a test notification
         crate::ui::notifications::buffer_notification(

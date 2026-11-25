@@ -26,6 +26,13 @@ pub mod radius {
     pub const LG: f32 = 24.0; // Windows, modal shells, popovers
     pub const XL: f32 = 30.0; // Large flyouts and Start Menu
     pub const PILL: f32 = 999.0; // Fully rounded pills, radar dots
+
+    // Apple HIG Continuous Squircle Radii
+    pub const IOS_WIDGET_SM: f32 = 20.0; // System Small 1x1 bento widget
+    pub const IOS_WIDGET_MD: f32 = 22.0; // System Medium 2x1 bento widget
+    pub const IOS_WIDGET_LG: f32 = 26.0; // System Large 2x2 bento widget
+    pub const IOS_TOGGLE: f32 = 16.0; // iOS Control Center quick squircle toggle
+    pub const IOS_CAPSULE: f32 = 999.0; // Dynamic Island / capsule pill
 }
 
 /// Border thickness tokens (thin, subtle, technical)

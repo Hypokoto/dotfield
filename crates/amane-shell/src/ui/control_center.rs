@@ -186,11 +186,8 @@ pub fn control_center_panel() -> LayerWindow {
 
     let panel = components::clay_modal_frame(380.0, panel_height, content, &tokens);
 
-    let transition = crate::ui::animation::ModalTransition::compute(
-        cc.open_time,
-        crate::ui::animation::DEFAULT_MODAL_ANIMATION_DURATION,
-    );
-    let panel = transition.apply(panel);
+    let transition = crate::ui::animation::SpringTransition::smooth(cc.open_time);
+    let panel = transition.apply_modal(panel);
 
     let (dock_height, _, _) = crate::ui::bar::bar_layer_properties(&manifest);
     let bottom_margin = (dock_height + 10.0) as i32;
@@ -239,7 +236,7 @@ fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
 
     let mut metrics: Vec<Box<dyn Widget>> = Vec::new();
 
-    // CPU Card
+    // CPU Bento Small Widget
     let cpu_color = if cpu > 80 {
         tokens.danger
     } else if cpu > 50 {
@@ -248,50 +245,19 @@ fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         tokens.accent
     };
 
-    let cpu_card = Rectangle::new()
-        .width(112.0)
-        .height(50.0)
-        .radius(radius::MD)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .padding(Padding {
-            top: 6.0,
-            bottom: 6.0,
-            left: 10.0,
-            right: 10.0,
-        })
-        .child(
-            Column::new(vec![
-                Box::new(
-                    Row::new(vec![
-                        Box::new(
-                            Text::new("󰍛")
-                                .size(typography::BADGE)
-                                .color(cpu_color)
-                                .font(&tokens.font_mono),
-                        ),
-                        Box::new(
-                            Text::new("CPU")
-                                .size(typography::BADGE)
-                                .color(cpu_color)
-                                .font(&tokens.font_sans),
-                        ),
-                    ])
-                    .gap(4.0)
-                    .align(Align::Center),
-                ),
-                Box::new(
-                    Text::new(format!("{cpu}%"))
-                        .size(typography::TITLE_SM)
-                        .color(tokens.text_primary)
-                        .font(&tokens.font_sans),
-                ),
-            ])
-            .gap(2.0),
-        );
+    let cpu_card = components::ios_widget_small(
+        "CPU",
+        "󰍛",
+        cpu_color,
+        &format!("{cpu}%"),
+        Some("Load"),
+        112.0,
+        78.0,
+        tokens,
+    );
     metrics.push(Box::new(cpu_card));
 
-    // RAM Card
+    // RAM Bento Small Widget
     let ram_color = if mem_pct > 85 {
         tokens.danger
     } else if mem_pct > 70 {
@@ -300,100 +266,46 @@ fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         tokens.accent
     };
 
-    let ram_card = Rectangle::new()
-        .width(112.0)
-        .height(50.0)
-        .radius(radius::MD)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .padding(Padding {
-            top: 6.0,
-            bottom: 6.0,
-            left: 10.0,
-            right: 10.0,
-        })
-        .child(
-            Column::new(vec![
-                Box::new(
-                    Row::new(vec![
-                        Box::new(
-                            Text::new("󰘚")
-                                .size(typography::BADGE)
-                                .color(ram_color)
-                                .font(&tokens.font_mono),
-                        ),
-                        Box::new(
-                            Text::new("RAM")
-                                .size(typography::BADGE)
-                                .color(ram_color)
-                                .font(&tokens.font_sans),
-                        ),
-                    ])
-                    .gap(4.0)
-                    .align(Align::Center),
-                ),
-                Box::new(
-                    Text::new(format!("{mem_pct}% ({used_gib:.1}/{total_gib:.0}G)"))
-                        .size(typography::CAPTION)
-                        .color(tokens.text_primary)
-                        .font(&tokens.font_sans),
-                ),
-            ])
-            .gap(2.0),
-        );
+    let ram_card = components::ios_widget_small(
+        "RAM",
+        "󰘚",
+        ram_color,
+        &format!("{mem_pct}%"),
+        Some(&format!("{used_gib:.1}/{total_gib:.0}G")),
+        112.0,
+        78.0,
+        tokens,
+    );
     metrics.push(Box::new(ram_card));
 
-    // Battery / Power Card
-    let (bat_icon, bat_text) = if battery.present() {
+    // Battery / Power Bento Small Widget
+    let (bat_icon, bat_metric, bat_sub) = if battery.present() {
         let icon = if battery.charging() { "󰂄" } else { "󰁹" };
-        (icon, format!("{}%", battery.percent()))
+        (
+            icon,
+            format!("{}%", battery.percent()),
+            if battery.charging() {
+                "Charging"
+            } else {
+                "Battery"
+            },
+        )
     } else {
-        ("󰚥", "AC Online".to_string())
+        ("󰚥", "Online".to_string(), "AC Power")
     };
-    let bat_card = Rectangle::new()
-        .width(112.0)
-        .height(50.0)
-        .radius(radius::MD)
-        .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
-        .padding(Padding {
-            top: 6.0,
-            bottom: 6.0,
-            left: 10.0,
-            right: 10.0,
-        })
-        .child(
-            Column::new(vec![
-                Box::new(
-                    Row::new(vec![
-                        Box::new(
-                            Text::new(bat_icon)
-                                .size(typography::BADGE)
-                                .color(tokens.accent)
-                                .font(&tokens.font_mono),
-                        ),
-                        Box::new(
-                            Text::new("Power")
-                                .size(typography::BADGE)
-                                .color(tokens.accent)
-                                .font(&tokens.font_sans),
-                        ),
-                    ])
-                    .gap(4.0)
-                    .align(Align::Center),
-                ),
-                Box::new(
-                    Text::new(bat_text)
-                        .size(typography::SECONDARY)
-                        .color(tokens.text_primary)
-                        .font(&tokens.font_sans),
-                ),
-            ])
-            .gap(2.0),
-        );
+    let bat_card = components::ios_widget_small(
+        "Power",
+        bat_icon,
+        tokens.accent,
+        &bat_metric,
+        Some(bat_sub),
+        112.0,
+        78.0,
+        tokens,
+    );
     metrics.push(Box::new(bat_card));
 
-    Rectangle::new().width(Parent).height(50.0).child(
+    Rectangle::new().width(Parent).height(78.0).child(
         Row::new(metrics)
             .width(Parent)
             .justify(Justify::SpaceBetween)

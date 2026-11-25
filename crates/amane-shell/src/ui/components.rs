@@ -1091,6 +1091,412 @@ pub fn split_button(
     )
 }
 
+// =========================================================================
+// Apple HIG iOS Bento Widget & Component Primitives
+// =========================================================================
+
+/// Base iOS Bento container frame featuring continuous squircle corners, translucent vibrancy fill,
+/// and subtle inner specular border highlight for depth.
+pub fn ios_widget_frame(
+    width: f32,
+    height: f32,
+    corner_radius: f32,
+    content: impl Widget + 'static,
+    tokens: &ThemeTokens,
+) -> Rectangle {
+    let specular_highlight = Color::rgba(255, 255, 255, 18);
+
+    // Outer container with squircle radius and glass specular outline
+    Rectangle::new()
+        .width(width)
+        .height(height)
+        .radius(corner_radius)
+        .fill(tokens.surface_elevated)
+        .border(border::THIN, specular_highlight)
+        .padding(Padding {
+            top: spacing::PAD_MD,
+            bottom: spacing::PAD_MD,
+            left: spacing::PAD_MD,
+            right: spacing::PAD_MD,
+        })
+        .child(content)
+}
+
+/// iOS System Small Bento Widget (~1×1 aspect, ~156×156px or custom dimensions).
+/// Displays leading squircle glyph badge, title, primary metric/content, and optional secondary footer.
+#[allow(clippy::too_many_arguments)]
+pub fn ios_widget_small(
+    title: &str,
+    icon: &str,
+    accent_color: Color,
+    metric_text: &str,
+    footer_text: Option<&str>,
+    width: f32,
+    height: f32,
+    tokens: &ThemeTokens,
+) -> Rectangle {
+    let icon_badge = Rectangle::new()
+        .width(32.0)
+        .height(32.0)
+        .radius(radius::SM)
+        .fill(tokens.surface_active)
+        .border(1.0, Color::rgba(255, 255, 255, 14))
+        .align_child(Center, Center)
+        .child(
+            Text::new(icon)
+                .size(typography::BODY_LG)
+                .color(accent_color)
+                .font(&tokens.font_mono),
+        );
+
+    let header_row = Row::new(vec![
+        Box::new(icon_badge),
+        Box::new(
+            Text::new(title)
+                .size(typography::BADGE)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_sans),
+        ),
+    ])
+    .gap(spacing::GAP_SM)
+    .align(Align::Center);
+
+    let mut body_items: Vec<Box<dyn Widget>> = vec![
+        Box::new(header_row),
+        Box::new(
+            Text::new(metric_text)
+                .size(typography::DISPLAY)
+                .color(tokens.text_primary)
+                .font(&tokens.font_sans),
+        ),
+    ];
+
+    if let Some(footer) = footer_text {
+        body_items.push(Box::new(
+            Text::new(footer)
+                .size(typography::CAPTION)
+                .color(tokens.text_muted)
+                .font(&tokens.font_sans),
+        ));
+    }
+
+    let content = Column::new(body_items)
+        .gap(spacing::GAP_SM)
+        .align(Align::Start);
+
+    ios_widget_frame(width, height, radius::IOS_WIDGET_SM, content, tokens)
+}
+
+/// iOS System Medium Bento Widget (~2×1 aspect, ~328×156px or custom dimensions).
+/// Ideal for multimedia playback, calendar, or combined system telemetry overview.
+pub fn ios_widget_medium(
+    title: &str,
+    icon: &str,
+    leading_content: impl Widget + 'static,
+    trailing_content: Option<Box<dyn Widget>>,
+    width: f32,
+    height: f32,
+    tokens: &ThemeTokens,
+) -> Rectangle {
+    let icon_badge = Rectangle::new()
+        .width(28.0)
+        .height(28.0)
+        .radius(radius::SM)
+        .fill(tokens.surface_active)
+        .border(1.0, Color::rgba(255, 255, 255, 14))
+        .align_child(Center, Center)
+        .child(
+            Text::new(icon)
+                .size(typography::BODY)
+                .color(tokens.accent)
+                .font(&tokens.font_mono),
+        );
+
+    let title_block = Row::new(vec![
+        Box::new(icon_badge),
+        Box::new(
+            Text::new(title)
+                .size(typography::SECONDARY)
+                .color(tokens.text_primary)
+                .font(&tokens.font_sans),
+        ),
+    ])
+    .gap(spacing::GAP_SM)
+    .align(Align::Center);
+
+    let mut header_widgets: Vec<Box<dyn Widget>> = vec![Box::new(title_block)];
+    if let Some(trailing) = trailing_content {
+        header_widgets.push(trailing);
+    }
+
+    let header_bar = Row::new(header_widgets)
+        .width(Parent)
+        .justify(Justify::SpaceBetween)
+        .align(Align::Center);
+
+    let content_col = Column::new(vec![Box::new(header_bar), Box::new(leading_content)])
+        .width(Parent)
+        .gap(spacing::GAP_SM)
+        .align(Align::Start);
+
+    ios_widget_frame(width, height, radius::IOS_WIDGET_MD, content_col, tokens)
+}
+
+/// iOS Control Center Squircle Quick Action Toggle (~68×68px or 72×72px).
+/// Features continuous squircle curvature (`radius::IOS_TOGGLE: 16.0`), high-contrast active state,
+/// embedded glyph, and tactile label.
+pub fn ios_control_toggle(
+    icon: &'static str,
+    label: &str,
+    is_active: bool,
+    width: f32,
+    height: f32,
+    tokens: &ThemeTokens,
+    on_toggle: impl Fn() + Send + Sync + 'static,
+) -> Rectangle {
+    let (bg_fill, icon_color, text_color, border_color) = if is_active {
+        (
+            tokens.accent,
+            tokens.bg,
+            tokens.text_primary,
+            Color::rgba(255, 255, 255, 40),
+        )
+    } else {
+        (
+            tokens.surface_elevated,
+            tokens.text_secondary,
+            tokens.text_muted,
+            Color::rgba(255, 255, 255, 12),
+        )
+    };
+
+    let glyph_circle = Rectangle::new()
+        .width(36.0)
+        .height(36.0)
+        .radius(radius::PILL)
+        .fill(if is_active {
+            Color::rgba(0, 0, 0, 24)
+        } else {
+            tokens.surface_active
+        })
+        .align_child(Center, Center)
+        .child(
+            Text::new(icon)
+                .size(18.0)
+                .color(icon_color)
+                .font(&tokens.font_mono),
+        );
+
+    let content = Column::new(vec![
+        Box::new(glyph_circle),
+        Box::new(
+            Text::new(label)
+                .size(typography::CAPTION)
+                .color(text_color)
+                .font(&tokens.font_sans)
+                .tight(),
+        ),
+    ])
+    .gap(4.0)
+    .align(Align::Center);
+
+    Rectangle::new()
+        .width(width)
+        .height(height)
+        .radius(radius::IOS_TOGGLE)
+        .fill(bg_fill)
+        .border(1.0, border_color)
+        .cursor(Pointer)
+        .align_child(Center, Center)
+        .on_click(move |_| on_toggle())
+        .child(content)
+}
+
+/// iOS Control Center Thick Pill Slider (~44-54px height) with embedded glyph and tactile fill.
+/// Unlike thin desktop trackbars, iOS sliders present a chunky tactile rounded pill with embedded icon
+/// and scroll/click interaction.
+#[allow(clippy::too_many_arguments)]
+pub fn ios_pill_slider<F1, F2>(
+    progress_frac: f32,
+    slider_width: f32,
+    slider_height: f32,
+    icon: &str,
+    label: &str,
+    is_muted: bool,
+    tokens: &ThemeTokens,
+    on_scroll_fn: F1,
+    on_icon_click: Option<F2>,
+) -> Rectangle
+where
+    F1: Fn(i32) + 'static,
+    F2: Fn() + 'static,
+{
+    let clamped_frac = progress_frac.clamp(0.0, 1.0);
+    let fill_w = (slider_width * clamped_frac).clamp(0.0, slider_width);
+
+    let (icon_color, value_str) = if is_muted {
+        (tokens.danger, "Muted".to_string())
+    } else {
+        (tokens.accent, format!("{:.0}%", clamped_frac * 100.0))
+    };
+
+    // 1. Base track: deep elevated pill with specular highlight
+    let bg_rect = Rectangle::new()
+        .width(slider_width)
+        .height(slider_height)
+        .radius(radius::PILL)
+        .fill(tokens.surface_track)
+        .border(1.0, Color::rgba(255, 255, 255, 14));
+
+    // 2. Dynamic progress fill: illuminated pill
+    let fill_rect = Rectangle::new()
+        .width(fill_w)
+        .height(slider_height)
+        .radius(radius::PILL)
+        .fill(if is_muted {
+            tokens.danger_subtle
+        } else {
+            tokens.surface_active
+        });
+
+    // 3. Embedded glyph icon
+    let icon_element: Box<dyn Widget> = if let Some(on_click) = on_icon_click {
+        Box::new(
+            Rectangle::new()
+                .width(32.0)
+                .height(32.0)
+                .radius(radius::PILL)
+                .fill(Color::rgba(0, 0, 0, 20))
+                .cursor(Pointer)
+                .align_child(Center, Center)
+                .on_click(move |_| on_click())
+                .child(
+                    Text::new(icon)
+                        .size(17.0)
+                        .color(icon_color)
+                        .font(&tokens.font_mono),
+                ),
+        )
+    } else {
+        Box::new(
+            Text::new(icon)
+                .size(17.0)
+                .color(icon_color)
+                .font(&tokens.font_mono),
+        )
+    };
+
+    let label_row = Row::new(vec![
+        icon_element,
+        Box::new(
+            Text::new(label)
+                .size(typography::SECONDARY)
+                .color(tokens.text_primary)
+                .font(&tokens.font_sans),
+        ),
+    ])
+    .gap(spacing::GAP_SM)
+    .align(Align::Center);
+
+    let value_tag = Text::new(value_str)
+        .size(typography::BADGE)
+        .color(if is_muted {
+            tokens.danger
+        } else {
+            tokens.text_secondary
+        })
+        .font(&tokens.font_mono);
+
+    let overlay_row = Row::new(vec![Box::new(label_row), Box::new(value_tag)])
+        .width(Parent)
+        .justify(Justify::SpaceBetween)
+        .align(Align::Center);
+
+    let overlay_container = Rectangle::new()
+        .width(slider_width)
+        .height(slider_height)
+        .padding(Padding {
+            top: 0.0,
+            bottom: 0.0,
+            left: 12.0,
+            right: 14.0,
+        })
+        .align_child(Align::Start, Align::Center)
+        .child(overlay_row);
+
+    let layers: Vec<Box<dyn Widget>> = vec![
+        Box::new(bg_rect),
+        Box::new(fill_rect),
+        Box::new(overlay_container),
+    ];
+
+    Rectangle::new()
+        .width(slider_width)
+        .height(slider_height)
+        .radius(radius::PILL)
+        .cursor(Pointer)
+        .on_scroll(move |scroll: Scroll| {
+            let step = if scroll.y < 0.0 { 5 } else { -5 };
+            on_scroll_fn(step);
+        })
+        .child(Stack::new(layers))
+}
+
+/// iOS Dynamic Island / Capsule Pill widget.
+/// Floating morphic pill displaying contextual indicators (e.g., active recording, audio playing, battery charging).
+pub fn ios_dynamic_capsule(
+    icon: &str,
+    title: &str,
+    subtitle: Option<&str>,
+    accent_color: Color,
+    tokens: &ThemeTokens,
+) -> Rectangle {
+    let glyph = Text::new(icon)
+        .size(typography::BODY)
+        .color(accent_color)
+        .font(&tokens.font_mono);
+
+    let mut text_elements: Vec<Box<dyn Widget>> = vec![Box::new(
+        Text::new(title)
+            .size(typography::BADGE)
+            .color(tokens.text_primary)
+            .font(&tokens.font_sans),
+    )];
+
+    if let Some(sub) = subtitle {
+        text_elements.push(Box::new(
+            Text::new(sub)
+                .size(typography::CAPTION)
+                .color(tokens.text_muted)
+                .font(&tokens.font_sans),
+        ));
+    }
+
+    let text_stack = Column::new(text_elements).gap(1.0).align(Align::Start);
+
+    let row = Row::new(vec![Box::new(glyph), Box::new(text_stack)])
+        .gap(spacing::GAP_SM)
+        .align(Align::Center);
+
+    let pill_w = 190.0;
+    let pill_h = 36.0;
+
+    Rectangle::new()
+        .width(pill_w)
+        .height(pill_h)
+        .radius(radius::IOS_CAPSULE)
+        .fill(Color::rgba(0, 0, 0, 180))
+        .border(1.0, Color::rgba(255, 255, 255, 25))
+        .padding(Padding {
+            top: 4.0,
+            bottom: 4.0,
+            left: 12.0,
+            right: 14.0,
+        })
+        .align_child(Align::Start, Align::Center)
+        .child(row)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1182,5 +1588,80 @@ mod tests {
     fn test_split_button_renders() {
         let tokens = test_tokens();
         let _split = split_button("Wi-Fi", Some("󰤨"), || {}, || {}, &tokens);
+    }
+
+    #[test]
+    fn test_ios_widget_frame_renders() {
+        let tokens = test_tokens();
+        let content = Rectangle::new().width(50.0).height(50.0);
+        let _frame = ios_widget_frame(156.0, 156.0, radius::IOS_WIDGET_SM, content, &tokens);
+    }
+
+    #[test]
+    fn test_ios_widget_small_renders() {
+        let tokens = test_tokens();
+        let _sm = ios_widget_small(
+            "CPU",
+            "󰍛",
+            tokens.accent,
+            "24%",
+            Some("4.8 GHz"),
+            156.0,
+            156.0,
+            &tokens,
+        );
+    }
+
+    #[test]
+    fn test_ios_widget_medium_renders() {
+        let tokens = test_tokens();
+        let body = Text::new("Song Title")
+            .size(12.0)
+            .color(tokens.text_primary);
+        let trailing = Box::new(Text::new("󰐊").size(14.0).color(tokens.accent));
+        let _md = ios_widget_medium(
+            "Now Playing",
+            "󰎆",
+            body,
+            Some(trailing),
+            328.0,
+            156.0,
+            &tokens,
+        );
+    }
+
+    #[test]
+    fn test_ios_control_toggle_renders() {
+        let tokens = test_tokens();
+        let _toggle_on = ios_control_toggle("󰤨", "Wi-Fi", true, 72.0, 72.0, &tokens, || {});
+        let _toggle_off = ios_control_toggle("󰤭", "Wi-Fi", false, 72.0, 72.0, &tokens, || {});
+    }
+
+    #[test]
+    fn test_ios_pill_slider_renders() {
+        let tokens = test_tokens();
+        let _slider = ios_pill_slider(
+            0.65,
+            328.0,
+            48.0,
+            "󰕾",
+            "Volume",
+            false,
+            &tokens,
+            |_| {},
+            Some(|| {}),
+        );
+    }
+
+    #[test]
+    fn test_ios_dynamic_capsule_renders() {
+        let tokens = test_tokens();
+        let _capsule = ios_dynamic_capsule(
+            "󰑋",
+            "Recording Screen",
+            Some("00:42"),
+            tokens.danger,
+            &tokens,
+        );
     }
 }

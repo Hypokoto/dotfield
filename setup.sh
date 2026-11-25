@@ -38,9 +38,17 @@ err() {
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}"
 
+# Guard against running whole script under sudo
+if [[ "${EUID:-$(id -u)}" -eq 0 && -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]]; then
+    err "Do not run ./setup.sh with sudo directly!"
+    err "Run as normal user: './setup.sh'. Privilege escalation is invoked automatically when needed."
+    exit 1
+fi
+
 # Default parameters
 PREFIX="${HOME}/.local/bin"
-export PATH="${PREFIX}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:${PATH:-}"
+ORIGINAL_PATH="${PATH:-}"
+export PATH="${PREFIX}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:${ORIGINAL_PATH}"
 DO_BUILD=""
 DRY_RUN=false
 FORCE_DEPLOY=false
@@ -164,7 +172,17 @@ while [[ $# -gt 0 ]]; do
                 exit 1
             fi
             PREFIX="$2"
+            export PATH="${PREFIX}:${PATH}"
             shift 2
+            ;;
+        --prefix=*)
+            PREFIX="${1#*=}"
+            if [[ -z "${PREFIX}" ]]; then
+                err "Option --prefix= requires a non-empty directory argument."
+                exit 1
+            fi
+            export PATH="${PREFIX}:${PATH}"
+            shift
             ;;
         --build)
             DO_BUILD=true
@@ -288,6 +306,10 @@ run_sudo() {
         info "[dry-run] sudo ${cmd[*]}"
         return 0
     fi
+    if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+        "${cmd[@]}"
+        return $?
+    fi
     if command -v sudo >/dev/null 2>&1; then
         # Check if already authenticated non-interactively
         if sudo -n true 2>/dev/null; then
@@ -336,8 +358,12 @@ deploy_apparmor() {
         return 0
     fi
 
-    mkdir -p "$(dirname "${stage_dest}")"
-    cp "${profile_src}" "${stage_dest}"
+    if ! mkdir -p "$(dirname "${stage_dest}")" || ! cp "${profile_src}" "${stage_dest}"; then
+        LAYER_STATUS["apparmor"]="FAIL"
+        LAYER_DETAILS["apparmor"]="Failed to stage AppArmor profile to ${stage_dest}"
+        err "Could not stage AppArmor profile to ${stage_dest}."
+        return 1
+    fi
     info "Staged AppArmor profile to ${stage_dest}"
 
     if ! command -v apparmor_parser >/dev/null 2>&1; then
@@ -374,7 +400,7 @@ deploy_apparmor() {
 
     if [[ -n "${active_mode}" ]] || \
        run_sudo grep -q "dotfield-daemon" /sys/kernel/security/apparmor/profiles 2>/dev/null || \
-       (command -v aa-status >/dev/null 2>&1 && run_sudo aa-status 2>/dev/null | grep -q "dotfield-daemon"); then
+       (command -v aa-status >/dev/null 2>&1 && run_sudo aa-status 2>/dev/null | grep "dotfield-daemon" >/dev/null 2>&1); then
         success "AppArmor profile loaded and kernel confinement verified (dotfield-daemon in ${active_mode:-complain} mode)"
         LAYER_STATUS["apparmor"]="PASS"
         LAYER_DETAILS["apparmor"]="Active kernel profile (dotfield-daemon) in ${active_mode:-complain} mode"
@@ -415,15 +441,28 @@ deploy_flatpak() {
         return 1
     fi
 
-    mkdir -p "$(dirname "${stage_dest}")" "${HOME}/.local/share/flatpak/overrides"
+    local flatpak_backup_dir="${HOME}/.config/dotfield/backups/flatpak"
+    if ! mkdir -p "$(dirname "${stage_dest}")" "${HOME}/.local/share/flatpak/overrides" "${flatpak_backup_dir}"; then
+        LAYER_STATUS["flatpak"]="FAIL"
+        LAYER_DETAILS["flatpak"]="Failed to create Flatpak overrides directory"
+        err "Could not create Flatpak overrides directory."
+        return 1
+    fi
+
     if [[ -f "${global_override_dest}" ]]; then
         local ts
         ts="$(date +%Y%m%d%H%M%S)"
-        cp "${global_override_dest}" "${global_override_dest}.bak.${ts}"
-        info "Backed up existing Flatpak global override to ${global_override_dest}.bak.${ts}"
+        if cp "${global_override_dest}" "${flatpak_backup_dir}/global.bak.${ts}"; then
+            info "Backed up existing Flatpak global override to ${flatpak_backup_dir}/global.bak.${ts}"
+        fi
     fi
-    cp "${overrides_src}" "${stage_dest}"
-    cp "${overrides_src}" "${global_override_dest}"
+
+    if ! cp "${overrides_src}" "${stage_dest}" || ! cp "${overrides_src}" "${global_override_dest}"; then
+        LAYER_STATUS["flatpak"]="FAIL"
+        LAYER_DETAILS["flatpak"]="Failed to copy Flatpak overrides"
+        err "Could not copy Flatpak overrides to ${global_override_dest}."
+        return 1
+    fi
     info "Deployed native Flatpak global override: ${global_override_dest}"
 
     # Also register via flatpak CLI to ensure user database synchronization
@@ -473,8 +512,12 @@ deploy_nftables() {
         return 0
     fi
 
-    mkdir -p "$(dirname "${stage_dest}")"
-    cp "${nft_src}" "${stage_dest}"
+    if ! mkdir -p "$(dirname "${stage_dest}")" || ! cp "${nft_src}" "${stage_dest}"; then
+        LAYER_STATUS["nft"]="FAIL"
+        LAYER_DETAILS["nft"]="Failed to stage ruleset to ${stage_dest}"
+        err "Could not stage NFTables ruleset to ${stage_dest}."
+        return 1
+    fi
     info "Staged NFTables ruleset to ${stage_dest}"
 
     if ! command -v nft >/dev/null 2>&1; then
@@ -503,19 +546,51 @@ deploy_nftables() {
     # Ensure persistence across reboots via /etc/nftables.conf include
     local nft_main_conf="/etc/nftables.conf"
     local include_stmt='include "/etc/nftables.d/*.nft"'
+    local has_include=false
+
     if [[ -f "${nft_main_conf}" ]]; then
-        if ! grep -qF 'include "/etc/nftables.d/' "${nft_main_conf}" 2>/dev/null; then
+        if [[ -r "${nft_main_conf}" ]]; then
+            if grep -E '^[[:space:]]*include[[:space:]]+"/etc/nftables\.d/' "${nft_main_conf}" >/dev/null 2>&1; then
+                has_include=true
+            fi
+        else
+            if run_sudo grep -E '^[[:space:]]*include[[:space:]]+"/etc/nftables\.d/' "${nft_main_conf}" >/dev/null 2>&1; then
+                has_include=true
+            fi
+        fi
+
+        if [[ "${has_include}" == false ]]; then
             step "Hooking persistence include into ${nft_main_conf}..."
             local ts
             ts="$(date +%Y%m%d%H%M%S)"
-            run_sudo cp "${nft_main_conf}" "${nft_main_conf}.bak.${ts}"
-            echo -e "\n# Dotfield workstation modular ruleset include\n${include_stmt}" | run_sudo tee -a "${nft_main_conf}" >/dev/null
+            if ! run_sudo cp "${nft_main_conf}" "${nft_main_conf}.bak.${ts}"; then
+                LAYER_STATUS["nft"]="FAIL"
+                LAYER_DETAILS["nft"]="Failed to backup ${nft_main_conf}"
+                err "Could not backup ${nft_main_conf}."
+                return 1
+            fi
+            if ! echo -e "\n# Dotfield workstation modular ruleset include\n${include_stmt}" | run_sudo tee -a "${nft_main_conf}" >/dev/null; then
+                LAYER_STATUS["nft"]="FAIL"
+                LAYER_DETAILS["nft"]="Failed to append include statement to ${nft_main_conf}"
+                err "Could not update ${nft_main_conf}."
+                return 1
+            fi
             info "Appended include statement to ${nft_main_conf} (backup created at ${nft_main_conf}.bak.${ts})"
         fi
     else
         step "Creating initial ${nft_main_conf} with persistence include..."
-        echo -e "#!/usr/sbin/nft -f\nflush ruleset\n${include_stmt}" | run_sudo tee "${nft_main_conf}" >/dev/null
-        run_sudo chmod 0644 "${nft_main_conf}"
+        if ! echo -e "#!/usr/sbin/nft -f\nflush ruleset\n${include_stmt}" | run_sudo tee "${nft_main_conf}" >/dev/null; then
+            LAYER_STATUS["nft"]="FAIL"
+            LAYER_DETAILS["nft"]="Failed to create initial ${nft_main_conf}"
+            err "Could not create initial ${nft_main_conf}."
+            return 1
+        fi
+        if ! run_sudo chmod 0644 "${nft_main_conf}"; then
+            LAYER_STATUS["nft"]="FAIL"
+            LAYER_DETAILS["nft"]="Failed to set permissions on ${nft_main_conf}"
+            err "Could not chmod ${nft_main_conf}."
+            return 1
+        fi
     fi
 
     # Enable systemd nftables service if present
@@ -531,8 +606,16 @@ deploy_nftables() {
     # Verification: check that table inet dotfield is active in kernel and persistence hook exists
     if run_sudo nft list table inet dotfield >/dev/null 2>&1; then
         local persisted=false
-        if [[ -f "${nft_main_conf}" ]] && grep -qF 'include "/etc/nftables.d/' "${nft_main_conf}" 2>/dev/null; then
-            persisted=true
+        if [[ -f "${nft_main_conf}" ]]; then
+            if [[ -r "${nft_main_conf}" ]]; then
+                if grep -E '^[[:space:]]*include[[:space:]]+"/etc/nftables\.d/' "${nft_main_conf}" >/dev/null 2>&1; then
+                    persisted=true
+                fi
+            else
+                if run_sudo grep -E '^[[:space:]]*include[[:space:]]+"/etc/nftables\.d/' "${nft_main_conf}" >/dev/null 2>&1; then
+                    persisted=true
+                fi
+            fi
         fi
         if [[ "${persisted}" == true ]]; then
             success "NFTables stateful filter active in kernel and verified persistent across reboot"
@@ -560,9 +643,16 @@ deploy_network_stability() {
     local modprobe_src="${SCRIPT_DIR}/network/modprobe.d/mt7921e.conf"
     local modprobe_dest="/etc/modprobe.d/mt7921e.conf"
 
+    local has_mt7921e=false
+    if [[ -d "/sys/module/mt7921e" ]]; then
+        has_mt7921e=true
+    elif command -v lsmod >/dev/null 2>&1 && lsmod | grep "mt7921e" >/dev/null 2>&1; then
+        has_mt7921e=true
+    fi
+
     if [[ "${DRY_RUN}" == true ]]; then
         info "[dry-run] sudo install -m 0644 -D ${nm_src} ${nm_dest}"
-        if [[ -d "/sys/module/mt7921e" ]] || (command -v lsmod >/dev/null 2>&1 && lsmod | grep -q "mt7921e"); then
+        if [[ "${has_mt7921e}" == true ]]; then
             info "[dry-run] sudo install -m 0644 -D ${modprobe_src} ${modprobe_dest}"
         fi
         LAYER_STATUS["network"]="DRY_RUN"
@@ -583,7 +673,7 @@ deploy_network_stability() {
     fi
 
     local modprobe_applied=false
-    if [[ -d "/sys/module/mt7921e" ]] || (command -v lsmod >/dev/null 2>&1 && lsmod | grep -q "mt7921e"); then
+    if [[ "${has_mt7921e}" == true ]]; then
         if [[ -f "${modprobe_src}" ]]; then
             if run_sudo mkdir -p /etc/modprobe.d && run_sudo cp "${modprobe_src}" "${modprobe_dest}"; then
                 run_sudo chmod 0644 "${modprobe_dest}"
@@ -619,7 +709,7 @@ deploy_network_stability() {
 if [[ "${ENABLE_HARDENING}" == true ]]; then
     # Interactive selection if no individual flag was specified
     if [[ "${HARDEN_APPARMOR}" == false && "${HARDEN_FLATPAK}" == false && "${HARDEN_NFT}" == false ]]; then
-        if [[ -t 0 && "${DRY_RUN}" != true ]]; then
+        if [[ -t 0 ]]; then
             echo -e "\n${AMBER}${BOLD}Dotfield Security Hardening Suite${NC}"
             echo -e "Choose the security layers to configure and deploy:"
             echo -e "  ${BOLD}1)${NC} All security layers (AppArmor + Flatpak + NFTables)"
@@ -648,6 +738,11 @@ if [[ "${ENABLE_HARDENING}" == true ]]; then
                     exit 0
                     ;;
             esac
+        elif [[ "${DRY_RUN}" == true ]]; then
+            info "Non-interactive dry-run: previewing all security hardening layers"
+            HARDEN_APPARMOR=true
+            HARDEN_FLATPAK=true
+            HARDEN_NFT=true
         else
             err "Non-interactive hardening requires explicit layer flags (e.g. --apparmor, --flatpak, --nft)."
             err "Refusing to apply default firewall or sandbox rules without explicit flags."
@@ -662,15 +757,21 @@ if [[ "${ENABLE_HARDENING}" == true ]]; then
     hardening_has_failures=false
 
     if [[ "${HARDEN_FLATPAK}" == true ]]; then
-        deploy_flatpak || hardening_has_failures=true
+        if ! deploy_flatpak; then
+            hardening_has_failures=true
+        fi
     fi
 
     if [[ "${HARDEN_APPARMOR}" == true ]]; then
-        deploy_apparmor || hardening_has_failures=true
+        if ! deploy_apparmor; then
+            hardening_has_failures=true
+        fi
     fi
 
     if [[ "${HARDEN_NFT}" == true ]]; then
-        deploy_nftables || hardening_has_failures=true
+        if ! deploy_nftables; then
+            hardening_has_failures=true
+        fi
     fi
 
     echo -e "\n${BOLD}Security Hardening Verification Summary:${NC}"
@@ -729,11 +830,20 @@ if [[ "${DO_BUILD}" == true ]]; then
         if [[ -f "${SCRIPT_DIR}/target/release/amane-msg" ]]; then
             install -m 0755 "${SCRIPT_DIR}/target/release/amane-msg" "${PREFIX}/amane-msg"
         fi
-        if [[ -d "${HOME}/.cargo/bin" ]]; then
-            ln -sf "${PREFIX}/amane" "${HOME}/.cargo/bin/amane"
-            ln -sf "${PREFIX}/amane-msg" "${HOME}/.cargo/bin/amane-msg"
+        cargo_bin_dir="${HOME}/.cargo/bin"
+        if [[ -d "${cargo_bin_dir}" ]]; then
+            prefix_real="$(cd "${PREFIX}" 2>/dev/null && pwd -P || echo "${PREFIX}")"
+            cargo_real="$(cd "${cargo_bin_dir}" 2>/dev/null && pwd -P || echo "${cargo_bin_dir}")"
+            if [[ "${prefix_real}" != "${cargo_real}" ]]; then
+                if [[ -f "${PREFIX}/amane" ]]; then
+                    ln -sf "${PREFIX}/amane" "${cargo_bin_dir}/amane"
+                fi
+                if [[ -f "${PREFIX}/amane-msg" ]]; then
+                    ln -sf "${PREFIX}/amane-msg" "${cargo_bin_dir}/amane-msg"
+                fi
+            fi
         fi
-        success "Installed amane and amane-msg to ${PREFIX} (and ~/.cargo/bin symlinks)"
+        success "Installed amane and amane-msg to ${PREFIX}"
     fi
 
     # 4. Reclaim build cache if requested
@@ -749,7 +859,7 @@ if [[ "${DO_BUILD}" == true ]]; then
 fi
 
 # Ensure PREFIX is in PATH
-if [[ ":$PATH:" != *":${PREFIX}:"* ]]; then
+if [[ ":${ORIGINAL_PATH}:" != *":${PREFIX}:"* ]]; then
     warn "${PREFIX} is not currently in your PATH!"
     warn "Add 'export PATH=\"${PREFIX}:\$PATH\"' to your ~/.zshrc or ~/.bashrc"
 fi
@@ -777,23 +887,30 @@ else
             fi
         done
     fi
-    ln -sf "${SCRIPTS_DEST}/terminal-select.sh" "${PREFIX}/terminal-select"
-    ln -sf "${SCRIPTS_DEST}/display-config.sh" "${PREFIX}/display-config"
-    ln -sf "${SCRIPTS_DEST}/typecheck-terminals.sh" "${PREFIX}/typecheck-terminals"
-    ln -sf "${SCRIPTS_DEST}/lock.sh" "${PREFIX}/dotfield-lock" 2>/dev/null || true
-    ln -sf "${SCRIPTS_DEST}/gtk-sync.sh" "${PREFIX}/dotfield-gtk-sync" 2>/dev/null || true
-    ln -sf "${SCRIPTS_DEST}/screenshot.sh" "${PREFIX}/dotfield-screenshot" 2>/dev/null || true
-    ln -sf "${SCRIPTS_DEST}/screen-record.sh" "${PREFIX}/dotfield-record" 2>/dev/null || true
-    ln -sf "${SCRIPTS_DEST}/osd.sh" "${PREFIX}/dotfield-osd" 2>/dev/null || true
-    ln -sf "${SCRIPTS_DEST}/battery-alert.sh" "${PREFIX}/dotfield-battery-alert" 2>/dev/null || true
-    ln -sf "${SCRIPTS_DEST}/sandbox-browser.sh" "${PREFIX}/sandbox-browser" 2>/dev/null || true
-    ln -sf "${SCRIPTS_DEST}/wallpaper.sh" "${PREFIX}/dotfield-wallpaper" 2>/dev/null || true
-    ln -sf "${SCRIPTS_DEST}/terminal-cwd.sh" "${PREFIX}/dotfield-terminal-cwd" 2>/dev/null || true
-    ln -sf "${SCRIPTS_DEST}/niri-ror.sh" "${PREFIX}/dotfield-ror" 2>/dev/null || true
-    ln -sf "${SCRIPTS_DEST}/scratchpad.sh" "${PREFIX}/dotfield-scratchpad" 2>/dev/null || true
-    ln -sf "${SCRIPTS_DEST}/session-manager.sh" "${PREFIX}/dotfield-session" 2>/dev/null || true
-    ln -sf "${SCRIPTS_DEST}/niri-nav.sh" "${PREFIX}/dotfield-niri-nav" 2>/dev/null || true
-    ln -sf "${SCRIPTS_DEST}/fw-open" "${PREFIX}/fw-open" 2>/dev/null || true
+    link_helper() {
+        local src_file="$1"
+        local link_name="$2"
+        if [[ -f "${src_file}" ]]; then
+            ln -sfn "${src_file}" "${link_name}"
+        fi
+    }
+    link_helper "${SCRIPTS_DEST}/terminal-select.sh" "${PREFIX}/terminal-select"
+    link_helper "${SCRIPTS_DEST}/display-config.sh" "${PREFIX}/display-config"
+    link_helper "${SCRIPTS_DEST}/typecheck-terminals.sh" "${PREFIX}/typecheck-terminals"
+    link_helper "${SCRIPTS_DEST}/lock.sh" "${PREFIX}/dotfield-lock"
+    link_helper "${SCRIPTS_DEST}/gtk-sync.sh" "${PREFIX}/dotfield-gtk-sync"
+    link_helper "${SCRIPTS_DEST}/screenshot.sh" "${PREFIX}/dotfield-screenshot"
+    link_helper "${SCRIPTS_DEST}/screen-record.sh" "${PREFIX}/dotfield-record"
+    link_helper "${SCRIPTS_DEST}/osd.sh" "${PREFIX}/dotfield-osd"
+    link_helper "${SCRIPTS_DEST}/battery-alert.sh" "${PREFIX}/dotfield-battery-alert"
+    link_helper "${SCRIPTS_DEST}/sandbox-browser.sh" "${PREFIX}/sandbox-browser"
+    link_helper "${SCRIPTS_DEST}/wallpaper.sh" "${PREFIX}/dotfield-wallpaper"
+    link_helper "${SCRIPTS_DEST}/terminal-cwd.sh" "${PREFIX}/dotfield-terminal-cwd"
+    link_helper "${SCRIPTS_DEST}/niri-ror.sh" "${PREFIX}/dotfield-ror"
+    link_helper "${SCRIPTS_DEST}/scratchpad.sh" "${PREFIX}/dotfield-scratchpad"
+    link_helper "${SCRIPTS_DEST}/session-manager.sh" "${PREFIX}/dotfield-session"
+    link_helper "${SCRIPTS_DEST}/niri-nav.sh" "${PREFIX}/dotfield-niri-nav"
+    link_helper "${SCRIPTS_DEST}/fw-open" "${PREFIX}/fw-open"
     success "Helper scripts deployed to ${SCRIPTS_DEST}"
 fi
 
@@ -832,22 +949,33 @@ ensure_config_link_or_dir() {
             fi
         fi
 
-        if [[ "${DRY_RUN}" == true ]]; then
-            if [[ -e "${dest}" || -L "${dest}" ]]; then
-                info "[dry-run] backup ${dest} -> ${dest}.bak.<timestamp> and symlink -> ${src}"
-            else
-                info "[dry-run] mkdir -p $(dirname "${dest}") && ln -sfn ${src} ${dest}"
-            fi
-            return 0
-        fi
-
-        mkdir -p "$(dirname "${dest}")"
         if [[ -e "${dest}" || -L "${dest}" ]]; then
+            if [[ "${FORCE_DEPLOY}" != true ]]; then
+                if [[ "${DRY_RUN}" == true ]]; then
+                    info "[dry-run] skipped existing config (use --force to overwrite): ${dest}"
+                else
+                    info "Skipped existing config (use --force to overwrite): ${dest}"
+                fi
+                return 0
+            fi
+
+            if [[ "${DRY_RUN}" == true ]]; then
+                info "[dry-run] backup ${dest} -> ${dest}.bak.<timestamp> and symlink -> ${src}"
+                return 0
+            fi
+
             local ts
             ts=$(date +%s)
             mv "${dest}" "${dest}.bak.${ts}"
             info "Backed up existing $(basename "${dest}") to ${dest}.bak.${ts}"
+        else
+            if [[ "${DRY_RUN}" == true ]]; then
+                info "[dry-run] mkdir -p $(dirname "${dest}") && ln -sfn ${src} ${dest}"
+                return 0
+            fi
         fi
+
+        mkdir -p "$(dirname "${dest}")"
         ln -sfn "${src}" "${dest}"
         success "Linked: ${dest} -> ${src}"
     else
@@ -938,22 +1066,30 @@ if [[ "${TARGET}" == "all" || "${TARGET}" == "niri" ]]; then
     if [[ ! -f "${HOME}/.config/environment.d/10-dotfield-path.conf" ]]; then
         if [[ "${DRY_RUN}" != true ]]; then
             # shellcheck disable=SC2016
-            echo 'PATH=${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}' > "${HOME}/.config/environment.d/10-dotfield-path.conf"
+            env_path='PATH=${HOME}/.local/bin:${HOME}/.cargo/bin:${PATH}'
+            if [[ "${PREFIX}" != "${HOME}/.local/bin" ]]; then
+                env_path="PATH=${PREFIX}:\${HOME}/.local/bin:\${HOME}/.cargo/bin:\${PATH}"
+            fi
+            echo "${env_path}" > "${HOME}/.config/environment.d/10-dotfield-path.conf"
         fi
     fi
     ensure_config_link_or_dir "${SCRIPT_DIR}/systemd/user/amane.service" "${HOME}/.config/systemd/user/amane.service"
     ensure_config_link_or_dir "${SCRIPT_DIR}/systemd/user/kanshi.service" "${HOME}/.config/systemd/user/kanshi.service"
-    if [[ ! -e "${HOME}/.config/systemd/user/dotfield-shell.service" || -L "${HOME}/.config/systemd/user/dotfield-shell.service" ]]; then
-        if [[ "${DRY_RUN}" != true ]]; then
-            ln -sf amane.service "${HOME}/.config/systemd/user/dotfield-shell.service" 2>/dev/null || true
+    if [[ -f "${HOME}/.config/systemd/user/amane.service" ]]; then
+        if [[ ! -e "${HOME}/.config/systemd/user/dotfield-shell.service" || -L "${HOME}/.config/systemd/user/dotfield-shell.service" ]]; then
+            if [[ "${DRY_RUN}" != true ]]; then
+                ln -sf amane.service "${HOME}/.config/systemd/user/dotfield-shell.service" 2>/dev/null || true
+            fi
         fi
     fi
 fi
 
 # Ensure ~/.tmux.conf points cleanly to ~/.config/tmux/tmux.conf
-if [[ ! -e "${HOME}/.tmux.conf" || -L "${HOME}/.tmux.conf" ]]; then
-    if [[ "${DRY_RUN}" != true ]]; then
-        ln -sfn "${HOME}/.config/tmux/tmux.conf" "${HOME}/.tmux.conf"
+if [[ -f "${HOME}/.config/tmux/tmux.conf" ]]; then
+    if [[ ! -e "${HOME}/.tmux.conf" || -L "${HOME}/.tmux.conf" ]]; then
+        if [[ "${DRY_RUN}" != true ]]; then
+            ln -sfn "${HOME}/.config/tmux/tmux.conf" "${HOME}/.tmux.conf"
+        fi
     fi
 fi
 
@@ -978,7 +1114,7 @@ fi
 
 # Pre-compile zshrc if zsh is available
 if [[ "${DRY_RUN}" != true ]] && command -v zsh >/dev/null 2>&1; then
-    zsh -c "zcompile ${HOME}/.zshrc 2>/dev/null" || true
+    zsh -c 'zcompile "${HOME}/.zshrc" 2>/dev/null' || true
 fi
 
 if [[ -d "${SCRIPT_DIR}/Wallpapers" ]]; then
@@ -1005,30 +1141,68 @@ fi
 # 6. Reload running desktop components
 step "Reloading running desktop components..."
 if [[ "${DRY_RUN}" != true ]]; then
+    user_uid="${EUID:-$(id -u)}"
+
+    # Systemd user services management (daemon-reload, enable, restart)
+    if command -v systemctl >/dev/null 2>&1; then
+        if systemctl --user is-system-running >/dev/null 2>&1 || [[ -n "${XDG_RUNTIME_DIR:-}" && -d "${XDG_RUNTIME_DIR}/systemd" ]]; then
+            systemctl --user daemon-reload 2>/dev/null || true
+            if [[ "${TARGET}" == "all" || "${TARGET}" == "niri" ]]; then
+                if [[ -f "${HOME}/.config/systemd/user/amane.service" ]]; then
+                    systemctl --user enable amane.service 2>/dev/null || true
+                fi
+                if [[ -f "${HOME}/.config/systemd/user/kanshi.service" ]] && command -v kanshi >/dev/null 2>&1; then
+                    systemctl --user enable kanshi.service 2>/dev/null || true
+                fi
+            fi
+        fi
+    fi
+
     if [[ -x "${HOME}/.config/dotfield/scripts/wallpaper.sh" ]]; then
         "${HOME}/.config/dotfield/scripts/wallpaper.sh" >/dev/null 2>&1 || true
     fi
 
     if [[ "${TARGET}" == "all" || "${TARGET}" == "niri" ]]; then
-        if command -v niri >/dev/null 2>&1 && pgrep -x niri >/dev/null 2>&1; then
-            niri msg action load-config-file >/dev/null 2>&1 || true
-            info "Reloaded Niri configuration"
+        if command -v niri >/dev/null 2>&1 && pgrep -u "${user_uid}" -x niri >/dev/null 2>&1; then
+            if niri msg action load-config-file >/dev/null 2>&1; then
+                info "Reloaded Niri configuration"
+            else
+                warn "Failed to reload Niri configuration"
+            fi
         fi
-        if systemctl --user is-active --quiet amane.service 2>/dev/null; then
-            systemctl --user restart amane.service 2>/dev/null || true
-            info "Restarted amane.service"
+        if command -v systemctl >/dev/null 2>&1 && systemctl --user is-active --quiet amane.service 2>/dev/null; then
+            if systemctl --user restart amane.service 2>/dev/null; then
+                info "Restarted amane.service"
+            else
+                warn "Failed to restart amane.service"
+            fi
+        fi
+        if command -v systemctl >/dev/null 2>&1 && systemctl --user is-active --quiet kanshi.service 2>/dev/null; then
+            if systemctl --user restart kanshi.service 2>/dev/null; then
+                info "Restarted kanshi.service"
+            else
+                warn "Failed to restart kanshi.service"
+            fi
         fi
     fi
 
     if [[ "${TARGET}" == "all" || "${TARGET}" == "sway" ]]; then
-        if command -v swaymsg >/dev/null 2>&1 && pgrep -x sway >/dev/null 2>&1; then
-            SWAYSOCK="${SWAYSOCK:-$(find "/run/user/$(id -u)" -maxdepth 1 -name "sway-ipc.*.sock" 2>/dev/null | head -n 1)}" swaymsg reload >/dev/null 2>&1 || true
-            info "Reloaded Sway configuration"
+        if command -v swaymsg >/dev/null 2>&1 && pgrep -u "${user_uid}" -x sway >/dev/null 2>&1; then
+            sway_sock="${SWAYSOCK:-$(find "/run/user/${user_uid}" -maxdepth 1 -name "sway-ipc.*.sock" 2>/dev/null | head -n 1)}"
+            if SWAYSOCK="${sway_sock}" swaymsg reload >/dev/null 2>&1; then
+                info "Reloaded Sway configuration"
+            else
+                warn "Failed to reload Sway configuration"
+            fi
         fi
     fi
 
-    if command -v makoctl >/dev/null 2>&1 && pgrep -x mako >/dev/null 2>&1; then
-        makoctl reload >/dev/null 2>&1 || true
+    if command -v makoctl >/dev/null 2>&1 && pgrep -u "${user_uid}" -x mako >/dev/null 2>&1; then
+        if makoctl reload >/dev/null 2>&1; then
+            info "Reloaded Mako configuration"
+        else
+            warn "Failed to reload Mako configuration"
+        fi
     fi
 fi
 

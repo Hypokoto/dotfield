@@ -1,16 +1,35 @@
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::sync::{LazyLock, Mutex};
 use std::time::SystemTime;
 
 use amane::{
-    Align, Center, Color, Column, Horizontal, Justify, Layer, LayerWindow, Margin, Notification,
+    Align, Center, Column, Horizontal, Justify, Layer, LayerWindow, Margin, Notification,
     Notifications, OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Urgency,
-    Vertical, Widget, Workspaces, Zone,
+    Vertical, Widget, Zone,
 };
 
 use crate::config::{ConfigService, ShellManifest};
 use crate::services::presentation::PresentationService;
 use crate::ui::tokens::{ThemeTokens, radius, spacing, typography};
+
+static EXPIRED_POPUPS: LazyLock<Mutex<HashSet<u32>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
+
+/// Dismisses only the on-screen popup toast for this notification,
+/// leaving it intact in the Notification Center.
+pub fn dismiss_popup(id: u32) {
+    if let Ok(mut set) = EXPIRED_POPUPS.lock() {
+        set.insert(id);
+    }
+    amane::request_frame();
+}
+
+/// Checks if an on-screen popup toast has been dismissed or expired.
+pub fn is_popup_expired(id: u32) -> bool {
+    EXPIRED_POPUPS
+        .lock()
+        .map(|s| s.contains(&id))
+        .unwrap_or(false)
+}
 
 /// Maximum capacity of suppressed notifications preserved in memory during presentation.
 pub const PRESENTATION_BUFFER_MAX_CAPACITY: usize = 50;
@@ -83,46 +102,71 @@ pub fn notification_popups() -> LayerWindow {
             .child(Rectangle::new().width(Parent).height(Parent));
     }
 
-    let notifications = Notifications::read();
-    let notifs_list = notifications.list();
-    let cc_open = crate::ui::control_center::ControlCenterService::read().open;
-
     let presentation_active = PresentationService::global().is_active();
 
-    // In presentation mode, capture non-critical notifications into FIFO buffer without rendering
+    // In presentation mode, capture non-critical notifications into FIFO buffer before reading for render
+    // (dropping the read guard before calling Notifications::dismiss avoids a RwLock self-deadlock).
     if presentation_active {
-        let mut buffer = match PRESENTATION_BUFFER.lock() {
-            Ok(b) => b,
-            Err(p) => p.into_inner(),
-        };
-        for n in notifs_list {
-            if n.urgency() != Urgency::Critical && !buffer.iter().any(|b| b.id == n.id()) {
-                if buffer.len() >= PRESENTATION_BUFFER_MAX_CAPACITY {
-                    buffer.pop_front();
+        let to_dismiss: Vec<u32> = {
+            let notifications = Notifications::read();
+            let mut buffer = match PRESENTATION_BUFFER.lock() {
+                Ok(b) => b,
+                Err(p) => p.into_inner(),
+            };
+            let mut dismiss_ids = Vec::new();
+            for n in notifications.list() {
+                if n.urgency() != Urgency::Critical {
+                    if !buffer.iter().any(|b| b.id == n.id()) {
+                        if buffer.len() >= PRESENTATION_BUFFER_MAX_CAPACITY {
+                            buffer.pop_front();
+                        }
+                        buffer.push_back(BufferedNotification::from(n));
+                    }
+                    dismiss_ids.push(n.id());
                 }
-                buffer.push_back(BufferedNotification::from(n));
             }
+            dismiss_ids
+        };
+        for id in to_dismiss {
+            Notifications::dismiss(id);
         }
     }
 
-    let in_focus_shield = Workspaces::read().list().iter().any(|ws| {
-        (ws.focused() || ws.active())
-            && ws
-                .name()
-                .map(|n| n.contains("01 DEV") || n.contains("04 SECURITY"))
-                .unwrap_or(false)
-    });
+    let notifications = Notifications::read();
+    let notifs_list = notifications.list();
+    let cc_service = crate::ui::control_center::ControlCenterService::read();
+    let cc_open = cc_service.is_open();
+    let dnd_active = cc_service.dnd;
 
-    // Contextual Focus Shield & Presentation Shield:
-    // In presentation mode or 01 DEV / 04 SECURITY, suppress non-critical notification popups.
-    // Critical urgency alerts (e.g. Battery < 5%) bypass suppression.
-    let visible_notifs: Vec<_> = if presentation_active || in_focus_shield {
+    let expired_popups = match EXPIRED_POPUPS.lock() {
+        Ok(e) => e,
+        Err(p) => p.into_inner(),
+    };
+    let now = SystemTime::now();
+    let timeout = std::time::Duration::from_millis(notifs_cfg.timeout_ms);
+
+    // Suppress non-critical notification popups in presentation mode, DND, or once toast has expired
+    let visible_notifs: Vec<_> = if presentation_active || dnd_active {
         notifs_list
             .iter()
-            .filter(|n| n.urgency() == Urgency::Critical)
+            .filter(|n| n.urgency() == Urgency::Critical && !expired_popups.contains(&n.id()))
             .collect()
     } else {
-        notifs_list.iter().collect()
+        notifs_list
+            .iter()
+            .filter(|n| {
+                if expired_popups.contains(&n.id()) {
+                    return false;
+                }
+                if n.urgency() == Urgency::Critical {
+                    return true;
+                }
+                match now.duration_since(n.received()) {
+                    Ok(elapsed) => elapsed < timeout,
+                    Err(_) => false,
+                }
+            })
+            .collect()
     };
 
     let target_out = if presentation_active {
@@ -144,11 +188,17 @@ pub fn notification_popups() -> LayerWindow {
     let mut cards: Vec<Box<dyn Widget>> = Vec::new();
     let font = manifest.theme.font_family.clone();
 
-    for notif in visible_notifs.into_iter().take(max_visible) {
+    for notif in visible_notifs.iter().take(max_visible) {
         cards.push(render_notification_card(notif, &manifest, &font));
     }
 
-    let window_h = (cards.len() as f32 * 104.0).clamp(96.0, 520.0);
+    let total_cards_h: f32 = visible_notifs
+        .iter()
+        .take(max_visible)
+        .map(|n| notification_card_height(n))
+        .sum();
+    let gaps_h = (cards.len().saturating_sub(1) as f32) * spacing::GAP_SM;
+    let window_h = (total_cards_h + gaps_h).clamp(96.0, 720.0);
 
     LayerWindow::new()
         .width(360.0)
@@ -157,16 +207,27 @@ pub fn notification_popups() -> LayerWindow {
         .anchor_vertical(Vertical::Top)
         .anchor_horizontal(Horizontal::Right)
         .margin(Margin {
-            top: 38,
+            top: 14,
             right: 16,
             bottom: 0,
             left: 0,
         })
         .layer(Layer::Overlay)
-        .space(Zone::Respect)
+        .space(Zone::Ignore)
         .visible(true)
         .namespace("dotfield-shell-notifications")
         .child(Column::new(cards).width(Parent).gap(spacing::GAP_SM))
+}
+
+pub fn notification_card_height(notif: &Notification) -> f32 {
+    let mut h = 104.0;
+    if !notif.body().is_empty() {
+        h += 22.0;
+    }
+    if !notif.actions().is_empty() {
+        h += 30.0;
+    }
+    h
 }
 
 fn render_notification_card(
@@ -201,18 +262,21 @@ fn render_notification_card(
         ),
         Box::new(
             Rectangle::new()
-                .width(18.0)
-                .height(18.0)
-                .radius(radius::XS)
-                .fill(Color::TRANSPARENT)
+                .width(20.0)
+                .height(20.0)
+                .radius(radius::PILL)
+                .fill(tokens.surface_track)
                 .cursor(Pointer)
                 .align_child(Center, Center)
-                .on_click(move |_| Notifications::dismiss(id))
+                .on_click(move |_| {
+                    dismiss_popup(id);
+                })
                 .child(
                     Text::new("󰅖")
                         .size(10.0)
-                        .color(tokens.text_muted)
-                        .font(font),
+                        .color(tokens.text_secondary)
+                        .font(&tokens.font_mono)
+                        .tight(),
                 ),
         ),
     ])
@@ -240,7 +304,7 @@ fn render_notification_card(
         ));
     }
 
-    // Action buttons if any
+    // App Action buttons if any
     if !notif.actions().is_empty() {
         let mut buttons: Vec<Box<dyn Widget>> = Vec::new();
         for action in notif.actions() {
@@ -254,7 +318,10 @@ fn render_notification_card(
                 .border(1.0, tokens.border_subtle)
                 .cursor(Pointer)
                 .align_child(Center, Center)
-                .on_click(move |_| Notifications::invoke(id, &key))
+                .on_click(move |_| {
+                    Notifications::invoke(id, &key);
+                    amane::request_frame();
+                })
                 .child(
                     Text::new(label)
                         .size(typography::BADGE)
@@ -266,9 +333,155 @@ fn render_notification_card(
         elements.push(Box::new(Row::new(buttons).gap(spacing::GAP_SM)));
     }
 
+    // System Action Buttons: Mark Read, Dismiss, Clean
+    let mark_read_btn = Rectangle::new()
+        .width(104.0)
+        .height(24.0)
+        .radius(radius::SM)
+        .fill(tokens.surface_track)
+        .border(1.0, tokens.border_subtle)
+        .cursor(Pointer)
+        .padding(Padding {
+            top: 2.0,
+            bottom: 2.0,
+            left: 8.0,
+            right: 8.0,
+        })
+        .align_child(Center, Center)
+        .on_click(move |_| {
+            let n_list = Notifications::read();
+            let read_key = n_list
+                .list()
+                .iter()
+                .find(|n| n.id() == id)
+                .and_then(|target| {
+                    target.actions().iter().find(|a| {
+                        let k = a.key().to_lowercase();
+                        let l = a.label().to_lowercase();
+                        k.contains("read") || l.contains("read")
+                    })
+                })
+                .map(|a| a.key().to_string());
+
+            if let Some(key) = read_key {
+                Notifications::invoke(id, &key);
+            }
+            Notifications::dismiss(id);
+            amane::request_frame();
+        })
+        .child(
+            Row::new(vec![
+                Box::new(
+                    Text::new("󰄬")
+                        .size(10.0)
+                        .color(tokens.accent)
+                        .font(&tokens.font_mono)
+                        .tight(),
+                ),
+                Box::new(
+                    Text::new("Mark Read")
+                        .size(typography::BADGE)
+                        .color(tokens.text_primary)
+                        .font(font)
+                        .tight(),
+                ),
+            ])
+            .gap(4.0)
+            .align(Align::Center),
+        );
+
+    let dismiss_btn = Rectangle::new()
+        .width(88.0)
+        .height(24.0)
+        .radius(radius::SM)
+        .fill(tokens.surface_track)
+        .border(1.0, tokens.border_subtle)
+        .cursor(Pointer)
+        .padding(Padding {
+            top: 2.0,
+            bottom: 2.0,
+            left: 8.0,
+            right: 8.0,
+        })
+        .align_child(Center, Center)
+        .on_click(move |_| {
+            Notifications::dismiss(id);
+            amane::request_frame();
+        })
+        .child(
+            Row::new(vec![
+                Box::new(
+                    Text::new("󰅖")
+                        .size(10.0)
+                        .color(tokens.text_secondary)
+                        .font(&tokens.font_mono)
+                        .tight(),
+                ),
+                Box::new(
+                    Text::new("Dismiss")
+                        .size(typography::BADGE)
+                        .color(tokens.text_secondary)
+                        .font(font)
+                        .tight(),
+                ),
+            ])
+            .gap(4.0)
+            .align(Align::Center),
+        );
+
+    let clean_btn = Rectangle::new()
+        .width(76.0)
+        .height(24.0)
+        .radius(radius::SM)
+        .fill(tokens.surface_track)
+        .border(1.0, tokens.border_subtle)
+        .cursor(Pointer)
+        .padding(Padding {
+            top: 2.0,
+            bottom: 2.0,
+            left: 8.0,
+            right: 8.0,
+        })
+        .align_child(Center, Center)
+        .on_click(move |_| {
+            Notifications::clear();
+            amane::request_frame();
+        })
+        .child(
+            Row::new(vec![
+                Box::new(
+                    Text::new("󰃢")
+                        .size(10.0)
+                        .color(tokens.danger)
+                        .font(&tokens.font_mono)
+                        .tight(),
+                ),
+                Box::new(
+                    Text::new("Clean")
+                        .size(typography::BADGE)
+                        .color(tokens.text_secondary)
+                        .font(font)
+                        .tight(),
+                ),
+            ])
+            .gap(4.0)
+            .align(Align::Center),
+        );
+
+    let sys_actions = Row::new(vec![
+        Box::new(mark_read_btn),
+        Box::new(dismiss_btn),
+        Box::new(clean_btn),
+    ])
+    .gap(spacing::GAP_SM)
+    .align(Align::Center);
+
+    elements.push(Box::new(sys_actions));
+
+    let card_h = notification_card_height(notif);
     let card = Rectangle::new()
         .width(Parent)
-        .height(96.0)
+        .height(card_h)
         .radius(radius::MD)
         .fill(tokens.surface_elevated)
         .border(1.0, border_color)
@@ -279,14 +492,18 @@ fn render_notification_card(
             right: spacing::PAD_MD,
         })
         .cursor(Pointer)
-        .on_click(move |_| Notifications::click(id))
+        .on_click(move |_| {
+            Notifications::click(id);
+            amane::request_frame();
+        })
         .child(Column::new(elements).width(Parent).gap(spacing::GAP_XS));
 
     Box::new(card)
 }
 
-/// Spawns a background thread that automatically dismisses non-critical
-/// notifications once their age exceeds the configured `timeout_ms`.
+/// Spawns a background thread that automatically expires on-screen popup toasts
+/// once their age exceeds the configured `timeout_ms`, while leaving the notification
+/// intact in the Notification Center.
 pub fn start_expiry_worker() {
     std::thread::spawn(move || {
         loop {
@@ -305,14 +522,21 @@ pub fn start_expiry_worker() {
             let timeout = std::time::Duration::from_millis(manifest.notifications.timeout_ms);
             let now = std::time::SystemTime::now();
 
-            let to_dismiss: Vec<u32> = {
+            let newly_expired: Vec<u32> = {
                 let notifs = Notifications::read();
+                let expired = match EXPIRED_POPUPS.lock() {
+                    Ok(e) => e,
+                    Err(p) => p.into_inner(),
+                };
                 notifs
                     .list()
                     .iter()
                     .filter(|n| {
-                        // Critical notifications remain until clicked
+                        // Critical notifications remain visible as popups until actioned
                         if n.urgency() == Urgency::Critical {
+                            return false;
+                        }
+                        if expired.contains(&n.id()) {
                             return false;
                         }
                         match now.duration_since(n.received()) {
@@ -324,8 +548,23 @@ pub fn start_expiry_worker() {
                     .collect()
             };
 
-            for id in to_dismiss {
-                Notifications::dismiss(id);
+            if !newly_expired.is_empty() {
+                if let Ok(mut expired) = EXPIRED_POPUPS.lock() {
+                    for id in newly_expired {
+                        expired.insert(id);
+                    }
+                }
+                amane::request_frame();
+            }
+
+            // Prune expired IDs that have been dismissed from Notifications
+            let active_ids: HashSet<u32> = Notifications::read()
+                .list()
+                .iter()
+                .map(|n| n.id())
+                .collect();
+            if let Ok(mut expired) = EXPIRED_POPUPS.lock() {
+                expired.retain(|id| active_ids.contains(id));
             }
         }
     });
@@ -374,5 +613,31 @@ pub(crate) mod tests {
         assert_eq!(drained[0].id, 6);
         assert_eq!(drained.last().unwrap().id, 55);
         assert_eq!(presentation_buffer_len(), 0);
+    }
+
+    #[test]
+    fn test_popup_dismissal_preserves_notification_center() {
+        let _guard = NOTIF_TEST_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let test_id = 9999;
+        assert!(!is_popup_expired(test_id));
+        dismiss_popup(test_id);
+        assert!(is_popup_expired(test_id));
+    }
+
+    #[test]
+    fn test_notification_popups_presentation_mode_no_deadlock() {
+        let _guard = NOTIF_TEST_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let _ = drain_presentation_buffer();
+        Notifications::notify(
+            "TestApp",
+            "Deadlock check",
+            "Must buffer and dismiss without self-deadlocking on RwLock",
+            Urgency::Normal,
+        );
+        let pres = PresentationService::global();
+        pres.set_active(true);
+        let _win = notification_popups();
+        pres.set_active(false);
+        let _ = drain_presentation_buffer();
     }
 }

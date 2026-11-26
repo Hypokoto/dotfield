@@ -62,6 +62,24 @@ pub mod typography {
     pub const DISPLAY: f32 = 22.0; // Hero display, large clock
 }
 
+/// Bento Grid and Widget Board geometry metrics
+pub mod bento {
+    pub const BOARD_WIDTH: f32 = 380.0;
+    pub const BOARD_PAD: f32 = 14.0;
+    pub const SECTION_W: f32 = 352.0; // BOARD_WIDTH - 2 * BOARD_PAD
+    pub const SECTION_PAD: f32 = 14.0;
+    pub const CELL_1X1: f32 = 156.0;
+    pub const CELL_1X1_H: f32 = 112.0; // Uniform 1x1 card height
+    pub const CELL_2X1_W: f32 = 324.0; // SECTION_W - 2 * SECTION_PAD == 2 * CELL_1X1 + GRID_GAP
+    pub const CELL_2X2_H: f32 = 324.0; // Large (2x2) fixed card height
+    pub const GRID_GAP: f32 = 12.0;
+    pub const GAUGE_SIZE: f32 = 64.0;
+    pub const GAUGE_STROKE: f32 = 6.0;
+    pub const CAVA_BAR_W: f32 = 4.0;
+    pub const CAVA_BAR_GAP: f32 = 3.0;
+    pub const CAVA_MAX_H: f32 = 32.0;
+}
+
 pub mod palette {
     // Canonical Obsidian Mint Palette (PALETTE.md)
     pub const OBSIDIAN_MINT_VOID: &str = "#080B0B";
@@ -153,10 +171,15 @@ pub struct ThemeTokens {
     pub border_hover: Color,
     pub border_focus: Color,
     pub border_danger: Color,
+    pub border_specular: Color,
 
     pub text_primary: Color,
     pub text_secondary: Color,
     pub text_muted: Color,
+    pub text_on_accent: Color,
+    pub text_on_elevated: Color,
+    pub text_on_danger: Color,
+    pub text_on_danger_critical: Color,
 
     pub accent: Color,
     pub accent_hover: Color,
@@ -222,6 +245,7 @@ impl ThemeTokens {
         let border_hover = Color::from("#454552");
         let border_focus = Color::rgba(0xFF, 0xB0, 0x00, 0x88); // Soft warm amber clay highlight
         let border_danger = Color::rgba(0xE6, 0x39, 0x46, 0x88); // Soft crimson clay highlight
+        let border_specular = Color::rgba(255, 255, 255, 18);
 
         let accent_subtle = Color::from("#332400");
         let danger_subtle = Color::from("#361114");
@@ -238,9 +262,14 @@ impl ThemeTokens {
             border_hover,
             border_focus,
             border_danger,
+            border_specular,
             text_primary,
             text_secondary,
             text_muted,
+            text_on_accent: Color::from("#000000"),
+            text_on_elevated: text_primary,
+            text_on_danger: Color::WHITE,
+            text_on_danger_critical: Color::WHITE,
             accent,
             accent_hover,
             accent_subtle,
@@ -276,6 +305,7 @@ impl ThemeTokens {
         let border_hover = Color::rgba(59, 130, 246, 120);
         let border_focus = Color::rgba(59, 130, 246, 180);
         let border_danger = Color::rgba(220, 38, 38, 180);
+        let border_specular = Color::rgba(255, 255, 255, 30);
 
         let text_primary = Color::from(palette::CLAY_TEXT_PRIMARY);
         let text_secondary = Color::from(palette::CLAY_TEXT_SECONDARY);
@@ -314,9 +344,14 @@ impl ThemeTokens {
             border_hover,
             border_focus,
             border_danger,
+            border_specular,
             text_primary,
             text_secondary,
             text_muted,
+            text_on_accent: Color::WHITE,
+            text_on_elevated: text_primary,
+            text_on_danger: Color::WHITE,
+            text_on_danger_critical: Color::WHITE,
             accent,
             accent_hover,
             accent_subtle,
@@ -370,6 +405,7 @@ impl ThemeTokens {
         let border_hover = Color::from("#2D423E");
         let border_focus = Color::rgba(0x2D, 0xD4, 0xBF, 0x88);
         let border_danger = Color::rgba(0xF4, 0x3F, 0x5E, 0x88);
+        let border_specular = Color::rgba(255, 255, 255, 18);
 
         let accent_subtle = Color::from("#0D332D");
         let danger_subtle = Color::from("#361118");
@@ -386,9 +422,14 @@ impl ThemeTokens {
             border_hover,
             border_focus,
             border_danger,
+            border_specular,
             text_primary,
             text_secondary,
             text_muted,
+            text_on_accent: Color::from("#080B0B"),
+            text_on_elevated: text_primary,
+            text_on_danger: Color::WHITE,
+            text_on_danger_critical: Color::WHITE,
             accent,
             accent_hover,
             accent_subtle,
@@ -415,12 +456,12 @@ impl ThemeTokens {
         let bg = Color::from("#000000"); // base00
         let surface = Color::from("#140e29"); // base01
         let surface_elevated = Color::from("#251b4a"); // base02
-        let border_subtle = Color::from("#251b4a"); // base02
-        let text_primary = Color::from("#14B9B5"); // base05
-        let text_secondary = Color::from("#11AEB3"); // base04
-        let text_muted = Color::from("#ffbe74"); // base03
+        let border_subtle = Color::from("#342766");
+        let text_primary = Color::from("#EAF8FA"); // Crisp cool ice-white (>=10.5:1 on #251b4a)
+        let text_secondary = Color::from("#97DCE3"); // Soft cyan-slate (~7.8:1 on #251b4a)
+        let text_muted = Color::from("#ABA5DB"); // Lifted lavender-slate (~5.2:1 on #251b4a)
         let accent = Color::from("#04C5F0"); // base0D
-        let accent_hover = Color::from("#14B9B5"); // base05
+        let accent_hover = Color::from("#97DCE3");
         let danger = Color::from("#BE3F50"); // base08
         let danger_critical = Color::from("#CE4F48"); // base0F
         let warning = Color::from("#FF7F41"); // base09
@@ -429,19 +470,20 @@ impl ThemeTokens {
         let steel = Color::from("#ffbe74"); // base07
 
         let acrylic_bg = Color::from("#140e29fa");
-        let acrylic_border = Color::from("#251b4a");
+        let acrylic_border = Color::from("#342766");
         let card_bg = surface_elevated;
-        let card_border = Color::from("#362768");
+        let card_border = Color::from("#3D2E75");
         let indicator_active = accent;
 
         let surface_hover = Color::from("#2e205c");
         let surface_active = Color::from("#3b2975");
-        let surface_selected = Color::from("#332366");
-        let surface_track = bg;
+        let surface_selected = Color::from("#2e225c");
+        let surface_track = Color::from("#1A1336"); // Recessed deep violet track (avoids harsh #000000 holes)
 
         let border_hover = Color::from("#9147a8"); // base0E
-        let border_focus = Color::rgba(0x04, 0xC5, 0xF0, 0x88); // base0D
-        let border_danger = Color::rgba(0xBE, 0x3F, 0x50, 0x88); // base08
+        let border_focus = Color::rgba(0x04, 0xC5, 0xF0, 140); // Softened neon blue rim
+        let border_danger = Color::rgba(0xBE, 0x3F, 0x50, 160); // base08
+        let border_specular = Color::rgba(234, 248, 250, 26);
 
         let accent_subtle = Color::from("#102e3b");
         let danger_subtle = Color::from("#301217");
@@ -458,9 +500,96 @@ impl ThemeTokens {
             border_hover,
             border_focus,
             border_danger,
+            border_specular,
             text_primary,
             text_secondary,
             text_muted,
+            text_on_accent: Color::from("#000000"), // 11.8:1 AAA vs #04C5F0
+            text_on_elevated: Color::from("#61E6FF"), // 9.8:1 AAA vs #251b4a
+            text_on_danger: Color::WHITE,
+            text_on_danger_critical: Color::WHITE,
+            accent,
+            accent_hover,
+            accent_subtle,
+            danger,
+            danger_critical,
+            danger_subtle,
+            warning,
+            warning_subtle,
+            success,
+            steel,
+            acrylic_bg,
+            acrylic_border,
+            card_bg,
+            card_border,
+            indicator_active,
+            font_family: "IBM Plex Sans".to_string(),
+            font_sans: "IBM Plex Sans".to_string(),
+            font_mono: "JetBrainsMono Nerd Font".to_string(),
+            accent_tint: Color::from("#04C5F026"),
+        }
+    }
+
+    pub fn ios_glass() -> Self {
+        let bg = Color::from("#000000"); // Apple OLED Black
+        let surface = Color::from("#1C1C1E"); // Apple iOS System Grouped Background (solid opaque)
+        let surface_elevated = Color::from("#2C2C2E"); // Apple iOS Secondary Grouped Card (solid opaque)
+        let surface_hover = Color::from("#3A3A3C"); // Apple iOS Tertiary
+        let surface_active = Color::from("#007AFF"); // Apple System Blue
+        let surface_selected = Color::from("#3A3A3C");
+        let surface_track = Color::from("#3A3A3C"); // Apple slider / switch track
+
+        let border_subtle = Color::from("#38383A"); // Apple 1px structural separator
+        let border_hover = Color::from("#48484A");
+        let border_focus = Color::from("#007AFF");
+        let border_danger = Color::from("#FF3B30");
+        let border_specular = Color::rgba(255, 255, 255, 20);
+
+        let text_primary = Color::WHITE;
+        let text_secondary = Color::from("#8E8E93"); // Apple System Gray
+        let text_muted = Color::from("#636366");
+
+        let accent = Color::from("#007AFF"); // Apple System Blue
+        let accent_hover = Color::from("#0A84FF");
+        let accent_subtle = Color::rgba(0, 122, 255, 45);
+        let accent_tint = Color::rgba(0, 122, 255, 30);
+
+        let danger = Color::from("#FF3B30"); // Apple System Red
+        let danger_critical = Color::from("#D70015");
+        let danger_subtle = Color::rgba(255, 59, 48, 40);
+
+        let warning = Color::from("#FF9500"); // Apple System Amber / Orange
+        let warning_subtle = Color::rgba(255, 149, 0, 40);
+
+        let success = Color::from("#34C759"); // Apple System Green
+        let steel = Color::from("#8E8E93"); // Apple System Gray
+
+        let acrylic_bg = Color::from("#1C1C1E"); // Solid opaque structured surface
+        let acrylic_border = Color::from("#38383A");
+        let card_bg = Color::from("#2C2C2E"); // Solid opaque Bento card surface
+        let card_border = Color::from("#38383A");
+        let indicator_active = accent;
+
+        Self {
+            bg,
+            surface,
+            surface_elevated,
+            surface_hover,
+            surface_active,
+            surface_selected,
+            surface_track,
+            border_subtle,
+            border_hover,
+            border_focus,
+            border_danger,
+            border_specular,
+            text_primary,
+            text_secondary,
+            text_muted,
+            text_on_accent: Color::WHITE,
+            text_on_elevated: Color::WHITE,
+            text_on_danger: Color::WHITE,
+            text_on_danger_critical: Color::WHITE,
             accent,
             accent_hover,
             accent_subtle,
@@ -479,13 +608,19 @@ impl ThemeTokens {
             font_family: "Inter".to_string(),
             font_sans: "Inter".to_string(),
             font_mono: "JetBrainsMono Nerd Font".to_string(),
-            accent_tint: Color::from("#04C5F026"),
+            accent_tint,
         }
     }
 
     pub fn from_manifest(manifest: &ShellManifest) -> Self {
         let style = manifest.theme.style.to_lowercase();
-        let mut tokens = if style.contains("clay") || style.contains("playful") {
+        let mut tokens = if style.contains("ios")
+            || style.contains("apple")
+            || style.contains("bento")
+            || style.contains("glass")
+        {
+            Self::ios_glass()
+        } else if style.contains("clay") || style.contains("playful") {
             Self::playful_clay()
         } else if style.contains("chaos") || style.contains("controlled") {
             Self::dark_controlled_chaos()
@@ -494,6 +629,68 @@ impl ThemeTokens {
         } else {
             Self::cyber_synthwave()
         };
+
+        let default_palette = crate::config::PaletteConfig::default();
+        let is_synthwave = style.contains("synthwave")
+            || (!style.contains("ios")
+                && !style.contains("apple")
+                && !style.contains("bento")
+                && !style.contains("glass")
+                && !style.contains("clay")
+                && !style.contains("playful")
+                && !style.contains("chaos")
+                && !style.contains("controlled")
+                && !style.contains("mint"));
+
+        let p = &manifest.palette;
+        if is_synthwave || p.background != default_palette.background {
+            tokens.bg = Color::from(p.background.as_str());
+        }
+        if is_synthwave || p.surface != default_palette.surface {
+            let sc = Color::from(p.surface.as_str());
+            tokens.surface = sc;
+            tokens.acrylic_bg = Color::rgba(sc.red(), sc.green(), sc.blue(), 250);
+        }
+        if is_synthwave || p.overlay != default_palette.overlay {
+            tokens.surface_elevated = Color::from(p.overlay.as_str());
+            tokens.card_bg = Color::from(p.overlay.as_str());
+        }
+        if is_synthwave || p.border != default_palette.border {
+            tokens.border_subtle = Color::from(p.border.as_str());
+            tokens.acrylic_border = Color::from(p.border.as_str());
+            tokens.card_border = Color::from(p.border.as_str());
+        }
+        if is_synthwave || p.foreground != default_palette.foreground {
+            tokens.text_primary = Color::from(p.foreground.as_str());
+        }
+        if is_synthwave || p.hover != default_palette.hover {
+            tokens.text_secondary = Color::from(p.hover.as_str());
+            tokens.accent_hover = Color::from(p.hover.as_str());
+        }
+        if is_synthwave || p.muted != default_palette.muted {
+            tokens.text_muted = Color::from(p.muted.as_str());
+        }
+        if is_synthwave || p.accent != default_palette.accent {
+            let ac = Color::from(p.accent.as_str());
+            tokens.accent = ac;
+            tokens.border_focus = Color::rgba(ac.red(), ac.green(), ac.blue(), 140);
+            tokens.indicator_active = ac;
+            tokens.accent_tint = Color::rgba(ac.red(), ac.green(), ac.blue(), 38);
+        }
+        if is_synthwave || p.highlight != default_palette.highlight {
+            tokens.warning = Color::from(p.highlight.as_str());
+        }
+        if is_synthwave || p.steel != default_palette.steel {
+            tokens.steel = Color::from(p.steel.as_str());
+        }
+        if is_synthwave || p.success != default_palette.success {
+            tokens.success = Color::from(p.success.as_str());
+        }
+        if is_synthwave || p.danger_critical != default_palette.danger_critical {
+            let dc = Color::from(p.danger_critical.as_str());
+            tokens.danger_critical = dc;
+            tokens.border_danger = Color::rgba(dc.red(), dc.green(), dc.blue(), 160);
+        }
 
         if !manifest.theme.font_family.is_empty() && manifest.theme.font_family != "monospace" {
             tokens.font_family = manifest.theme.font_family.clone();
@@ -513,9 +710,14 @@ mod tests {
         let manifest = ShellManifest::default();
         let tokens = ThemeTokens::from_manifest(&manifest);
         assert_eq!(tokens.bg, Color::from("#000000"));
-        assert_eq!(tokens.text_primary, Color::from("#14B9B5"));
+        assert_eq!(tokens.text_primary, Color::from("#EAF8FA"));
+        assert_eq!(tokens.text_secondary, Color::from("#97DCE3"));
+        assert_eq!(tokens.text_muted, Color::from("#ABA5DB"));
+        assert_eq!(tokens.surface_track, Color::from("#1A1336"));
         assert_eq!(tokens.accent, Color::from("#04C5F0"));
-        assert_eq!(tokens.font_sans, "Inter");
+        assert_eq!(tokens.font_sans, "IBM Plex Sans");
+        assert_eq!(tokens.text_on_accent, Color::from("#000000"));
+        assert_eq!(tokens.text_on_elevated, Color::from("#61E6FF"));
     }
 
     #[test]
@@ -546,5 +748,14 @@ mod tests {
         let tokens = ThemeTokens::from_manifest(&manifest);
         assert_eq!(tokens.text_primary, Color::from(palette::CLAY_TEXT_PRIMARY));
         assert_eq!(tokens.accent, Color::from(palette::CLAY_PRIMARY));
+    }
+
+    #[test]
+    fn test_tokens_from_manifest_ios_glass_style() {
+        let mut manifest = ShellManifest::default();
+        manifest.theme.style = "ios-glass".to_string();
+        let tokens = ThemeTokens::from_manifest(&manifest);
+        assert_eq!(tokens.text_primary, Color::WHITE);
+        assert_eq!(tokens.accent, Color::from("#007AFF"));
     }
 }

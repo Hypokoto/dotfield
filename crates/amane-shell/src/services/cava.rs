@@ -19,6 +19,16 @@ static SPECTRUM_BARS: LazyLock<ArcSwap<Vec<f32>>> =
 
 static IS_ACTIVE: AtomicBool = AtomicBool::new(false);
 
+pub struct CavaSignal;
+
+impl Service for CavaSignal {
+    fn new() -> Self {
+        Self
+    }
+
+    fn listen() {}
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct CavaService {
     pub bars: Vec<f32>,
@@ -108,10 +118,20 @@ impl CavaService {
                 last_activity = Instant::now();
                 IS_ACTIVE.store(true, Ordering::Relaxed);
                 SPECTRUM_BARS.store(Arc::new(float_bars));
+
+                // Only wake Amane frame pipeline if Control Center is open
+                if crate::ui::control_center::ControlCenterService::read().is_open() {
+                    let _ = CavaSignal::write();
+                    amane::request_frame();
+                }
             } else if last_activity.elapsed() > Duration::from_secs(2) {
                 // Silence: park spectrum bars to zero to allow 0 Hz render parking
                 if IS_ACTIVE.swap(false, Ordering::Relaxed) {
                     SPECTRUM_BARS.store(Arc::new(vec![0.0; CAVA_BAR_COUNT]));
+                    if crate::ui::control_center::ControlCenterService::read().is_open() {
+                        let _ = CavaSignal::write();
+                        amane::request_frame();
+                    }
                 }
                 // Sleep slightly during prolonged silence to save CPU cycles
                 thread::sleep(Duration::from_millis(150));

@@ -275,6 +275,34 @@ fn ipc_osd_handler(args: &[String]) -> String {
     }
 }
 
+fn ipc_volume_up_handler(args: &[String]) -> String {
+    let mut osd_args = vec!["volume-up".to_string()];
+    osd_args.extend_from_slice(args);
+    ipc_osd_handler(&osd_args)
+}
+
+fn ipc_volume_down_handler(args: &[String]) -> String {
+    let mut osd_args = vec!["volume-down".to_string()];
+    osd_args.extend_from_slice(args);
+    ipc_osd_handler(&osd_args)
+}
+
+fn ipc_volume_mute_handler(_args: &[String]) -> String {
+    ipc_osd_handler(&["volume-mute".to_string()])
+}
+
+fn ipc_brightness_up_handler(args: &[String]) -> String {
+    let mut osd_args = vec!["brightness-up".to_string()];
+    osd_args.extend_from_slice(args);
+    ipc_osd_handler(&osd_args)
+}
+
+fn ipc_brightness_down_handler(args: &[String]) -> String {
+    let mut osd_args = vec!["brightness-down".to_string()];
+    osd_args.extend_from_slice(args);
+    ipc_osd_handler(&osd_args)
+}
+
 fn ipc_reload_handler(_args: &[String]) -> String {
     let path = config::ShellManifest::default_path();
     match config::ShellManifest::load_from_path(&path) {
@@ -314,6 +342,11 @@ fn ipc_bluetooth_handler(_args: &[String]) -> String {
 fn ipc_tray_handler(_args: &[String]) -> String {
     ui::control_center::open_view(ui::control_center::ActiveView::Tray);
     "tray widget opened".to_string()
+}
+
+fn ipc_notifications_handler(_args: &[String]) -> String {
+    ui::control_center::open_view(ui::control_center::ActiveView::Notifications);
+    "notification center opened".to_string()
 }
 
 fn ipc_display_config_handler(_args: &[String]) -> String {
@@ -474,6 +507,11 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
     // Run Amane application with bar (if enabled), osd, notifications, launcher, control-center, display-config, powermenu, calendar, screen-recorder, widgets, start-menu, action-center, and overview
     let mut app = amane::App::new()
         .ipc("osd", ipc_osd_handler)
+        .ipc("volume-up", ipc_volume_up_handler)
+        .ipc("volume-down", ipc_volume_down_handler)
+        .ipc("volume-mute", ipc_volume_mute_handler)
+        .ipc("brightness-up", ipc_brightness_up_handler)
+        .ipc("brightness-down", ipc_brightness_down_handler)
         .ipc("reload", ipc_reload_handler)
         .ipc("launcher", ipc_launcher_handler)
         .ipc("control-center", ipc_control_center_handler)
@@ -481,6 +519,8 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         .ipc("audio", ipc_audio_handler)
         .ipc("bluetooth", ipc_bluetooth_handler)
         .ipc("tray", ipc_tray_handler)
+        .ipc("notifications", ipc_notifications_handler)
+        .ipc("notification-center", ipc_notifications_handler)
         .ipc("display-config", ipc_display_config_handler)
         .ipc("presentation", ipc_presentation_handler)
         .ipc("widgets", ipc_widgets_handler)
@@ -497,7 +537,9 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         .ipc("screen-recorder", ipc_screen_record_handler);
 
     if show_bar {
-        app = app.window_per_monitor(ui::bar::top_bar_monitor);
+        app = app
+            .window_per_monitor(ui::bar::top_bar_monitor)
+            .window_per_monitor(ui::bar::top_island_monitor);
     }
 
     app.window(ui::osd::osd_overlay)

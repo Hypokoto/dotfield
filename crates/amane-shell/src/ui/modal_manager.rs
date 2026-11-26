@@ -4,7 +4,6 @@
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ModalType {
-    Launcher,
     ControlCenter,
     Calendar,
     DisplayConfig,
@@ -19,7 +18,7 @@ pub struct ModalManager;
 impl ModalManager {
     /// Opens the specified modal exclusively, closing any other active modal.
     pub fn open_exclusive(target: ModalType) {
-        if target != ModalType::StartMenu && target != ModalType::Launcher {
+        if target != ModalType::StartMenu {
             crate::ui::start_menu::close();
         }
         if target != ModalType::ControlCenter {
@@ -77,7 +76,7 @@ mod tests {
     #[test]
     fn test_modal_manager_open_exclusive() {
         let _lock = crate::ui::TEST_UI_MUTEX.lock().unwrap();
-        ModalManager::open_exclusive(ModalType::Launcher);
+        ModalManager::open_exclusive(ModalType::StartMenu);
         ModalManager::close_all();
     }
 }

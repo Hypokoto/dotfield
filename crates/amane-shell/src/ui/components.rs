@@ -1,9 +1,35 @@
 use amane::{
-    Align, Center, Color, Column, Justify, Padding, Parent, Pointer, Rectangle, Row, Scroll, Stack,
-    Text, Widget,
+    Align, Center, Color, Column, InputArea, Justify, Padding, Parent, Pointer, Rectangle, Row,
+    Scroll, Stack, Text, Weight, Widget,
 };
 
+use crate::ui::animation::PanelMotion;
 use crate::ui::tokens::{ThemeTokens, border, radius, spacing, typography};
+
+pub const CONNECTED_PANEL_FILLET_PAD: f32 = 0.0;
+pub const CONNECTED_PANEL_OUTER_PAD: f32 = 0.0;
+pub const CONNECTED_PANEL_BAR_OVERLAP: f32 = 0.0;
+
+/// Returns total LayerWindow dimensions `(width, height)` required for a popout panel.
+#[inline]
+pub fn bar_connected_window_size(body_width: f32, body_height: f32) -> (f32, f32) {
+    (body_width, body_height)
+}
+
+/// Returns the interactive input rectangle for a popout panel.
+#[inline]
+pub fn bar_connected_input_region(
+    body_width: f32,
+    body_height: f32,
+    _is_top_bar: bool,
+) -> Vec<InputArea> {
+    vec![InputArea {
+        x: 0,
+        y: 0,
+        width: body_width.round() as i32,
+        height: body_height.round() as i32,
+    }]
+}
 
 /// Standardized action button for closing overlays and modals (Smooth Clay Pill)
 pub fn close_button(on_click_fn: impl Fn() + 'static, tokens: &ThemeTokens) -> Rectangle {
@@ -38,11 +64,13 @@ pub fn modal_header(
             Text::new(icon)
                 .size(typography::TITLE_SM)
                 .color(tokens.accent)
-                .font(&tokens.font_mono),
+                .font(&tokens.font_mono)
+                .tight(),
         ),
         Box::new(
             Text::new(title)
                 .size(typography::TITLE_SM)
+                .weight(Weight::SemiBold)
                 .color(tokens.text_primary)
                 .font(&tokens.font_sans),
         ),
@@ -83,7 +111,7 @@ pub fn keycap(key_text: &str, tokens: &ThemeTokens) -> Rectangle {
         .width(cap_width)
         .height(20.0)
         .radius(radius::SM)
-        .fill(tokens.surface_elevated)
+        .fill(tokens.surface_track)
         .border(1.0, tokens.border_subtle)
         .padding(Padding {
             top: 2.0,
@@ -95,7 +123,8 @@ pub fn keycap(key_text: &str, tokens: &ThemeTokens) -> Rectangle {
         .child(
             Text::new(key_text)
                 .size(typography::CAPTION)
-                .color(tokens.text_primary)
+                .weight(Weight::Medium)
+                .color(tokens.text_secondary)
                 .font(&tokens.font_mono)
                 .tight(),
         )
@@ -112,7 +141,7 @@ pub fn clay_modal_frame(
     Rectangle::new()
         .width(width)
         .height(height)
-        .radius(radius::LG)
+        .radius(radius::IOS_WIDGET_LG)
         .fill(tokens.surface)
         .border(1.0, tokens.border_subtle)
         .padding(Padding {
@@ -124,14 +153,37 @@ pub fn clay_modal_frame(
         .child(content)
 }
 
-/// Compatibility alias for legacy callers
-pub fn victorian_panel_frame(
-    width: f32,
-    height: f32,
+/// Floating island popout panel with smooth rounded corners, full enclosed border, and spring slide motion.
+/// Slides smoothly into place from the island/dock and parks cleanly at 0 Hz when settled.
+#[allow(clippy::too_many_arguments)]
+pub fn bar_connected_panel(
+    body_width: f32,
+    body_height: f32,
+    is_top_bar: bool,
+    motion: PanelMotion,
+    padding: Padding,
+    border_color: Color,
     content: impl Widget + 'static,
     tokens: &ThemeTokens,
 ) -> Rectangle {
-    clay_modal_frame(width, height, content, tokens)
+    let slide_travel = 16.0;
+    let slide_px = (1.0 - motion.progress) * slide_travel;
+    let signed_slide = if is_top_bar { -slide_px } else { slide_px };
+
+    let mut panel = Rectangle::new()
+        .width(body_width)
+        .height(body_height)
+        .radius(radius::IOS_WIDGET_LG)
+        .fill(tokens.surface)
+        .border(1.0, border_color)
+        .padding(padding)
+        .child(content);
+
+    if motion.animating || motion.progress < 1.0 {
+        panel = panel.translate(0.0, signed_slide).opacity(motion.alpha);
+    }
+
+    panel
 }
 
 /// Status badge with dot indicator (Tactical Telemetry Badge)
@@ -426,174 +478,6 @@ pub fn action_card_interactive(
     card.on_hover(on_hover)
 }
 
-/// Modular telemetry capsule block for the top status bar
-pub fn telemetry_module(icon: &str, text: &str, warn: bool, tokens: &ThemeTokens) -> Rectangle {
-    let (icon_color, text_color, border_color) = if warn {
-        (tokens.accent, tokens.accent, tokens.border_focus)
-    } else {
-        (tokens.accent, tokens.text_primary, tokens.border_subtle)
-    };
-
-    let char_count = text.chars().count();
-    let width = (char_count as f32 * 7.5 + 32.0).max(56.0);
-
-    let row = Row::new(vec![
-        Box::new(
-            Text::new(icon)
-                .size(typography::BODY)
-                .color(icon_color)
-                .font(&tokens.font_family),
-        ),
-        Box::new(
-            Text::new(text)
-                .size(typography::SECONDARY)
-                .color(text_color)
-                .font(&tokens.font_family),
-        ),
-    ])
-    .gap(spacing::GAP_SM)
-    .align(Align::Center);
-
-    Rectangle::new()
-        .width(width)
-        .height(24.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(border::THIN, border_color)
-        .padding(Padding {
-            top: 2.0,
-            bottom: 2.0,
-            left: spacing::PAD_SM,
-            right: spacing::PAD_SM,
-        })
-        .align_child(Center, Center)
-        .child(row)
-}
-
-/// WinUI 3 ToggleSwitch primitive: 40x20 pill track with sliding thumb and binary state toggle
-pub fn toggle_switch(
-    checked: bool,
-    on_toggle: impl Fn(bool) + 'static,
-    tokens: &ThemeTokens,
-) -> Rectangle {
-    let track_w = 40.0;
-    let track_h = 20.0;
-    let thumb_size = 12.0;
-
-    let thumb_left = if checked { 24.0 } else { 4.0 };
-    let thumb_color = if checked { Color::BLACK } else { tokens.steel };
-    let track_fill = if checked {
-        tokens.accent
-    } else {
-        tokens.surface_track
-    };
-    let track_border = if checked {
-        tokens.accent
-    } else {
-        tokens.border_subtle
-    };
-
-    let thumb = Rectangle::new()
-        .width(thumb_size)
-        .height(thumb_size)
-        .radius(radius::PILL)
-        .fill(thumb_color);
-
-    let thumb_wrapper = Rectangle::new()
-        .width(track_w)
-        .height(track_h)
-        .padding(Padding {
-            top: 4.0,
-            bottom: 4.0,
-            left: thumb_left,
-            right: 4.0,
-        })
-        .align_child(Align::Start, Align::Center)
-        .child(thumb);
-
-    Rectangle::new()
-        .width(track_w)
-        .height(track_h)
-        .radius(radius::PILL)
-        .fill(track_fill)
-        .border(border::THIN, track_border)
-        .cursor(Pointer)
-        .on_click(move |_| on_toggle(!checked))
-        .child(thumb_wrapper)
-}
-
-/// Smooth Clay Settings / Quick Settings tile row with title, optional subtitle, and trailing ToggleSwitch
-pub fn toggle_switch_card(
-    checked: bool,
-    icon: &str,
-    title: &str,
-    subtitle: Option<&str>,
-    on_toggle: impl Fn(bool) + 'static,
-    tokens: &ThemeTokens,
-) -> Rectangle {
-    let mut text_elements: Vec<Box<dyn Widget>> = vec![Box::new(
-        Text::new(title)
-            .size(typography::BODY)
-            .color(tokens.text_primary)
-            .font(&tokens.font_sans),
-    )];
-
-    if let Some(sub) = subtitle {
-        text_elements.push(Box::new(
-            Text::new(sub)
-                .size(typography::SECONDARY)
-                .color(tokens.text_secondary)
-                .font(&tokens.font_sans),
-        ));
-    }
-
-    let text_col = Column::new(text_elements).gap(2.0).align(Align::Start);
-
-    let left_row = Row::new(vec![
-        Box::new(
-            Text::new(icon)
-                .size(typography::BODY_LG)
-                .color(if checked {
-                    tokens.accent
-                } else {
-                    tokens.text_muted
-                })
-                .font(&tokens.font_mono),
-        ),
-        Box::new(text_col),
-    ])
-    .gap(spacing::GAP_MD)
-    .align(Align::Center);
-
-    let switch = toggle_switch(checked, on_toggle, tokens);
-
-    let content_row = Row::new(vec![Box::new(left_row), Box::new(switch)])
-        .width(Parent)
-        .justify(Justify::SpaceBetween)
-        .align(Align::Center);
-
-    let (card_fill, card_border) = if checked {
-        (tokens.surface_active, tokens.border_focus)
-    } else {
-        (tokens.surface_elevated, tokens.border_subtle)
-    };
-
-    Rectangle::new()
-        .width(Parent)
-        .height(if subtitle.is_some() { 48.0 } else { 40.0 })
-        .radius(radius::MD)
-        .fill(card_fill)
-        .border(1.0, card_border)
-        .padding(Padding {
-            top: 4.0,
-            bottom: 4.0,
-            left: spacing::PAD_MD,
-            right: spacing::PAD_MD,
-        })
-        .align_child(Align::Start, Align::Center)
-        .child(content_row)
-}
-
 /// Smooth Clay Tactile Gauge Slider with recessed clay track,
 /// glazed terracotta progress fill, circular pill icon button, and tactile scroll.
 #[allow(clippy::too_many_arguments)]
@@ -735,362 +619,6 @@ where
         .child(slider_stack)
 }
 
-/// WinUI 3 InfoBadge: numeric count or status dot indicator
-pub fn info_badge(
-    count: Option<usize>,
-    dot_only: bool,
-    badge_color: Color,
-    tokens: &ThemeTokens,
-) -> Rectangle {
-    if dot_only {
-        return Rectangle::new()
-            .width(8.0)
-            .height(8.0)
-            .radius(radius::PILL)
-            .fill(badge_color);
-    }
-
-    let text_str = if let Some(c) = count {
-        if c > 99 {
-            "99+".to_string()
-        } else {
-            c.to_string()
-        }
-    } else {
-        String::new()
-    };
-
-    let w = (text_str.chars().count() as f32 * 6.5 + 10.0).max(18.0);
-    Rectangle::new()
-        .width(w)
-        .height(16.0)
-        .radius(radius::PILL)
-        .fill(badge_color)
-        .align_child(Center, Center)
-        .child(
-            Text::new(text_str)
-                .size(typography::CAPTION)
-                .color(Color::BLACK)
-                .font(&tokens.font_family)
-                .tight(),
-        )
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InfoBarSeverity {
-    Informational,
-    Success,
-    Warning,
-    Danger,
-}
-
-/// WinUI 3 InfoBar banner: inline dismissible notification with severity styling
-pub fn info_bar(
-    severity: InfoBarSeverity,
-    title: &str,
-    message: &str,
-    on_close: Option<Box<dyn Fn() + 'static>>,
-    tokens: &ThemeTokens,
-) -> Rectangle {
-    let (icon, color) = match severity {
-        InfoBarSeverity::Informational => ("󰋼", tokens.accent),
-        InfoBarSeverity::Success => ("󰄬", tokens.success),
-        InfoBarSeverity::Warning => ("󰀦", tokens.warning),
-        InfoBarSeverity::Danger => ("󰅚", tokens.danger),
-    };
-
-    let icon_w = Text::new(icon)
-        .size(typography::BODY_LG)
-        .color(color)
-        .font(&tokens.font_family);
-
-    let text_col = Column::new(vec![
-        Box::new(
-            Text::new(title)
-                .size(typography::BODY)
-                .color(tokens.text_primary)
-                .font(&tokens.font_family),
-        ),
-        Box::new(
-            Text::new(message)
-                .size(typography::SECONDARY)
-                .color(tokens.text_secondary)
-                .font(&tokens.font_family),
-        ),
-    ])
-    .gap(1.0);
-
-    let mut row_children: Vec<Box<dyn Widget>> = vec![Box::new(icon_w), Box::new(text_col)];
-
-    if let Some(close_fn) = on_close {
-        let close_btn = Rectangle::new()
-            .width(22.0)
-            .height(22.0)
-            .radius(radius::SM)
-            .cursor(Pointer)
-            .align_child(Center, Center)
-            .on_click(move |_| close_fn())
-            .child(
-                Text::new("󰅖")
-                    .size(typography::SECONDARY)
-                    .color(tokens.text_muted)
-                    .font(&tokens.font_family),
-            );
-        row_children.push(Box::new(close_btn));
-    }
-
-    let row = Row::new(row_children)
-        .width(Parent)
-        .justify(Justify::SpaceBetween)
-        .align(Align::Center);
-
-    Rectangle::new()
-        .width(Parent)
-        .height(if message.is_empty() { 36.0 } else { 48.0 })
-        .radius(radius::MD)
-        .fill(tokens.surface_elevated)
-        .border(border::THIN, color)
-        .padding(Padding {
-            top: spacing::PAD_SM,
-            bottom: spacing::PAD_SM,
-            left: spacing::PAD_MD,
-            right: spacing::PAD_MD,
-        })
-        .child(row)
-}
-
-/// WinUI 3 PipsPager: horizontal workspace/tab indicator pips
-pub fn pips_pager(
-    total: usize,
-    active: usize,
-    on_select: impl Fn(usize) + 'static + Copy,
-    tokens: &ThemeTokens,
-) -> Rectangle {
-    let mut pips: Vec<Box<dyn Widget>> = Vec::with_capacity(total);
-
-    for i in 0..total {
-        let is_active = i == active;
-        let (pip_w, pip_fill) = if is_active {
-            (18.0, tokens.accent)
-        } else {
-            (6.0, tokens.steel)
-        };
-
-        let pip = Rectangle::new()
-            .width(pip_w)
-            .height(6.0)
-            .radius(radius::PILL)
-            .fill(pip_fill)
-            .cursor(Pointer)
-            .on_click(move |_| on_select(i));
-
-        pips.push(Box::new(pip));
-    }
-
-    let pips_row = Row::new(pips).gap(4.0).align(Align::Center);
-    let total_w = (total as f32 * 10.0 + 12.0).max(24.0);
-
-    Rectangle::new()
-        .width(total_w)
-        .height(16.0)
-        .align_child(Center, Center)
-        .child(pips_row)
-}
-
-/// WinUI 3 Expander: Collapsible disclosure card
-#[allow(clippy::too_many_arguments)]
-pub fn expander(
-    icon: &str,
-    title: &str,
-    subtitle: Option<&str>,
-    is_expanded: bool,
-    trailing_action: Option<Box<dyn Widget>>,
-    content: Box<dyn Widget>,
-    on_toggle: impl Fn() + 'static,
-    tokens: &ThemeTokens,
-) -> Rectangle {
-    let chevron_glyph = if is_expanded { "󰅃" } else { "󰅀" };
-
-    let mut text_items: Vec<Box<dyn Widget>> = vec![Box::new(
-        Text::new(title)
-            .size(typography::BODY)
-            .color(tokens.text_primary)
-            .font(&tokens.font_family),
-    )];
-
-    if let Some(sub) = subtitle {
-        text_items.push(Box::new(
-            Text::new(sub)
-                .size(typography::SECONDARY)
-                .color(tokens.text_secondary)
-                .font(&tokens.font_family),
-        ));
-    }
-
-    let title_block = Row::new(vec![
-        Box::new(
-            Text::new(icon)
-                .size(typography::BODY_LG)
-                .color(tokens.accent)
-                .font(&tokens.font_family),
-        ),
-        Box::new(Column::new(text_items).gap(1.0).align(Align::Start)),
-    ])
-    .gap(spacing::GAP_MD)
-    .align(Align::Center);
-
-    let mut right_items: Vec<Box<dyn Widget>> = Vec::new();
-    if let Some(action) = trailing_action {
-        right_items.push(action);
-    }
-
-    right_items.push(Box::new(
-        Text::new(chevron_glyph)
-            .size(typography::BODY)
-            .color(tokens.text_secondary)
-            .font(&tokens.font_family),
-    ));
-
-    let header_row = Row::new(vec![
-        Box::new(title_block),
-        Box::new(
-            Row::new(right_items)
-                .gap(spacing::GAP_SM)
-                .align(Align::Center),
-        ),
-    ])
-    .width(Parent)
-    .justify(Justify::SpaceBetween)
-    .align(Align::Center);
-
-    let header = Rectangle::new()
-        .width(Parent)
-        .height(if subtitle.is_some() { 48.0 } else { 40.0 })
-        .cursor(Pointer)
-        .on_click(move |_| on_toggle())
-        .child(header_row);
-
-    let mut card_children: Vec<Box<dyn Widget>> = vec![Box::new(header)];
-
-    if is_expanded {
-        card_children.push(Box::new(divider(tokens)));
-        card_children.push(content);
-    }
-
-    let card_height = if is_expanded {
-        120.0
-    } else if subtitle.is_some() {
-        56.0
-    } else {
-        46.0
-    };
-
-    Rectangle::new()
-        .width(Parent)
-        .height(card_height)
-        .radius(radius::MD)
-        .fill(tokens.surface_elevated)
-        .border(border::THIN, tokens.border_subtle)
-        .padding(Padding {
-            top: spacing::PAD_SM,
-            bottom: spacing::PAD_SM,
-            left: spacing::PAD_MD,
-            right: spacing::PAD_MD,
-        })
-        .child(
-            Column::new(card_children)
-                .gap(spacing::GAP_SM)
-                .width(Parent),
-        )
-}
-
-/// Smooth Clay acrylic framed panel
-pub fn acrylic_card(
-    width: f32,
-    height: f32,
-    child: Box<dyn Widget>,
-    tokens: &ThemeTokens,
-) -> Rectangle {
-    clay_modal_frame(
-        width,
-        height,
-        Column::new(vec![child]).width(Parent).height(Parent),
-        tokens,
-    )
-}
-
-/// WinUI 3 SplitButton: primary click action on the left + dropdown arrow on the right
-pub fn split_button(
-    primary_label: &str,
-    primary_icon: Option<&str>,
-    on_primary: impl Fn() + 'static,
-    on_flyout: impl Fn() + 'static,
-    tokens: &ThemeTokens,
-) -> Rectangle {
-    let char_count = primary_label.chars().count();
-    let left_w = (char_count as f32 * 7.5 + 32.0).max(60.0);
-
-    let mut left_items: Vec<Box<dyn Widget>> = Vec::new();
-    if let Some(ic) = primary_icon {
-        left_items.push(Box::new(
-            Text::new(ic)
-                .size(typography::BODY)
-                .color(tokens.text_primary)
-                .font(&tokens.font_family),
-        ));
-    }
-    left_items.push(Box::new(
-        Text::new(primary_label)
-            .size(typography::SECONDARY)
-            .color(tokens.text_primary)
-            .font(&tokens.font_family),
-    ));
-
-    let left_btn = Rectangle::new()
-        .width(left_w)
-        .height(32.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(border::THIN, tokens.border_subtle)
-        .cursor(Pointer)
-        .padding(Padding {
-            top: 2.0,
-            bottom: 2.0,
-            left: 10.0,
-            right: 10.0,
-        })
-        .align_child(Center, Center)
-        .on_click(move |_| on_primary())
-        .child(
-            Row::new(left_items)
-                .gap(spacing::GAP_XS)
-                .align(Align::Center),
-        );
-
-    let right_btn = Rectangle::new()
-        .width(26.0)
-        .height(32.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_elevated)
-        .border(border::THIN, tokens.border_subtle)
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(move |_| on_flyout())
-        .child(
-            Text::new("󰅀")
-                .size(typography::SECONDARY)
-                .color(tokens.text_secondary)
-                .font(&tokens.font_family),
-        );
-
-    let total_w = left_w + 26.0 + 1.0;
-    Rectangle::new().width(total_w).height(32.0).child(
-        Row::new(vec![Box::new(left_btn), Box::new(right_btn)])
-            .gap(1.0)
-            .align(Align::Center),
-    )
-}
-
 // =========================================================================
 // Apple HIG iOS Bento Widget & Component Primitives
 // =========================================================================
@@ -1104,15 +632,13 @@ pub fn ios_widget_frame(
     content: impl Widget + 'static,
     tokens: &ThemeTokens,
 ) -> Rectangle {
-    let specular_highlight = Color::rgba(255, 255, 255, 18);
-
     // Outer container with squircle radius and glass specular outline
     Rectangle::new()
         .width(width)
         .height(height)
         .radius(corner_radius)
         .fill(tokens.surface_elevated)
-        .border(border::THIN, specular_highlight)
+        .border(border::THIN, tokens.border_specular)
         .padding(Padding {
             top: spacing::PAD_MD,
             bottom: spacing::PAD_MD,
@@ -1123,7 +649,7 @@ pub fn ios_widget_frame(
 }
 
 /// iOS System Small Bento Widget (~1×1 aspect, ~156×156px or custom dimensions).
-/// Displays leading squircle glyph badge, title, primary metric/content, and optional secondary footer.
+/// Displays leading circular glyph badge, title, primary metric, and secondary footer without text collision.
 #[allow(clippy::too_many_arguments)]
 pub fn ios_widget_small(
     title: &str,
@@ -1136,17 +662,17 @@ pub fn ios_widget_small(
     tokens: &ThemeTokens,
 ) -> Rectangle {
     let icon_badge = Rectangle::new()
-        .width(32.0)
-        .height(32.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_active)
-        .border(1.0, Color::rgba(255, 255, 255, 14))
+        .width(24.0)
+        .height(24.0)
+        .radius(radius::PILL)
+        .fill(accent_color)
         .align_child(Center, Center)
         .child(
             Text::new(icon)
-                .size(typography::BODY_LG)
-                .color(accent_color)
-                .font(&tokens.font_mono),
+                .size(13.0)
+                .color(tokens.text_on_accent)
+                .font(&tokens.font_mono)
+                .tight(),
         );
 
     let header_row = Row::new(vec![
@@ -1154,20 +680,22 @@ pub fn ios_widget_small(
         Box::new(
             Text::new(title)
                 .size(typography::BADGE)
+                .weight(Weight::Medium)
                 .color(tokens.text_secondary)
                 .font(&tokens.font_sans),
         ),
     ])
-    .gap(spacing::GAP_SM)
+    .gap(6.0)
     .align(Align::Center);
 
     let mut body_items: Vec<Box<dyn Widget>> = vec![
         Box::new(header_row),
         Box::new(
             Text::new(metric_text)
-                .size(typography::DISPLAY)
+                .size(19.0)
+                .weight(Weight::Bold)
                 .color(tokens.text_primary)
-                .font(&tokens.font_sans),
+                .font(&tokens.font_mono),
         ),
     ];
 
@@ -1180,66 +708,22 @@ pub fn ios_widget_small(
         ));
     }
 
-    let content = Column::new(body_items)
-        .gap(spacing::GAP_SM)
-        .align(Align::Start);
+    let content = Column::new(body_items).gap(3.0).align(Align::Start);
 
-    ios_widget_frame(width, height, radius::IOS_WIDGET_SM, content, tokens)
-}
-
-/// iOS System Medium Bento Widget (~2×1 aspect, ~328×156px or custom dimensions).
-/// Ideal for multimedia playback, calendar, or combined system telemetry overview.
-pub fn ios_widget_medium(
-    title: &str,
-    icon: &str,
-    leading_content: impl Widget + 'static,
-    trailing_content: Option<Box<dyn Widget>>,
-    width: f32,
-    height: f32,
-    tokens: &ThemeTokens,
-) -> Rectangle {
-    let icon_badge = Rectangle::new()
-        .width(28.0)
-        .height(28.0)
-        .radius(radius::SM)
-        .fill(tokens.surface_active)
-        .border(1.0, Color::rgba(255, 255, 255, 14))
-        .align_child(Center, Center)
-        .child(
-            Text::new(icon)
-                .size(typography::BODY)
-                .color(tokens.accent)
-                .font(&tokens.font_mono),
-        );
-
-    let title_block = Row::new(vec![
-        Box::new(icon_badge),
-        Box::new(
-            Text::new(title)
-                .size(typography::SECONDARY)
-                .color(tokens.text_primary)
-                .font(&tokens.font_sans),
-        ),
-    ])
-    .gap(spacing::GAP_SM)
-    .align(Align::Center);
-
-    let mut header_widgets: Vec<Box<dyn Widget>> = vec![Box::new(title_block)];
-    if let Some(trailing) = trailing_content {
-        header_widgets.push(trailing);
-    }
-
-    let header_bar = Row::new(header_widgets)
-        .width(Parent)
-        .justify(Justify::SpaceBetween)
-        .align(Align::Center);
-
-    let content_col = Column::new(vec![Box::new(header_bar), Box::new(leading_content)])
-        .width(Parent)
-        .gap(spacing::GAP_SM)
-        .align(Align::Start);
-
-    ios_widget_frame(width, height, radius::IOS_WIDGET_MD, content_col, tokens)
+    Rectangle::new()
+        .width(width)
+        .height(height)
+        .radius(radius::IOS_WIDGET_SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
+        .padding(Padding {
+            top: 8.0,
+            bottom: 8.0,
+            left: 10.0,
+            right: 10.0,
+        })
+        .align_child(Align::Start, Align::Center)
+        .child(content)
 }
 
 /// iOS Control Center Squircle Quick Action Toggle (~68×68px or 72×72px).
@@ -1254,19 +738,19 @@ pub fn ios_control_toggle(
     tokens: &ThemeTokens,
     on_toggle: impl Fn() + Send + Sync + 'static,
 ) -> Rectangle {
-    let (bg_fill, icon_color, text_color, border_color) = if is_active {
+    let (circle_bg, icon_color, border_color, text_color) = if is_active {
         (
             tokens.accent,
-            tokens.bg,
+            tokens.text_on_accent,
+            tokens.border_focus,
             tokens.text_primary,
-            Color::rgba(255, 255, 255, 40),
         )
     } else {
         (
-            tokens.surface_elevated,
+            tokens.surface_track,
             tokens.text_secondary,
-            tokens.text_muted,
-            Color::rgba(255, 255, 255, 12),
+            tokens.border_subtle,
+            tokens.text_secondary,
         )
     };
 
@@ -1274,42 +758,148 @@ pub fn ios_control_toggle(
         .width(36.0)
         .height(36.0)
         .radius(radius::PILL)
-        .fill(if is_active {
-            Color::rgba(0, 0, 0, 24)
-        } else {
-            tokens.surface_active
-        })
+        .fill(circle_bg)
         .align_child(Center, Center)
         .child(
             Text::new(icon)
-                .size(18.0)
+                .size(17.0)
                 .color(icon_color)
-                .font(&tokens.font_mono),
+                .font(&tokens.font_mono)
+                .tight(),
         );
 
     let content = Column::new(vec![
         Box::new(glyph_circle),
         Box::new(
             Text::new(label)
-                .size(typography::CAPTION)
+                .size(11.0)
+                .weight(if is_active {
+                    Weight::SemiBold
+                } else {
+                    Weight::Regular
+                })
                 .color(text_color)
                 .font(&tokens.font_sans)
                 .tight(),
         ),
     ])
-    .gap(4.0)
+    .gap(5.0)
     .align(Align::Center);
 
     Rectangle::new()
         .width(width)
         .height(height)
         .radius(radius::IOS_TOGGLE)
-        .fill(bg_fill)
+        .fill(if is_active {
+            tokens.surface_active
+        } else {
+            tokens.surface_elevated
+        })
         .border(1.0, border_color)
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(move |_| on_toggle())
         .child(content)
+}
+
+/// iOS Bento Split Connectivity Widget (~172×68px):
+/// Left side: illuminated 38×38 circular toggle button (toggles Wi-Fi or Bluetooth).
+/// Right side: Title + Network/Device status + chevron, tapping opens detail sheet.
+#[allow(clippy::too_many_arguments)]
+pub fn ios_connectivity_widget(
+    icon: &'static str,
+    title: &str,
+    status_text: &str,
+    is_active: bool,
+    width: f32,
+    height: f32,
+    tokens: &ThemeTokens,
+    on_toggle: impl Fn() + Send + Sync + 'static,
+    on_details: impl Fn() + Send + Sync + 'static,
+) -> Rectangle {
+    let (circle_bg, circle_icon_color) = if is_active {
+        (tokens.accent, tokens.text_on_accent)
+    } else {
+        (tokens.surface_track, tokens.text_secondary)
+    };
+
+    let toggle_btn = Rectangle::new()
+        .width(38.0)
+        .height(38.0)
+        .radius(radius::PILL)
+        .fill(circle_bg)
+        .cursor(Pointer)
+        .align_child(Center, Center)
+        .on_click(move |_| on_toggle())
+        .child(
+            Text::new(icon)
+                .size(18.0)
+                .color(circle_icon_color)
+                .font(&tokens.font_mono)
+                .tight(),
+        );
+
+    let details_col = Column::new(vec![
+        Box::new(
+            Text::new(title)
+                .size(typography::BODY)
+                .weight(Weight::SemiBold)
+                .color(tokens.text_primary)
+                .font(&tokens.font_sans),
+        ),
+        Box::new(
+            Text::new(status_text)
+                .size(typography::CAPTION)
+                .color(if is_active {
+                    tokens.text_secondary
+                } else {
+                    tokens.text_muted
+                })
+                .font(&tokens.font_sans),
+        ),
+    ])
+    .gap(1.0)
+    .align(Align::Start);
+
+    let chevron = Text::new("󰅂")
+        .size(12.0)
+        .color(tokens.text_muted)
+        .font(&tokens.font_mono)
+        .tight();
+
+    let details_row = Row::new(vec![Box::new(details_col), Box::new(chevron)])
+        .width(Parent)
+        .justify(Justify::SpaceBetween)
+        .align(Align::Center);
+
+    let details_width = width - 38.0 - 8.0 - 22.0;
+    let details_btn = Rectangle::new()
+        .width(details_width.max(80.0))
+        .height(height)
+        .cursor(Pointer)
+        .align_child(Align::Start, Align::Center)
+        .on_click(move |_| on_details())
+        .child(details_row);
+
+    let card_content = Row::new(vec![Box::new(toggle_btn), Box::new(details_btn)])
+        .width(Parent)
+        .gap(8.0)
+        .align(Align::Center);
+
+    Rectangle::new()
+        .width(width)
+        .height(height)
+        .radius(radius::IOS_WIDGET_SM)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
+        .padding(Padding {
+            top: 4.0,
+            bottom: 4.0,
+            left: 10.0,
+            right: 12.0,
+        })
+        .align_child(Align::Start, Align::Center)
+        .child(card_content)
 }
 
 /// iOS Control Center Thick Pill Slider (~44-54px height) with embedded glyph and tactile fill.
@@ -1334,55 +924,66 @@ where
     let clamped_frac = progress_frac.clamp(0.0, 1.0);
     let fill_w = (slider_width * clamped_frac).clamp(0.0, slider_width);
 
-    let (icon_color, value_str) = if is_muted {
-        (tokens.danger, "Muted".to_string())
+    let value_str = if is_muted {
+        "Muted".to_string()
     } else {
-        (tokens.accent, format!("{:.0}%", clamped_frac * 100.0))
+        format!("{:.0}%", clamped_frac * 100.0)
     };
 
-    // 1. Base track: deep elevated pill with specular highlight
+    // 1. Base track: recessed deep-violet pill track
     let bg_rect = Rectangle::new()
         .width(slider_width)
         .height(slider_height)
         .radius(radius::PILL)
         .fill(tokens.surface_track)
-        .border(1.0, Color::rgba(255, 255, 255, 14));
+        .border(1.0, tokens.border_subtle);
 
-    // 2. Dynamic progress fill: illuminated pill
+    // 2. Dynamic progress fill: illuminated high-contrast pill
     let fill_rect = Rectangle::new()
         .width(fill_w)
         .height(slider_height)
         .radius(radius::PILL)
         .fill(if is_muted {
-            tokens.danger_subtle
+            tokens.danger
         } else {
-            tokens.surface_active
+            tokens.accent
         });
+
+    let left_over_fill = clamped_frac >= 0.24;
+    let (icon_color, label_color) = if !left_over_fill {
+        (tokens.text_primary, tokens.text_primary)
+    } else if is_muted {
+        (tokens.text_on_danger, tokens.text_on_danger)
+    } else {
+        (tokens.text_on_accent, tokens.text_on_accent)
+    };
 
     // 3. Embedded glyph icon
     let icon_element: Box<dyn Widget> = if let Some(on_click) = on_icon_click {
         Box::new(
             Rectangle::new()
-                .width(32.0)
-                .height(32.0)
+                .width(28.0)
+                .height(28.0)
                 .radius(radius::PILL)
-                .fill(Color::rgba(0, 0, 0, 20))
+                .fill(Color::rgba(0, 0, 0, 42))
                 .cursor(Pointer)
                 .align_child(Center, Center)
                 .on_click(move |_| on_click())
                 .child(
                     Text::new(icon)
-                        .size(17.0)
+                        .size(15.0)
                         .color(icon_color)
-                        .font(&tokens.font_mono),
+                        .font(&tokens.font_mono)
+                        .tight(),
                 ),
         )
     } else {
         Box::new(
             Text::new(icon)
-                .size(17.0)
+                .size(15.0)
                 .color(icon_color)
-                .font(&tokens.font_mono),
+                .font(&tokens.font_mono)
+                .tight(),
         )
     };
 
@@ -1391,21 +992,36 @@ where
         Box::new(
             Text::new(label)
                 .size(typography::SECONDARY)
-                .color(tokens.text_primary)
+                .weight(Weight::SemiBold)
+                .color(label_color)
                 .font(&tokens.font_sans),
         ),
     ])
     .gap(spacing::GAP_SM)
     .align(Align::Center);
 
-    let value_tag = Text::new(value_str)
-        .size(typography::BADGE)
-        .color(if is_muted {
-            tokens.danger
-        } else {
-            tokens.text_secondary
-        })
-        .font(&tokens.font_mono);
+    // Value badge wrapped in a crisp dark translucent pill so contrast stays >10:1
+    // across 0%..100% and never splits half-on-fill half-on-track.
+    let badge_w = (value_str.chars().count() as f32 * 7.5 + 16.0).max(46.0);
+    let value_tag = Rectangle::new()
+        .width(badge_w)
+        .height(22.0)
+        .radius(radius::PILL)
+        .fill(Color::rgba(20, 14, 41, 215))
+        .border(1.0, tokens.border_subtle)
+        .align_child(Center, Center)
+        .child(
+            Text::new(value_str)
+                .size(typography::BADGE)
+                .weight(Weight::SemiBold)
+                .color(if is_muted {
+                    tokens.danger
+                } else {
+                    tokens.text_primary
+                })
+                .font(&tokens.font_mono)
+                .tight(),
+        );
 
     let overlay_row = Row::new(vec![Box::new(label_row), Box::new(value_tag)])
         .width(Parent)
@@ -1419,7 +1035,7 @@ where
             top: 0.0,
             bottom: 0.0,
             left: 12.0,
-            right: 14.0,
+            right: 12.0,
         })
         .align_child(Align::Start, Align::Center)
         .child(overlay_row);
@@ -1442,61 +1058,6 @@ where
         .child(Stack::new(layers))
 }
 
-/// iOS Dynamic Island / Capsule Pill widget.
-/// Floating morphic pill displaying contextual indicators (e.g., active recording, audio playing, battery charging).
-pub fn ios_dynamic_capsule(
-    icon: &str,
-    title: &str,
-    subtitle: Option<&str>,
-    accent_color: Color,
-    tokens: &ThemeTokens,
-) -> Rectangle {
-    let glyph = Text::new(icon)
-        .size(typography::BODY)
-        .color(accent_color)
-        .font(&tokens.font_mono);
-
-    let mut text_elements: Vec<Box<dyn Widget>> = vec![Box::new(
-        Text::new(title)
-            .size(typography::BADGE)
-            .color(tokens.text_primary)
-            .font(&tokens.font_sans),
-    )];
-
-    if let Some(sub) = subtitle {
-        text_elements.push(Box::new(
-            Text::new(sub)
-                .size(typography::CAPTION)
-                .color(tokens.text_muted)
-                .font(&tokens.font_sans),
-        ));
-    }
-
-    let text_stack = Column::new(text_elements).gap(1.0).align(Align::Start);
-
-    let row = Row::new(vec![Box::new(glyph), Box::new(text_stack)])
-        .gap(spacing::GAP_SM)
-        .align(Align::Center);
-
-    let pill_w = 190.0;
-    let pill_h = 36.0;
-
-    Rectangle::new()
-        .width(pill_w)
-        .height(pill_h)
-        .radius(radius::IOS_CAPSULE)
-        .fill(Color::rgba(0, 0, 0, 180))
-        .border(1.0, Color::rgba(255, 255, 255, 25))
-        .padding(Padding {
-            top: 4.0,
-            bottom: 4.0,
-            left: 12.0,
-            right: 14.0,
-        })
-        .align_child(Align::Start, Align::Center)
-        .child(row)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1504,19 +1065,6 @@ mod tests {
 
     fn test_tokens() -> ThemeTokens {
         ThemeTokens::from_manifest(&ShellManifest::default())
-    }
-
-    #[test]
-    fn test_toggle_switch_renders() {
-        let tokens = test_tokens();
-        let _sw_on = toggle_switch(true, |_| {}, &tokens);
-        let _sw_off = toggle_switch(false, |_| {}, &tokens);
-    }
-
-    #[test]
-    fn test_toggle_switch_card_renders() {
-        let tokens = test_tokens();
-        let _card = toggle_switch_card(true, "󰤨", "Wi-Fi", Some("Connected"), |_| {}, &tokens);
     }
 
     #[test]
@@ -1533,61 +1081,6 @@ mod tests {
             |_| {},
             None::<fn()>,
         );
-    }
-
-    #[test]
-    fn test_info_badge_renders() {
-        let tokens = test_tokens();
-        let _dot = info_badge(None, true, tokens.accent, &tokens);
-        let _num = info_badge(Some(5), false, tokens.accent, &tokens);
-        let _overflow = info_badge(Some(120), false, tokens.accent, &tokens);
-    }
-
-    #[test]
-    fn test_info_bar_renders() {
-        let tokens = test_tokens();
-        let _bar = info_bar(
-            InfoBarSeverity::Success,
-            "Connected",
-            "Network active",
-            Some(Box::new(|| {})),
-            &tokens,
-        );
-    }
-
-    #[test]
-    fn test_pips_pager_renders() {
-        let tokens = test_tokens();
-        let _pager = pips_pager(5, 2, |_| {}, &tokens);
-    }
-
-    #[test]
-    fn test_expander_renders() {
-        let tokens = test_tokens();
-        let content = Box::new(Rectangle::new().width(100.0).height(20.0));
-        let _exp_closed = expander(
-            "󰂯",
-            "Bluetooth",
-            Some("Enabled"),
-            false,
-            None,
-            content,
-            || {},
-            &tokens,
-        );
-    }
-
-    #[test]
-    fn test_acrylic_card_renders() {
-        let tokens = test_tokens();
-        let content = Box::new(Text::new("Test").size(12.0).color(tokens.text_primary));
-        let _card = acrylic_card(200.0, 100.0, content, &tokens);
-    }
-
-    #[test]
-    fn test_split_button_renders() {
-        let tokens = test_tokens();
-        let _split = split_button("Wi-Fi", Some("󰤨"), || {}, || {}, &tokens);
     }
 
     #[test]
@@ -1613,28 +1106,37 @@ mod tests {
     }
 
     #[test]
-    fn test_ios_widget_medium_renders() {
-        let tokens = test_tokens();
-        let body = Text::new("Song Title")
-            .size(12.0)
-            .color(tokens.text_primary);
-        let trailing = Box::new(Text::new("󰐊").size(14.0).color(tokens.accent));
-        let _md = ios_widget_medium(
-            "Now Playing",
-            "󰎆",
-            body,
-            Some(trailing),
-            328.0,
-            156.0,
-            &tokens,
-        );
-    }
-
-    #[test]
     fn test_ios_control_toggle_renders() {
         let tokens = test_tokens();
         let _toggle_on = ios_control_toggle("󰤨", "Wi-Fi", true, 72.0, 72.0, &tokens, || {});
         let _toggle_off = ios_control_toggle("󰤭", "Wi-Fi", false, 72.0, 72.0, &tokens, || {});
+    }
+
+    #[test]
+    fn test_ios_connectivity_widget_renders() {
+        let tokens = test_tokens();
+        let _conn_on = ios_connectivity_widget(
+            "󰤨",
+            "Wi-Fi",
+            "Connected",
+            true,
+            172.0,
+            68.0,
+            &tokens,
+            || {},
+            || {},
+        );
+        let _conn_off = ios_connectivity_widget(
+            "󰤭",
+            "Wi-Fi",
+            "Off",
+            false,
+            172.0,
+            68.0,
+            &tokens,
+            || {},
+            || {},
+        );
     }
 
     #[test]
@@ -1650,18 +1152,6 @@ mod tests {
             &tokens,
             |_| {},
             Some(|| {}),
-        );
-    }
-
-    #[test]
-    fn test_ios_dynamic_capsule_renders() {
-        let tokens = test_tokens();
-        let _capsule = ios_dynamic_capsule(
-            "󰑋",
-            "Recording Screen",
-            Some("00:42"),
-            tokens.danger,
-            &tokens,
         );
     }
 }

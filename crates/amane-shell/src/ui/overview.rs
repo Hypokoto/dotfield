@@ -2,7 +2,7 @@
 //! Provides a fullscreen translucent overview mapping Niri workspaces and spatial columns.
 //! Features 150ms cubic ease-out animation and 0 Hz frame parking at rest.
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use amane::{
     Align, Center, Column, Full, Key, Keyboard, Layer, LayerWindow, OutputTarget, Padding, Parent,
@@ -24,7 +24,6 @@ const WORKSPACES: [&str; 5] = [
 
 pub struct OverviewService {
     pub open: bool,
-    pub open_time: Option<Instant>,
     pub selected_window_idx: usize,
 }
 
@@ -32,7 +31,6 @@ impl Service for OverviewService {
     fn new() -> Self {
         Self {
             open: false,
-            open_time: None,
             selected_window_idx: 0,
         }
     }
@@ -46,11 +44,6 @@ pub fn toggle() {
     let is_open = {
         let mut overview = OverviewService::write();
         overview.open = !overview.open;
-        overview.open_time = if overview.open {
-            Some(Instant::now())
-        } else {
-            None
-        };
         overview.selected_window_idx = 0;
         overview.open
     };
@@ -65,7 +58,6 @@ pub fn toggle() {
 pub fn close() {
     let mut overview = OverviewService::write();
     overview.open = false;
-    overview.open_time = None;
     overview.selected_window_idx = 0;
 }
 

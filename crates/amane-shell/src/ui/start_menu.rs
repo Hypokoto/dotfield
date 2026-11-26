@@ -11,12 +11,12 @@
 //! - Full Keyboard Accessibility (Arrows, Enter, Escape, PageUp, PageDown)
 
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use amane::{
     Align, Apps, Button, Center, Color, Column, DesktopApp, Horizontal, Image, Justify, Key,
     Keyboard, Layer, LayerWindow, Margin, OutputTarget, Padding, Parent, Pointer, Rectangle, Row,
-    Service, Text, TextInput, Vertical, Widget, Zone,
+    Service, Text, TextInput, Widget, Zone,
 };
 
 use crate::config::ConfigService;
@@ -35,7 +35,6 @@ pub enum StartMenuViewMode {
 
 pub struct StartMenuService {
     pub open: bool,
-    pub open_time: Option<Instant>,
     pub query: String,
     pub selected: usize,
     pub scroll_row: usize,
@@ -47,7 +46,6 @@ impl Service for StartMenuService {
     fn new() -> Self {
         Self {
             open: false,
-            open_time: None,
             query: String::new(),
             selected: 0,
             scroll_row: 0,
@@ -135,11 +133,6 @@ pub fn toggle() {
     let is_open = {
         let mut menu = StartMenuService::write();
         menu.open = !menu.open;
-        menu.open_time = if menu.open {
-            Some(Instant::now())
-        } else {
-            None
-        };
         menu.query.clear();
         menu.selected = 0;
         menu.scroll_row = 0;
@@ -158,7 +151,6 @@ pub fn toggle() {
 pub fn close() {
     let mut menu = StartMenuService::write();
     menu.open = false;
-    menu.open_time = None;
     menu.query.clear();
     menu.selected = 0;
     menu.scroll_row = 0;
@@ -168,7 +160,6 @@ pub fn close() {
 pub fn open_with_query(initial_query: &str) {
     let mut menu = StartMenuService::write();
     menu.open = true;
-    menu.open_time = Some(Instant::now());
     menu.query = initial_query.to_string();
     menu.selected = 0;
     menu.scroll_row = 0;
@@ -365,7 +356,9 @@ pub fn start_menu_overlay() -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
     let menu = StartMenuService::read();
 
-    if !menu.open {
+    let is_open = menu.open;
+    let motion = crate::ui::animation::panel_motion("start_menu", is_open);
+    if !motion.visible {
         return LayerWindow::new()
             .width(1.0)
             .height(1.0)
@@ -378,15 +371,6 @@ pub fn start_menu_overlay() -> LayerWindow {
 
     let tokens = ThemeTokens::from_manifest(&manifest);
     let font = &tokens.font_family;
-
-    let dock_height = if manifest.bar.height == 34.0
-        || manifest.bar.height == 32.0
-        || manifest.bar.position == "bottom"
-    {
-        48.0
-    } else {
-        manifest.bar.height as f32
-    };
 
     // 1. Search Bar with instant focus
     let search_input = TextInput::new("start-menu-search")
@@ -1029,39 +1013,55 @@ pub fn start_menu_overlay() -> LayerWindow {
             Box::new(
                 Rectangle::new()
                     .width(Parent)
-                    .height(268.0)
+                    .height(56.0)
                     .radius(radius::MD)
                     .fill(tokens.surface_elevated)
                     .border(1.0, tokens.border_subtle)
-                    .align_child(Center, Center)
+                    .padding(Padding {
+                        top: 8.0,
+                        bottom: 8.0,
+                        left: 14.0,
+                        right: 12.0,
+                    })
+                    .align_child(Align::Start, Center)
                     .child(
-                        Column::new(vec![
+                        Row::new(vec![
                             Box::new(
-                                Text::new("󰤱")
-                                    .size(32.0)
-                                    .color(tokens.accent)
-                                    .font(&tokens.font_mono),
-                            ),
-                            Box::new(
-                                Text::new("No pinned applications")
-                                    .size(typography::BODY)
-                                    .color(tokens.text_primary)
-                                    .font(&tokens.font_sans),
-                            ),
-                            Box::new(
-                                Text::new(
-                                    "Right-click any app or click 󰤱 in 'All apps' to pin it here",
-                                )
-                                .size(typography::CAPTION)
-                                .color(tokens.text_secondary)
-                                .font(&tokens.font_sans),
+                                Row::new(vec![
+                                    Box::new(
+                                        Text::new("󰤱")
+                                            .size(18.0)
+                                            .color(tokens.accent)
+                                            .font(&tokens.font_mono),
+                                    ),
+                                    Box::new(
+                                        Column::new(vec![
+                                            Box::new(
+                                                Text::new("No pinned applications")
+                                                    .size(typography::SECONDARY)
+                                                    .color(tokens.text_primary)
+                                                    .font(&tokens.font_sans),
+                                            ),
+                                            Box::new(
+                                                Text::new("Right-click any app in 'All apps' to pin it here")
+                                                    .size(typography::CAPTION)
+                                                    .color(tokens.text_muted)
+                                                    .font(&tokens.font_sans),
+                                            ),
+                                        ])
+                                        .align(Align::Start)
+                                        .gap(1.0),
+                                    ),
+                                ])
+                                .gap(spacing::GAP_SM)
+                                .align(Align::Center),
                             ),
                             Box::new(
                                 Rectangle::new()
-                                    .width(170.0)
+                                    .width(150.0)
                                     .height(30.0)
                                     .radius(radius::PILL)
-                                    .fill(tokens.surface_active)
+                                    .fill(tokens.accent_tint)
                                     .border(1.0, tokens.border_focus)
                                     .cursor(Pointer)
                                     .align_child(Center, Center)
@@ -1073,14 +1073,15 @@ pub fn start_menu_overlay() -> LayerWindow {
                                     })
                                     .child(
                                         Text::new("Browse All Apps 󰅂")
-                                            .size(typography::SECONDARY)
+                                            .size(typography::CAPTION)
                                             .color(tokens.text_primary)
                                             .font(&tokens.font_sans),
                                     ),
                             ),
                         ])
-                        .align(Center)
-                        .gap(spacing::GAP_SM),
+                        .width(Parent)
+                        .justify(Justify::SpaceBetween)
+                        .align(Align::Center),
                     ),
             )
         } else {
@@ -1398,19 +1399,39 @@ pub fn start_menu_overlay() -> LayerWindow {
         .height(Parent)
         .justify(Justify::SpaceBetween);
 
-    // 640px width x 604px height wrapped in Clay Modal Frame
-    let container =
-        crate::ui::components::clay_modal_frame(640.0, 604.0, start_menu_content, &tokens);
+    let is_empty_pinned = query_raw.is_empty()
+        && current_view == StartMenuViewMode::Pinned
+        && menu.pinned_apps.is_empty();
+    let panel_height = if is_empty_pinned { 392.0 } else { 604.0 };
 
-    let bottom_margin = (dock_height + 10.0) as i32;
+    let anchor_vert = crate::ui::bar::bar_anchor_vertical(&manifest);
+    let is_top_bar = anchor_vert == amane::Vertical::Top;
+    let container = crate::ui::components::bar_connected_panel(
+        640.0,
+        panel_height,
+        is_top_bar,
+        motion,
+        Padding {
+            top: spacing::PAD_MD,
+            bottom: spacing::PAD_MD,
+            left: spacing::PAD_MD,
+            right: spacing::PAD_MD,
+        },
+        tokens.border_subtle,
+        start_menu_content,
+        &tokens,
+    );
+
+    let (win_w, win_h) = crate::ui::components::bar_connected_window_size(640.0, panel_height);
+    let (top_margin, bottom_margin) = crate::ui::bar::bar_edge_margins(&manifest, 10.0);
 
     LayerWindow::new()
-        .width(640.0)
-        .height(604.0)
+        .width(win_w)
+        .height(win_h)
         .anchor_horizontal(Horizontal::Middle)
-        .anchor_vertical(Vertical::Bottom)
+        .anchor_vertical(anchor_vert)
         .margin(Margin {
-            top: 12,
+            top: top_margin,
             right: 0,
             bottom: bottom_margin,
             left: 0,
@@ -1419,7 +1440,17 @@ pub fn start_menu_overlay() -> LayerWindow {
         .target_output(OutputTarget::Active)
         .namespace("dotfield-shell-start-menu")
         .space(Zone::Ignore)
-        .keyboard(Keyboard::Exclusive)
+        .keyboard(if is_open {
+            Keyboard::Exclusive
+        } else {
+            Keyboard::None
+        })
+        .input_region(crate::ui::components::bar_connected_input_region(
+            640.0,
+            panel_height,
+            is_top_bar,
+        ))
+        .visible(motion.visible)
         .on_key(|key| match key {
             Key::Escape => {
                 let mut menu = StartMenuService::write();
@@ -1551,7 +1582,6 @@ pub fn start_menu_overlay() -> LayerWindow {
             }
             _ => {}
         })
-        .visible(true)
         .child(container)
 }
 
@@ -1691,7 +1721,7 @@ where
         (tokens.surface_elevated, tokens.border_subtle)
     };
     let icon_col = if is_shutdown {
-        tokens.text_primary
+        tokens.text_on_danger
     } else {
         color
     };

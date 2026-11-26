@@ -8,7 +8,10 @@ use std::sync::{Arc, LazyLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use amane::Service;
 use arc_swap::ArcSwap;
+
+use std::collections::VecDeque;
 
 static RUNNING: AtomicBool = AtomicBool::new(false);
 static TELEMETRY_STATE: LazyLock<ArcSwap<TelemetrySnapshot>> =
@@ -24,12 +27,15 @@ pub struct TelemetrySnapshot {
     pub battery_percent: Option<u8>,
     pub battery_charging: bool,
     pub battery_present: bool,
+    pub psi_available: bool,
     pub cpu_stalled: bool,
     pub mem_stalled: bool,
     pub culprit_pid: Option<i32>,
     pub culprit_name: Option<String>,
     pub culprit_delta_percent: f32,
     pub anomaly_active: bool,
+    pub cpu_history: VecDeque<u8>,
+    pub mem_history: VecDeque<u8>,
     pub timestamp: Instant,
 }
 
@@ -49,12 +55,15 @@ impl TelemetrySnapshot {
             battery_percent: None,
             battery_charging: false,
             battery_present: false,
+            psi_available: false,
             cpu_stalled: false,
             mem_stalled: false,
             culprit_pid: None,
             culprit_name: None,
             culprit_delta_percent: 0.0,
             anomaly_active: false,
+            cpu_history: VecDeque::with_capacity(60),
+            mem_history: VecDeque::with_capacity(60),
             timestamp: Instant::now(),
         }
     }
@@ -81,12 +90,42 @@ impl TelemetrySnapshot {
     }
 }
 
+pub struct TelemetrySignal;
+
+impl amane::Service for TelemetrySignal {
+    fn new() -> Self {
+        Self
+    }
+
+    fn listen() {}
+}
+
 pub struct TelemetryService;
 
 impl TelemetryService {
     /// Read latest immutable telemetry snapshot lock-free.
     pub fn read() -> Arc<TelemetrySnapshot> {
         TELEMETRY_STATE.load_full()
+    }
+
+    /// Helper returning CPU history as f32 slices for sparkline rendering.
+    pub fn cpu_history() -> Vec<f32> {
+        TELEMETRY_STATE
+            .load()
+            .cpu_history
+            .iter()
+            .map(|&v| v as f32)
+            .collect()
+    }
+
+    /// Helper returning Mem history as f32 slices for sparkline rendering.
+    pub fn mem_history() -> Vec<f32> {
+        TELEMETRY_STATE
+            .load()
+            .mem_history
+            .iter()
+            .map(|&v| v as f32)
+            .collect()
     }
 
     /// Spawns background telemetry poller and Linux PSI sentinel.
@@ -153,10 +192,9 @@ impl ProcfsReader {
     }
 
     /// Zero-allocation parse of `/proc/stat` for aggregate CPU percentage.
-    fn sample_cpu(&mut self) -> u8 {
-        let Some(file) = &self.stat_file else {
-            return 0;
-        };
+    /// Returns `None` on the very first baseline sample so dummy 0% values don't pollute history.
+    fn sample_cpu(&mut self) -> Option<u8> {
+        let file = self.stat_file.as_ref()?;
 
         let mut buf = [0u8; 4096];
         let bytes_read = unsafe {
@@ -168,18 +206,16 @@ impl ProcfsReader {
             )
         };
         if bytes_read <= 0 {
-            return 0;
+            return None;
         }
 
         let slice = &buf[..bytes_read as usize];
-        let Some((busy, total)) = parse_proc_stat_cpu_line(slice) else {
-            return 0;
-        };
+        let (busy, total) = parse_proc_stat_cpu_line(slice)?;
 
         if self.prev_total_ticks == 0 {
             self.prev_busy_ticks = busy;
             self.prev_total_ticks = total;
-            return 0;
+            return None;
         }
 
         let busy_delta = busy.saturating_sub(self.prev_busy_ticks);
@@ -190,7 +226,6 @@ impl ProcfsReader {
         (busy_delta * 100)
             .checked_div(total_delta)
             .map(|v| v.clamp(0, 100) as u8)
-            .unwrap_or(0)
     }
 
     /// Zero-allocation parse of `/proc/meminfo` for memory percentage and MB usage.
@@ -564,9 +599,109 @@ fn find_top_memory_culprit() -> (Option<i32>, Option<String>, f32) {
     (best_pid, best_name, rss_mb)
 }
 
+/// Reads the parent process ID (PPID) of a process from `/proc/[pid]/stat`.
+pub fn get_process_ppid(pid: i32) -> Option<i32> {
+    let stat_path = format!("/proc/{pid}/stat");
+    let mut buf = [0u8; 512];
+    let mut file = fs::File::open(&stat_path).ok()?;
+    let bytes_read = file.read(&mut buf).ok()?;
+    if bytes_read == 0 {
+        return None;
+    }
+    let data = &buf[..bytes_read];
+    let close_paren = data.iter().rposition(|&b| b == b')')?;
+    let after_paren = &data[close_paren + 1..];
+    let mut fields = after_paren.split(|&b| b == b' ').filter(|s| !s.is_empty());
+    let _state = fields.next()?;
+    let ppid_bytes = fields.next()?;
+    parse_u64_from_ascii(ppid_bytes).map(|p| p as i32)
+}
+
+/// Resolves a culprit PID or process name against Niri's open windows using ancestor PPID traversal (depth <= 8)
+/// or case-insensitive app_id / title matching. Returns matching Niri window ID if found.
+pub fn find_window_for_culprit(
+    culprit_pid: Option<i32>,
+    culprit_name: Option<&str>,
+) -> Option<u64> {
+    let windows = crate::services::niri::NiriService::cached_windows();
+    if windows.is_empty() {
+        return None;
+    }
+
+    // 1. Ancestor PPID matching up to depth 8
+    if let Some(initial_pid) = culprit_pid {
+        let mut curr_pid = initial_pid;
+        for _ in 0..8 {
+            if curr_pid <= 1 {
+                break;
+            }
+            if let Some(win) = windows.iter().find(|w| w.pid == Some(curr_pid)) {
+                return Some(win.id);
+            }
+            match get_process_ppid(curr_pid) {
+                Some(ppid) if ppid != curr_pid => curr_pid = ppid,
+                _ => break,
+            }
+        }
+    }
+
+    // 2. Case-insensitive substring match against app_id or title
+    if let Some(name) = culprit_name {
+        let name_lower = name.to_lowercase();
+        if let Some(win) = windows.iter().find(|w| {
+            let app_matches = w
+                .app_id
+                .as_ref()
+                .is_some_and(|id| id.to_lowercase().contains(&name_lower));
+            let title_matches = w
+                .title
+                .as_ref()
+                .is_some_and(|t| t.to_lowercase().contains(&name_lower));
+            app_matches || title_matches
+        }) {
+            return Some(win.id);
+        }
+    }
+
+    None
+}
+
 /// Main background telemetry worker loop.
 fn telemetry_worker_loop() {
     let mut reader = ProcfsReader::new();
+    let psi_available = reader.psi_cpu_file.is_some() || reader.psi_mem_file.is_some();
+
+    // 1. Initial sample on startup so ProcfsReader has baseline ticks and publishes immediately
+    let initial_cpu = reader.sample_cpu().unwrap_or(0);
+    let (initial_mem, initial_used_mb, initial_total_mb) = reader.sample_memory();
+    let (initial_bat_pct, initial_bat_charging) = reader.sample_battery();
+
+    let mut cpu_history: VecDeque<u8> = VecDeque::with_capacity(60);
+    let mut mem_history: VecDeque<u8> = VecDeque::with_capacity(60);
+    cpu_history.push_back(initial_cpu);
+    mem_history.push_back(initial_mem);
+
+    let initial_snapshot = TelemetrySnapshot {
+        cpu_percent: initial_cpu,
+        mem_percent: initial_mem,
+        mem_used_mb: initial_used_mb,
+        mem_total_mb: initial_total_mb,
+        battery_percent: initial_bat_pct,
+        battery_charging: initial_bat_charging,
+        battery_present: reader.battery_present,
+        psi_available,
+        cpu_stalled: false,
+        mem_stalled: false,
+        culprit_pid: None,
+        culprit_name: None,
+        culprit_delta_percent: 0.0,
+        anomaly_active: false,
+        cpu_history: cpu_history.clone(),
+        mem_history: mem_history.clone(),
+        timestamp: Instant::now(),
+    };
+    TELEMETRY_STATE.store(Arc::new(initial_snapshot));
+    let mut last_history_push = Instant::now();
 
     loop {
         // Construct poll fds for PSI events
@@ -591,7 +726,7 @@ fn telemetry_worker_loop() {
             },
         ];
 
-        let poll_count = if reader.psi_cpu_file.is_some() || reader.psi_mem_file.is_some() {
+        let poll_count = if psi_available {
             // Wait up to 5000ms for PSI stall triggers
             unsafe { libc::poll(poll_fds.as_mut_ptr(), 2, 5000) }
         } else {
@@ -602,9 +737,27 @@ fn telemetry_worker_loop() {
         let cpu_stalled = poll_count > 0 && (poll_fds[0].revents & libc::POLLPRI != 0);
         let mem_stalled = poll_count > 0 && (poll_fds[1].revents & libc::POLLPRI != 0);
 
-        let cpu_percent = reader.sample_cpu();
+        let cpu_sample = reader.sample_cpu();
+        let cpu_percent = cpu_sample.unwrap_or_else(|| TELEMETRY_STATE.load().cpu_percent);
         let (mem_percent, mem_used_mb, mem_total_mb) = reader.sample_memory();
         let (battery_percent, battery_charging) = reader.sample_battery();
+
+        let mut pushed_history = false;
+        let now = Instant::now();
+        if now.duration_since(last_history_push) >= Duration::from_secs(5) && cpu_sample.is_some() {
+            if cpu_history.len() >= 60 {
+                cpu_history.pop_front();
+            }
+            cpu_history.push_back(cpu_percent);
+
+            if mem_history.len() >= 60 {
+                mem_history.pop_front();
+            }
+            mem_history.push_back(mem_percent);
+
+            last_history_push = now;
+            pushed_history = true;
+        }
 
         let tripped_now = cpu_percent >= 85
             || mem_percent >= 80
@@ -614,7 +767,6 @@ fn telemetry_worker_loop() {
                 && !battery_charging
                 && battery_percent.unwrap_or(100) <= 20);
 
-        let now = Instant::now();
         if tripped_now {
             if !reader.anomaly_active {
                 reader.anomaly_active = true;
@@ -663,12 +815,15 @@ fn telemetry_worker_loop() {
             battery_percent,
             battery_charging,
             battery_present: reader.battery_present,
+            psi_available,
             cpu_stalled,
             mem_stalled,
             culprit_pid,
             culprit_name,
             culprit_delta_percent,
             anomaly_active: reader.anomaly_active,
+            cpu_history: cpu_history.clone(),
+            mem_history: mem_history.clone(),
             timestamp: Instant::now(),
         };
 
@@ -684,9 +839,11 @@ fn telemetry_worker_loop() {
                 || current.culprit_pid != snapshot.culprit_pid
         };
 
-        if changed {
+        if changed
+            || (pushed_history && crate::ui::control_center::ControlCenterService::read().is_open())
+        {
             TELEMETRY_STATE.store(Arc::new(snapshot));
-            // Wake Amane layer shell if an anomalous state tripped or cleared
+            TelemetrySignal::write();
             amane::request_frame();
         }
     }
@@ -747,5 +904,17 @@ mod tests {
 
         snap.battery_percent = Some(8);
         assert!(snap.is_critical());
+    }
+
+    #[test]
+    fn test_telemetry_get_process_ppid_from_data() {
+        let sample = b"4567 (firefox) S 1234 4567 1000 0 -1 4194304 100 0 0 0 250 50 10 20";
+        let close_paren = sample.iter().rposition(|&b| b == b')').unwrap();
+        let after_paren = &sample[close_paren + 1..];
+        let mut fields = after_paren.split(|&b| b == b' ').filter(|s| !s.is_empty());
+        let _state = fields.next().unwrap();
+        let ppid_bytes = fields.next().unwrap();
+        let ppid = parse_u64_from_ascii(ppid_bytes).map(|p| p as i32);
+        assert_eq!(ppid, Some(1234));
     }
 }

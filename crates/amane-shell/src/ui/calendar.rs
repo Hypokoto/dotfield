@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use amane::{
     Align, Center, Color, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin,
-    OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
+    OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Widget, Zone,
 };
 
 use crate::config::ConfigService;
@@ -105,8 +105,9 @@ pub fn calendar_overlay() -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
     let cal = CalendarService::read();
 
-    let is_visible = cal.open;
-    if !is_visible {
+    let is_open = cal.open;
+    let motion = crate::ui::animation::panel_motion("calendar", is_open);
+    if !motion.visible {
         return LayerWindow::new()
             .width(1.0)
             .height(1.0)
@@ -240,8 +241,8 @@ pub fn calendar_overlay() -> LayerWindow {
                 .width(58.0)
                 .height(26.0)
                 .radius(radius::PILL)
-                .fill(tokens.surface_elevated)
-                .border(1.0, tokens.border_subtle)
+                .fill(tokens.accent_tint)
+                .border(1.0, tokens.border_focus)
                 .cursor(Pointer)
                 .align_child(Center, Center)
                 .on_click(|_| {
@@ -270,7 +271,7 @@ pub fn calendar_overlay() -> LayerWindow {
             .child(
                 Text::new(label)
                     .size(typography::BADGE)
-                    .color(tokens.accent)
+                    .color(tokens.text_secondary)
                     .font(&tokens.font_sans),
             );
         weekday_pills.push(Box::new(pill));
@@ -317,7 +318,7 @@ pub fn calendar_overlay() -> LayerWindow {
             let is_selected = is_current_month && cal.selected_day == Some(day_num);
 
             let (cell_fill, cell_border, text_color) = if is_today {
-                (tokens.accent, tokens.accent, Color::WHITE)
+                (tokens.accent, tokens.accent, tokens.text_on_accent)
             } else if is_selected {
                 (
                     tokens.surface_active,
@@ -380,32 +381,49 @@ pub fn calendar_overlay() -> LayerWindow {
     .width(Parent)
     .gap(spacing::GAP_MD);
 
-    let calendar_panel =
-        crate::ui::components::clay_modal_frame(330.0, 360.0, calendar_content, &tokens);
+    let is_top_bar = true;
+    let calendar_panel = crate::ui::components::bar_connected_panel(
+        330.0,
+        360.0,
+        is_top_bar,
+        motion,
+        Padding {
+            top: spacing::PAD_MD,
+            bottom: spacing::PAD_MD,
+            left: spacing::PAD_MD,
+            right: spacing::PAD_MD,
+        },
+        tokens.border_subtle,
+        calendar_content,
+        &tokens,
+    );
 
-    let (dock_height, _, _) = crate::ui::bar::bar_layer_properties(&manifest);
-    let bottom_margin = (dock_height + 10.0) as i32;
+    let (win_w, win_h) = crate::ui::components::bar_connected_window_size(330.0, 360.0);
+    let top_margin = (crate::ui::bar::TOP_ISLAND_HEIGHT + 6.0 + 10.0).round() as i32;
 
     LayerWindow::new()
-        .width(330.0)
-        .height(360.0)
+        .width(win_w)
+        .height(win_h)
         .target_output(OutputTarget::Active)
-        .anchor_vertical(Vertical::Bottom)
-        .anchor_horizontal(Horizontal::Right)
+        .anchor_vertical(amane::Vertical::Top)
+        .anchor_horizontal(Horizontal::Middle)
         .margin(Margin {
-            top: 0,
-            right: 12,
-            bottom: bottom_margin,
+            top: top_margin,
+            right: 0,
+            bottom: 0,
             left: 0,
         })
         .layer(Layer::Overlay)
         .space(Zone::Ignore)
-        .keyboard(if is_visible {
+        .keyboard(if is_open {
             Keyboard::OnDemand
         } else {
             Keyboard::None
         })
-        .visible(is_visible)
+        .input_region(crate::ui::components::bar_connected_input_region(
+            330.0, 360.0, is_top_bar,
+        ))
+        .visible(motion.visible)
         .namespace("dotfield-shell-calendar")
         .on_key(|key| match key {
             Key::Escape | Key::Character('q') | Key::Character('Q') => {

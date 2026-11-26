@@ -2,7 +2,7 @@ use std::process::Command;
 use std::time::Duration;
 
 use amane::{
-    Align, Center, Color, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin,
+    Align, Center, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin,
     OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
 };
 
@@ -170,8 +170,9 @@ pub fn powermenu_overlay() -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
     let menu = PowermenuService::read();
 
-    let is_visible = menu.open;
-    if !is_visible {
+    let is_open = menu.open;
+    let motion = crate::ui::animation::panel_motion("powermenu", is_open);
+    if !motion.visible {
         return LayerWindow::new()
             .width(1.0)
             .height(1.0)
@@ -210,8 +211,8 @@ pub fn powermenu_overlay() -> LayerWindow {
                 (
                     tokens.danger,
                     tokens.border_danger,
-                    Color::WHITE,
-                    Color::WHITE,
+                    tokens.text_on_danger,
+                    tokens.text_on_danger,
                 )
             } else {
                 (
@@ -268,7 +269,8 @@ pub fn powermenu_overlay() -> LayerWindow {
                         Text::new(action.icon)
                             .size(28.0)
                             .color(icon_color)
-                            .font(&tokens.font_mono),
+                            .font(&tokens.font_mono)
+                            .tight(),
                     ),
                     Box::new(
                         Text::new(action.title)
@@ -339,6 +341,7 @@ pub fn powermenu_overlay() -> LayerWindow {
     .gap(12.0);
 
     let dialog = crate::ui::components::clay_modal_frame(590.0, 228.0, dialog_content, &tokens);
+    let dialog = motion.apply_centered_modal(dialog);
 
     LayerWindow::new()
         .width(590.0)
@@ -354,12 +357,12 @@ pub fn powermenu_overlay() -> LayerWindow {
         })
         .layer(Layer::Overlay)
         .space(Zone::Ignore)
-        .keyboard(if is_visible {
+        .keyboard(if is_open {
             Keyboard::Exclusive
         } else {
             Keyboard::None
         })
-        .visible(is_visible)
+        .visible(motion.visible)
         .namespace("dotfield-shell-powermenu")
         .on_key(|key| match key {
             Key::Escape | Key::Character('q') | Key::Character('Q') => {

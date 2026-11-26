@@ -120,3 +120,24 @@ flowchart LR
 - [x] **Fast-Path IPC Protocols & Zero-Poll Power Invariants**:
   - Fast-path 1-byte opcodes for `start-menu` (`0x15`), `overview` (`0x17`), `control-center` (`0x04`), with legacy `widgets` (`0x0F`) and `action-center` (`0x16`) aliased cleanly to Control Manager.
   - Strict 0 Hz Wayland frame request parking at rest across all desktop surfaces.
+
+---
+
+## Phase 17: Bento Widgets Architecture & Cyber Synthwave Unification
+*Goal: Reclaim `OP_WIDGETS = 0x0F` with a dedicated left-anchored `Layer::Overlay` Widget Board (`380px`), unify all shell surfaces onto canonical Cyber Synthwave (`PALETTE.md`) with WCAG-compliant contrast tokens, and deliver FocusShield sprint presets and 5m telemetry sparklines with 0 Hz parking.*
+
+- [ ] **Cyber Synthwave Design System & Contrast Guard**:
+  - Align `shell.toml`, `config.rs`, and `tokens.rs` with `PALETTE.md` tokens (`#000000` / `#140e29` / `#251b4a` / `#04C5F0` / `#14B9B5`).
+  - Introduce verified contrast tokens (`text_on_elevated = #61E6FF`, `text_on_accent = #000000`, `text_on_danger`, `text_on_danger_critical`).
+  - Update `DESIGN.md` and enforce bottom `48.0px` bar position with dynamic `effective_h >= 40.0px` floor.
+- [ ] **Bento Primitives & Editorial Section Kit (`ui/components.rs`)**:
+  - Implement `editorial_section` container (`352px` wide, `14px` pad, `1px #251b4a`).
+  - Implement `bento_gauge_ring` (`64px` diameter, `Arc` based) and `bento_sparkline` with `<2` sample baseline.
+- [ ] **Modular Widget Board & Cards (`ui/widgets/`)**:
+  - Reclaim `OP_WIDGETS` (`0x0F`), bind `Mod+W`, and add dock status trigger (`dock.rs`).
+  - Implement `widgets_board_overlay` (`ui/widgets/board.rs`) with `Keyboard::OnDemand` and `SpringTransition` physics.
+  - Implement `ui/widgets/cards.rs` with 6 `WidgetKind` cards (`FocusShield` hero, `Telemetry`, `Media` + CAVA, `Clock`, `Workspaces`, `Notifications`).
+- [ ] **Zero-Poll Signal Wakeup & Service Expansions**:
+  - `PresentationSignal`, `TelemetrySignal`, and `CavaSignal` event-loop wakeup markers.
+  - FocusShield sprint presets (`25m`/`50m`/`Free`) and notification dismiss-on-capture.
+  - Telemetry 5m ring buffers, seeded procfs startup, and ancestor-PPID window jumping.

@@ -13,8 +13,8 @@ pub struct ThemeConfig {
 impl Default for ThemeConfig {
     fn default() -> Self {
         Self {
-            font_family: "Inter".to_string(),
-            font_size: 10.0,
+            font_family: "IBM Plex Sans".to_string(),
+            font_size: 11.5,
             style: "cyber-synthwave".to_string(),
         }
     }
@@ -43,12 +43,12 @@ impl Default for PaletteConfig {
             background: "#000000".to_string(),
             surface: "#140e29".to_string(),
             overlay: "#251b4a".to_string(),
-            muted: "#ffbe74".to_string(),
+            muted: "#ABA5DB".to_string(),
             accent: "#04C5F0".to_string(),
             highlight: "#FF7F41".to_string(),
-            foreground: "#14B9B5".to_string(),
-            border: "#251b4a".to_string(),
-            hover: "#11AEB3".to_string(),
+            foreground: "#EAF8FA".to_string(),
+            border: "#342766".to_string(),
+            hover: "#97DCE3".to_string(),
             steel: "#ffbe74".to_string(),
             success: "#7cd699".to_string(),
             danger_critical: "#CE4F48".to_string(),
@@ -229,9 +229,12 @@ mod tests {
         let manifest = ShellManifest::default();
         assert_eq!(manifest.bar.height, 48.0);
         assert!(manifest.bar.enabled);
-        assert_eq!(manifest.theme.font_size, 10.0);
+        assert_eq!(manifest.theme.font_size, 11.5);
+        assert_eq!(manifest.theme.font_family, "IBM Plex Sans");
         assert_eq!(manifest.theme.style, "cyber-synthwave");
         assert_eq!(manifest.palette.accent, "#04C5F0");
+        assert_eq!(manifest.palette.muted, "#ABA5DB");
+        assert_eq!(manifest.palette.border, "#342766");
         assert_eq!(manifest.terminal.default, "ghostty");
     }
 
@@ -250,7 +253,7 @@ mod tests {
         assert!(manifest.bar.enabled);
         assert_eq!(manifest.bar.position, "bottom");
         assert_eq!(manifest.theme.font_size, 12.0);
-        assert_eq!(manifest.theme.font_family, "Inter");
+        assert_eq!(manifest.theme.font_family, "IBM Plex Sans");
         assert_eq!(manifest.theme.style, "cyber-synthwave");
         assert_eq!(manifest.palette.accent, "#04C5F0");
     }

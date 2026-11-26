@@ -199,7 +199,7 @@ where
     Rectangle::new()
         .width(40.0)
         .height(40.0)
-        .radius(radius::MD)
+        .radius(radius::SM)
         .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
@@ -222,7 +222,7 @@ where
         .width(112.0)
         .height(34.0)
         .radius(radius::PILL)
-        .fill(tokens.surface_elevated)
+        .fill(tokens.surface_track)
         .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .padding(Padding {
@@ -267,38 +267,36 @@ where
     F: Fn() + Send + Sync + 'static,
 {
     let bg_color = if is_focused {
-        tokens.surface_active
+        tokens.surface_track
+    } else if is_running {
+        tokens.surface_elevated
     } else {
         Color::TRANSPARENT
     };
 
     let border_color = if is_focused {
         tokens.border_focus
+    } else if is_running {
+        tokens.border_subtle
     } else {
         Color::TRANSPARENT
     };
 
-    let icon_color = if is_focused || is_running {
-        tokens.text_primary
-    } else {
-        tokens.text_muted
-    };
-
-    // Smooth Clay Pill indicator for running / focused app
-    let pip_width = if is_focused {
-        16.0
-    } else if is_running {
-        6.0
-    } else {
-        0.0
-    };
-
-    let pip_color = if is_focused {
+    let icon_color = if is_focused {
         tokens.accent
     } else if is_running {
-        tokens.accent_tint
+        tokens.text_primary
     } else {
-        Color::TRANSPARENT
+        tokens.text_secondary
+    };
+
+    // Apple Style pill dot indicator for running / focused app with stable baseline
+    let (pip_width, pip_color) = if is_focused {
+        (8.0, tokens.accent)
+    } else if is_running {
+        (4.0, tokens.text_muted)
+    } else {
+        (4.0, Color::TRANSPARENT)
     };
 
     let pip = Rectangle::new()
@@ -331,7 +329,7 @@ where
     Rectangle::new()
         .width(40.0)
         .height(40.0)
-        .radius(radius::MD)
+        .radius(radius::SM)
         .fill(bg_color)
         .border(1.0, border_color)
         .cursor(Pointer)

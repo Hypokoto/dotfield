@@ -1,12 +1,12 @@
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use amane::{
     Align, Audio, Battery, Bluetooth, Brightness, Center, Color, Column, Cpu, Horizontal, Justify,
     Key, Keyboard, Layer, LayerWindow, Margin, Media, Memory, Network, Notifications, OutputTarget,
-    Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Widget, Zone,
+    Padding, Parent, Pointer, Rectangle, Row, Service, Text, Weight, Widget, Zone,
 };
 
-use crate::config::ConfigService;
+use crate::config::{ConfigService, ShellManifest};
 use crate::services::niri::NiriService;
 use crate::ui::components;
 use crate::ui::tokens::{ThemeTokens, radius, spacing, typography};
@@ -19,22 +19,26 @@ pub enum ActiveView {
     Audio,
     Bluetooth,
     Tray,
+    Notifications,
 }
 
 pub struct ControlCenterService {
-    pub open: bool,
-    pub open_time: Option<Instant>,
+    pub active_view: Option<ActiveView>,
     pub dnd: bool,
-    pub view: ActiveView,
+}
+
+impl ControlCenterService {
+    #[inline]
+    pub fn is_open(&self) -> bool {
+        self.active_view.is_some()
+    }
 }
 
 impl Service for ControlCenterService {
     fn new() -> Self {
         Self {
-            open: false,
-            open_time: None,
+            active_view: None,
             dnd: false,
-            view: ActiveView::Main,
         }
     }
 
@@ -46,34 +50,39 @@ impl Service for ControlCenterService {
 pub fn toggle() {
     let is_open = {
         let mut cc = ControlCenterService::write();
-        cc.open = !cc.open;
-        cc.open_time = if cc.open { Some(Instant::now()) } else { None };
-        if !cc.open {
-            cc.view = ActiveView::Main;
-        }
-        cc.open
+        cc.active_view = match cc.active_view {
+            Some(_) => None,
+            None => Some(ActiveView::Main),
+        };
+        cc.is_open()
     };
     if is_open {
         crate::ui::modal_manager::ModalManager::open_exclusive(
             crate::ui::modal_manager::ModalType::ControlCenter,
         );
     }
+    amane::request_frame();
+}
+
+pub fn open() {
+    {
+        let mut cc = ControlCenterService::write();
+        cc.active_view = Some(ActiveView::Main);
+    }
+    crate::ui::modal_manager::ModalManager::open_exclusive(
+        crate::ui::modal_manager::ModalType::ControlCenter,
+    );
+    amane::request_frame();
 }
 
 pub fn open_view(view: ActiveView) {
     let should_open = {
         let mut cc = ControlCenterService::write();
-        if cc.open && cc.view == view {
-            cc.open = false;
-            cc.open_time = None;
-            cc.view = ActiveView::Main;
+        if cc.active_view == Some(view) {
+            cc.active_view = None;
             false
         } else {
-            if !cc.open {
-                cc.open_time = Some(Instant::now());
-            }
-            cc.open = true;
-            cc.view = view;
+            cc.active_view = Some(view);
             true
         }
     };
@@ -82,21 +91,22 @@ pub fn open_view(view: ActiveView) {
             crate::ui::modal_manager::ModalType::ControlCenter,
         );
     }
+    amane::request_frame();
 }
 
 pub fn close() {
     let mut cc = ControlCenterService::write();
-    cc.open = false;
-    cc.open_time = None;
-    cc.view = ActiveView::Main;
+    cc.active_view = None;
+    amane::request_frame();
 }
 
 pub fn control_center_panel() -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
     let cc = ControlCenterService::read();
 
-    let is_visible = cc.open && manifest.control_center.enabled;
-    if !is_visible {
+    let is_open = cc.is_open() && manifest.control_center.enabled;
+    let motion = crate::ui::animation::panel_motion("control_center", is_open);
+    if !motion.visible {
         return LayerWindow::new()
             .width(1.0)
             .height(1.0)
@@ -109,8 +119,9 @@ pub fn control_center_panel() -> LayerWindow {
 
     let tokens = ThemeTokens::from_manifest(&manifest);
     let font = manifest.theme.font_family.clone();
+    let current_view = cc.active_view.unwrap_or_default();
 
-    let content: Column = match cc.view {
+    let content: Column = match current_view {
         ActiveView::Main => {
             let mut sections: Vec<Box<dyn Widget>> = vec![
                 Box::new(render_header(&tokens)),
@@ -167,56 +178,87 @@ pub fn control_center_panel() -> LayerWindow {
             ];
             Column::new(sections).width(Parent).gap(spacing::GAP_MD)
         }
+        ActiveView::Notifications => {
+            let sections: Vec<Box<dyn Widget>> = vec![
+                Box::new(render_subview_header(
+                    "Notification Center",
+                    "󰂚",
+                    &tokens,
+                    &font,
+                )),
+                render_notification_center_subview(&manifest, &font),
+            ];
+            Column::new(sections).width(Parent).gap(spacing::GAP_MD)
+        }
     };
 
-    let panel_height = match cc.view {
+    let panel_height = match current_view {
         ActiveView::Main => {
             let media_h = if Media::read().playing() || !Media::read().title().is_empty() {
                 76.0
             } else {
-                36.0
+                38.0
             };
-            548.0 + media_h
+            let max_h = (NiriService::focused_output_height() - 64.0).max(560.0);
+            (594.0_f32 + media_h).min(max_h)
         }
         ActiveView::Network => adaptive_network_height(),
         ActiveView::Audio => adaptive_audio_height(),
         ActiveView::Bluetooth => adaptive_bluetooth_height(),
         ActiveView::Tray => adaptive_tray_height(),
+        ActiveView::Notifications => adaptive_notifications_height(),
     };
 
-    let panel = components::clay_modal_frame(380.0, panel_height, content, &tokens);
+    let is_top_bar = true;
+    let panel = components::bar_connected_panel(
+        380.0,
+        panel_height,
+        is_top_bar,
+        motion,
+        Padding {
+            top: spacing::PAD_MD,
+            bottom: spacing::PAD_MD,
+            left: spacing::PAD_MD,
+            right: spacing::PAD_MD,
+        },
+        tokens.border_subtle,
+        content,
+        &tokens,
+    );
 
-    let transition = crate::ui::animation::SpringTransition::smooth(cc.open_time);
-    let panel = transition.apply_modal(panel);
-
-    let (dock_height, _, _) = crate::ui::bar::bar_layer_properties(&manifest);
-    let bottom_margin = (dock_height + 10.0) as i32;
+    let (win_w, win_h) = components::bar_connected_window_size(380.0, panel_height);
+    let top_margin = (crate::ui::bar::TOP_ISLAND_HEIGHT + 6.0 + 10.0).round() as i32;
 
     LayerWindow::new()
-        .width(380.0)
-        .height(panel_height)
+        .width(win_w)
+        .height(win_h)
         .target_output(OutputTarget::Active)
-        .anchor_vertical(Vertical::Bottom)
-        .anchor_horizontal(Horizontal::Right)
+        .anchor_vertical(amane::Vertical::Top)
+        .anchor_horizontal(Horizontal::Middle)
         .margin(Margin {
-            top: 0,
-            right: 12,
-            bottom: bottom_margin,
+            top: top_margin,
+            right: 0,
+            bottom: 0,
             left: 0,
         })
         .layer(Layer::Overlay)
-        .keyboard(if is_visible {
+        .keyboard(if is_open {
             Keyboard::OnDemand
         } else {
             Keyboard::None
         })
+        .input_region(components::bar_connected_input_region(
+            380.0,
+            panel_height,
+            is_top_bar,
+        ))
         .on_key(|key| {
             if key == Key::Escape {
                 close();
             }
         })
         .space(Zone::Ignore)
-        .visible(is_visible)
+        .visible(motion.visible)
         .namespace("dotfield-shell-control-center")
         .child(panel)
 }
@@ -252,7 +294,7 @@ fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         &format!("{cpu}%"),
         Some("Load"),
         112.0,
-        78.0,
+        84.0,
         tokens,
     );
     metrics.push(Box::new(cpu_card));
@@ -273,7 +315,7 @@ fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         &format!("{mem_pct}%"),
         Some(&format!("{used_gib:.1}/{total_gib:.0}G")),
         112.0,
-        78.0,
+        84.0,
         tokens,
     );
     metrics.push(Box::new(ram_card));
@@ -300,12 +342,12 @@ fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         &bat_metric,
         Some(bat_sub),
         112.0,
-        78.0,
+        84.0,
         tokens,
     );
     metrics.push(Box::new(bat_card));
 
-    Rectangle::new().width(Parent).height(78.0).child(
+    Rectangle::new().width(Parent).height(84.0).child(
         Row::new(metrics)
             .width(Parent)
             .justify(Justify::SpaceBetween)
@@ -346,176 +388,14 @@ fn adaptive_tray_height() -> f32 {
     (170.0 + count as f32 * 42.0).clamp(240.0, 420.0)
 }
 
-fn render_split_tile<F1, F2>(
-    icon: &'static str,
-    label: &str,
-    is_active: bool,
-    tokens: &ThemeTokens,
-    on_toggle: F1,
-    on_details: F2,
-) -> Rectangle
-where
-    F1: Fn() + Send + Sync + 'static,
-    F2: Fn() + Send + Sync + 'static,
-{
-    let tile_w = 172.0;
-    let tile_h = 44.0;
-
-    let (bg_color, border_color, icon_color, text_color) = if is_active {
-        (
-            tokens.surface_active,
-            tokens.border_focus,
-            tokens.accent,
-            tokens.text_primary,
-        )
+fn adaptive_notifications_height() -> f32 {
+    let notifs = Notifications::read();
+    let count = notifs.list().len().min(5);
+    if count == 0 {
+        240.0
     } else {
-        (
-            tokens.surface_elevated,
-            tokens.border_subtle,
-            tokens.text_muted,
-            tokens.text_secondary,
-        )
-    };
-
-    let left_btn = Rectangle::new()
-        .width(132.0)
-        .height(tile_h)
-        .cursor(Pointer)
-        .padding(Padding {
-            top: 2.0,
-            bottom: 2.0,
-            left: 10.0,
-            right: 4.0,
-        })
-        .align_child(Align::Start, Align::Center)
-        .on_click(move |_| on_toggle())
-        .child(
-            Row::new(vec![
-                Box::new(
-                    Text::new(icon)
-                        .size(16.0)
-                        .color(icon_color)
-                        .font(&tokens.font_mono),
-                ),
-                Box::new(
-                    Text::new(label)
-                        .size(typography::SECONDARY)
-                        .color(text_color)
-                        .font(&tokens.font_sans),
-                ),
-            ])
-            .gap(spacing::GAP_SM)
-            .align(Align::Center),
-        );
-
-    let divider = Rectangle::new()
-        .width(1.0)
-        .height(18.0)
-        .fill(tokens.border_subtle);
-
-    let right_btn = Rectangle::new()
-        .width(38.0)
-        .height(tile_h)
-        .cursor(Pointer)
-        .align_child(Center, Center)
-        .on_click(move |_| on_details())
-        .child(
-            Text::new("󰅂")
-                .size(14.0)
-                .color(if is_active {
-                    tokens.accent
-                } else {
-                    tokens.text_muted
-                })
-                .font(&tokens.font_mono),
-        );
-
-    Rectangle::new()
-        .width(tile_w)
-        .height(tile_h)
-        .radius(radius::MD)
-        .fill(bg_color)
-        .border(1.0, border_color)
-        .child(
-            Row::new(vec![
-                Box::new(left_btn),
-                Box::new(divider),
-                Box::new(right_btn),
-            ])
-            .align(Align::Center),
-        )
-}
-
-fn render_action_tile<F>(
-    icon: &'static str,
-    label: &str,
-    is_active: bool,
-    is_danger: bool,
-    tokens: &ThemeTokens,
-    on_click: F,
-) -> Rectangle
-where
-    F: Fn() + Send + Sync + 'static,
-{
-    let tile_w = 172.0;
-    let tile_h = 44.0;
-
-    let (bg_color, border_color, icon_color, text_color) = if is_danger && is_active {
-        (
-            tokens.danger,
-            tokens.border_subtle,
-            tokens.text_primary,
-            tokens.text_primary,
-        )
-    } else if is_active {
-        (
-            tokens.surface_active,
-            tokens.border_focus,
-            tokens.accent,
-            tokens.text_primary,
-        )
-    } else {
-        (
-            tokens.surface_elevated,
-            tokens.border_subtle,
-            tokens.text_muted,
-            tokens.text_secondary,
-        )
-    };
-
-    Rectangle::new()
-        .width(tile_w)
-        .height(tile_h)
-        .radius(radius::MD)
-        .fill(bg_color)
-        .border(1.0, border_color)
-        .cursor(Pointer)
-        .padding(Padding {
-            top: 2.0,
-            bottom: 2.0,
-            left: 10.0,
-            right: 10.0,
-        })
-        .align_child(Align::Start, Align::Center)
-        .on_click(move |_| on_click())
-        .child(
-            Row::new(vec![
-                Box::new(
-                    Text::new(icon)
-                        .size(16.0)
-                        .color(icon_color)
-                        .font(&tokens.font_mono),
-                ),
-                Box::new(
-                    Text::new(label)
-                        .size(typography::SECONDARY)
-                        .color(text_color)
-                        .font(&tokens.font_sans),
-                ),
-            ])
-            .gap(spacing::GAP_SM)
-            .align(Align::Center),
-        )
+        (170.0 + count as f32 * 78.0).clamp(260.0, 560.0)
+    }
 }
 
 fn render_quick_toggles(tokens: &ThemeTokens, dnd: bool, _font: &str) -> Rectangle {
@@ -538,10 +418,14 @@ fn render_quick_toggles(tokens: &ThemeTokens, dnd: bool, _font: &str) -> Rectang
         "Wi-Fi Off".to_string()
     };
 
-    let wifi_tile = render_split_tile(
+    // 1. Row 1: Two authentic iOS Bento Split Connectivity widgets (172x68 each)
+    let wifi_tile = components::ios_connectivity_widget(
         if wifi_active { "󰤨" } else { "󰤭" },
+        "Wi-Fi",
         &wifi_label,
         wifi_active,
+        172.0,
+        68.0,
         tokens,
         || {
             let net = Network::read();
@@ -554,14 +438,22 @@ fn render_quick_toggles(tokens: &ThemeTokens, dnd: bool, _font: &str) -> Rectang
 
     let bt_active = bluetooth.powered();
     let bt_label = if bt_active {
-        "Bluetooth"
+        let count = bluetooth.devices().len();
+        if count > 0 {
+            format!("{count} Connected")
+        } else {
+            "On".to_string()
+        }
     } else {
-        "Bluetooth Off"
+        "Off".to_string()
     };
-    let bt_tile = render_split_tile(
+    let bt_tile = components::ios_connectivity_widget(
         if bt_active { "󰂯" } else { "󰂲" },
-        bt_label,
+        "Bluetooth",
+        &bt_label,
         bt_active,
+        172.0,
+        68.0,
         tokens,
         move || {
             Bluetooth::set_powered(!bt_active);
@@ -576,11 +468,13 @@ fn render_quick_toggles(tokens: &ThemeTokens, dnd: bool, _font: &str) -> Rectang
         .justify(Justify::SpaceBetween)
         .align(Align::Center);
 
-    let dnd_tile = render_action_tile(
+    // 2. Row 2: Four authentic iOS Squircle Bento toggles (82x72 each)
+    let dnd_toggle = components::ios_control_toggle(
         if dnd { "󰂛" } else { "󰂚" },
-        "Do Not Disturb",
+        "Focus",
         dnd,
-        true,
+        82.0,
+        72.0,
         tokens,
         || {
             let mut cc = ControlCenterService::write();
@@ -588,52 +482,51 @@ fn render_quick_toggles(tokens: &ThemeTokens, dnd: bool, _font: &str) -> Rectang
         },
     );
 
-    let disp_tile = render_action_tile("󰍹", "Display Profiles", false, false, tokens, || {
-        crate::ui::display_config::toggle();
-    });
-
-    let row2 = Row::new(vec![Box::new(dnd_tile), Box::new(disp_tile)])
-        .width(Parent)
-        .justify(Justify::SpaceBetween)
-        .align(Align::Center);
-
-    let rec_tile = render_action_tile(
+    let rec_toggle = components::ios_control_toggle(
         "󰑋",
-        if rec_active {
-            "Recording"
-        } else {
-            "Record Screen"
-        },
+        if rec_active { "Recording" } else { "Record" },
         rec_active,
-        true,
+        82.0,
+        72.0,
         tokens,
         || {
             crate::ui::screen_record::toggle();
         },
     );
 
-    let pres_tile = render_action_tile(
+    let disp_toggle =
+        components::ios_control_toggle("󰍹", "Displays", false, 82.0, 72.0, tokens, || {
+            crate::ui::display_config::toggle();
+        });
+
+    let pres_toggle = components::ios_control_toggle(
         "󰐩",
         if is_presenting {
             "Presenting"
         } else {
-            "Presentation"
+            "Present"
         },
         is_presenting,
-        false,
+        82.0,
+        72.0,
         tokens,
         || {
             let _ = crate::services::presentation::PresentationService::global().toggle();
         },
     );
 
-    let row3 = Row::new(vec![Box::new(rec_tile), Box::new(pres_tile)])
-        .width(Parent)
-        .justify(Justify::SpaceBetween)
-        .align(Align::Center);
+    let row2 = Row::new(vec![
+        Box::new(dnd_toggle),
+        Box::new(rec_toggle),
+        Box::new(disp_toggle),
+        Box::new(pres_toggle),
+    ])
+    .width(Parent)
+    .justify(Justify::SpaceBetween)
+    .align(Align::Center);
 
     Rectangle::new().width(Parent).height(148.0).child(
-        Column::new(vec![Box::new(row1), Box::new(row2), Box::new(row3)])
+        Column::new(vec![Box::new(row1), Box::new(row2)])
             .width(Parent)
             .gap(8.0),
     )
@@ -650,7 +543,7 @@ fn render_subview_header(title: &str, icon: &str, tokens: &ThemeTokens, _font: &
         .align_child(Center, Center)
         .on_click(|_| {
             let mut cc = ControlCenterService::write();
-            cc.view = ActiveView::Main;
+            cc.active_view = Some(ActiveView::Main);
         })
         .child(
             Row::new(vec![
@@ -716,11 +609,11 @@ fn render_sliders(tokens: &ThemeTokens, _font: &str) -> Rectangle {
 
     let slider_w = 356.0;
 
-    // Volume Slider: full-width 356px with interactive leading mute toggle icon
-    let vol_slider = components::fluent_slider(
+    // Volume Slider: full-width 356px chunky iOS Pill Slider with embedded mute toggle
+    let vol_slider = components::ios_pill_slider(
         vol as f32 / 100.0,
         slider_w,
-        34.0,
+        46.0,
         if is_muted { "󰖁" } else { "󰕾" },
         "Volume",
         is_muted,
@@ -735,11 +628,11 @@ fn render_sliders(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         }),
     );
 
-    // Brightness Slider: full-width 356px
-    let bright_slider = components::fluent_slider(
+    // Brightness Slider: full-width 356px chunky iOS Pill Slider
+    let bright_slider = components::ios_pill_slider(
         bright as f32 / 100.0,
         slider_w,
-        34.0,
+        46.0,
         "󰃠",
         "Brightness",
         false,
@@ -752,7 +645,7 @@ fn render_sliders(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         None::<fn()>,
     );
 
-    Rectangle::new().width(Parent).height(76.0).child(
+    Rectangle::new().width(Parent).height(100.0).child(
         Column::new(vec![Box::new(vol_slider), Box::new(bright_slider)]).gap(spacing::GAP_SM),
     )
 }
@@ -765,13 +658,13 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
     let play_pause_icon = if playing { "󰏤" } else { "󰐊" };
 
     if !has_media && !playing {
-        // Minimal idle status card
+        // Minimal idle status card with iOS squircle styling
         return Rectangle::new()
             .width(Parent)
-            .height(36.0)
-            .radius(radius::MD)
+            .height(38.0)
+            .radius(radius::IOS_WIDGET_SM)
             .fill(tokens.surface_elevated)
-            .border(1.0, tokens.border_subtle)
+            .border(1.0, tokens.border_specular)
             .padding(Padding {
                 top: 2.0,
                 bottom: 2.0,
@@ -788,7 +681,7 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
                             .font(&tokens.font_mono),
                     ),
                     Box::new(
-                        Text::new("Idle • No media playing")
+                        Text::new("Music • No media playing")
                             .size(typography::SECONDARY)
                             .color(tokens.text_secondary)
                             .font(&tokens.font_sans),
@@ -830,14 +723,14 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
     Rectangle::new()
         .width(Parent)
         .height(76.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_MD)
         .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
         .padding(Padding {
             top: 6.0,
             bottom: 6.0,
-            left: 10.0,
-            right: 10.0,
+            left: 12.0,
+            right: 12.0,
         })
         .child(
             Column::new(vec![
@@ -882,8 +775,8 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
                             Rectangle::new()
                                 .width(140.0)
                                 .height(28.0)
-                                .fill(tokens.surface)
-                                .radius(radius::XS)
+                                .fill(tokens.surface_track)
+                                .radius(radius::SM)
                                 .padding(Padding {
                                     top: 2.0,
                                     bottom: 2.0,
@@ -898,10 +791,10 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
                                 Box::new(
                                     Rectangle::new()
                                         .width(32.0)
-                                        .height(26.0)
+                                        .height(28.0)
                                         .radius(radius::PILL)
                                         .fill(tokens.surface_active)
-                                        .border(1.0, tokens.border_subtle)
+                                        .border(1.0, tokens.border_specular)
                                         .cursor(Pointer)
                                         .align_child(Center, Center)
                                         .on_click(|_| Media::previous())
@@ -914,28 +807,28 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
                                 ),
                                 Box::new(
                                     Rectangle::new()
-                                        .width(32.0)
-                                        .height(26.0)
+                                        .width(36.0)
+                                        .height(28.0)
                                         .radius(radius::PILL)
-                                        .fill(tokens.surface_active)
-                                        .border(1.0, tokens.border_focus)
+                                        .fill(tokens.accent)
+                                        .border(1.0, tokens.border_specular)
                                         .cursor(Pointer)
                                         .align_child(Center, Center)
                                         .on_click(|_| Media::play_pause())
                                         .child(
                                             Text::new(play_pause_icon)
                                                 .size(typography::BODY_LG)
-                                                .color(tokens.accent)
+                                                .color(tokens.text_on_accent)
                                                 .font(font),
                                         ),
                                 ),
                                 Box::new(
                                     Rectangle::new()
                                         .width(32.0)
-                                        .height(26.0)
+                                        .height(28.0)
                                         .radius(radius::PILL)
                                         .fill(tokens.surface_active)
-                                        .border(1.0, tokens.border_subtle)
+                                        .border(1.0, tokens.border_specular)
                                         .cursor(Pointer)
                                         .align_child(Center, Center)
                                         .on_click(|_| Media::next())
@@ -961,6 +854,13 @@ fn render_media(tokens: &ThemeTokens, font: &str) -> Rectangle {
 }
 
 fn render_appearance(tokens: &ThemeTokens, _font: &str) -> Rectangle {
+    let manifest = ConfigService::read().manifest.clone();
+    let style_name = if manifest.theme.style.eq_ignore_ascii_case("cyber-synthwave") {
+        "Cyber Synthwave"
+    } else {
+        &manifest.theme.style
+    };
+
     let theme_badge = Row::new(vec![
         Box::new(
             Text::new("󰏘")
@@ -969,7 +869,7 @@ fn render_appearance(tokens: &ThemeTokens, _font: &str) -> Rectangle {
                 .font(&tokens.font_mono),
         ),
         Box::new(
-            Text::new("Smooth Clay")
+            Text::new(style_name)
                 .size(typography::SECONDARY)
                 .color(tokens.text_primary)
                 .font(&tokens.font_sans),
@@ -982,7 +882,7 @@ fn render_appearance(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         .width(104.0)
         .height(26.0)
         .radius(radius::PILL)
-        .fill(tokens.surface_active)
+        .fill(tokens.surface_track)
         .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .align_child(Center, Center)
@@ -1023,7 +923,7 @@ fn render_appearance(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         .width(96.0)
         .height(26.0)
         .radius(radius::PILL)
-        .fill(tokens.surface_active)
+        .fill(tokens.surface_track)
         .border(1.0, tokens.border_subtle)
         .cursor(Pointer)
         .align_child(Center, Center)
@@ -1066,7 +966,7 @@ fn render_appearance(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     Rectangle::new()
         .width(Parent)
         .height(34.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
         .padding(Padding {
@@ -1097,7 +997,7 @@ fn render_notifications_drawer(tokens: &ThemeTokens, _font: &str) -> Rectangle {
                 .child(
                     Text::new("Clear")
                         .size(typography::BADGE)
-                        .color(Color::WHITE)
+                        .color(tokens.text_on_danger)
                         .font(&tokens.font_sans)
                         .tight(),
                 ),
@@ -1109,7 +1009,7 @@ fn render_notifications_drawer(tokens: &ThemeTokens, _font: &str) -> Rectangle {
                 .height(20.0)
                 .radius(radius::PILL)
                 .fill(tokens.surface)
-                .border(1.0, tokens.border_subtle)
+                .border(1.0, tokens.border_specular)
                 .align_child(Center, Center)
                 .child(
                     Text::new("Idle")
@@ -1154,9 +1054,14 @@ fn render_notifications_drawer(tokens: &ThemeTokens, _font: &str) -> Rectangle {
     Rectangle::new()
         .width(Parent)
         .height(56.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
+        .cursor(Pointer)
+        .on_click(|_| {
+            let mut cc = ControlCenterService::write();
+            cc.active_view = Some(ActiveView::Notifications);
+        })
         .padding(Padding {
             top: 6.0,
             bottom: 6.0,
@@ -1168,9 +1073,9 @@ fn render_notifications_drawer(tokens: &ThemeTokens, _font: &str) -> Rectangle {
                 Box::new(header_row),
                 Box::new(
                     Text::new(if notifs_count == 0 {
-                        "No new notifications"
+                        "No new notifications (click to view center)"
                     } else {
-                        "Recent notifications active"
+                        "Recent notifications active (click to open)"
                     })
                     .size(typography::BADGE)
                     .color(tokens.text_muted)
@@ -1179,6 +1084,243 @@ fn render_notifications_drawer(tokens: &ThemeTokens, _font: &str) -> Rectangle {
             ])
             .gap(spacing::GAP_XS),
         )
+}
+
+fn render_notification_center_subview(manifest: &ShellManifest, font: &str) -> Box<dyn Widget> {
+    let tokens = ThemeTokens::from_manifest(manifest);
+    let notifs = Notifications::read();
+    let notifs_list = notifs.list();
+
+    let mut elements: Vec<Box<dyn Widget>> = Vec::new();
+
+    // Top action bar: count badge + Clear All button
+    let count = notifs_list.len();
+    let count_text = Text::new(format!("{count} active alerts"))
+        .size(typography::SECONDARY)
+        .color(tokens.text_secondary)
+        .font(font);
+
+    let clear_all_btn = if count > 0 {
+        Box::new(
+            Rectangle::new()
+                .width(84.0)
+                .height(26.0)
+                .radius(radius::SM)
+                .fill(tokens.surface_active)
+                .border(1.0, tokens.border_subtle)
+                .cursor(Pointer)
+                .align_child(Center, Center)
+                .on_click(|_| {
+                    Notifications::clear();
+                    amane::request_frame();
+                })
+                .child(
+                    Row::new(vec![
+                        Box::new(
+                            Text::new("󰃢")
+                                .size(11.0)
+                                .color(tokens.danger)
+                                .font(&tokens.font_mono)
+                                .tight(),
+                        ),
+                        Box::new(
+                            Text::new("Clean All")
+                                .size(typography::CAPTION)
+                                .color(tokens.text_primary)
+                                .font(font)
+                                .tight(),
+                        ),
+                    ])
+                    .gap(4.0)
+                    .align(Align::Center),
+                ),
+        ) as Box<dyn Widget>
+    } else {
+        Box::new(
+            Text::new("")
+                .size(typography::CAPTION)
+                .color(Color::TRANSPARENT),
+        ) as Box<dyn Widget>
+    };
+
+    let toolbar = Row::new(vec![Box::new(count_text), clear_all_btn])
+        .width(Parent)
+        .justify(Justify::SpaceBetween)
+        .align(Align::Center);
+
+    elements.push(Box::new(toolbar));
+
+    if notifs_list.is_empty() {
+        let empty_card = Rectangle::new()
+            .width(Parent)
+            .height(110.0)
+            .radius(radius::MD)
+            .fill(tokens.surface_elevated)
+            .border(1.0, tokens.border_subtle)
+            .align_child(Center, Center)
+            .child(
+                Column::new(vec![
+                    Box::new(
+                        Text::new("󰂚")
+                            .size(24.0)
+                            .color(tokens.text_muted)
+                            .font(&tokens.font_mono)
+                            .tight(),
+                    ),
+                    Box::new(
+                        Text::new("No active notifications")
+                            .size(typography::BODY)
+                            .color(tokens.text_muted)
+                            .font(font),
+                    ),
+                    Box::new(
+                        Text::new("You're all caught up!")
+                            .size(typography::CAPTION)
+                            .color(tokens.text_secondary)
+                            .font(font),
+                    ),
+                ])
+                .gap(spacing::GAP_XS)
+                .align(Center),
+            );
+        elements.push(Box::new(empty_card));
+    } else {
+        for notif in notifs_list.iter().take(5) {
+            let id = notif.id();
+            let (border_col, header_col) = match notif.urgency() {
+                amane::Urgency::Critical => (tokens.border_danger, tokens.danger),
+                amane::Urgency::Low => (tokens.border_subtle, tokens.text_muted),
+                amane::Urgency::Normal => (tokens.border_subtle, tokens.accent),
+            };
+
+            let app_name = if notif.app_name().is_empty() {
+                "Notification"
+            } else {
+                notif.app_name()
+            };
+
+            let mark_read_btn = Rectangle::new()
+                .width(20.0)
+                .height(20.0)
+                .radius(radius::PILL)
+                .fill(tokens.surface_track)
+                .cursor(Pointer)
+                .align_child(Center, Center)
+                .on_click(move |_| {
+                    let n_list = Notifications::read();
+                    let read_key = n_list
+                        .list()
+                        .iter()
+                        .find(|n| n.id() == id)
+                        .and_then(|target| {
+                            target.actions().iter().find(|a| {
+                                let k = a.key().to_lowercase();
+                                let l = a.label().to_lowercase();
+                                k.contains("read") || l.contains("read")
+                            })
+                        })
+                        .map(|a| a.key().to_string());
+
+                    if let Some(key) = read_key {
+                        Notifications::invoke(id, &key);
+                    }
+                    Notifications::dismiss(id);
+                    amane::request_frame();
+                })
+                .child(
+                    Text::new("󰄬")
+                        .size(10.0)
+                        .color(tokens.accent)
+                        .font(&tokens.font_mono)
+                        .tight(),
+                );
+
+            let dismiss_btn = Rectangle::new()
+                .width(20.0)
+                .height(20.0)
+                .radius(radius::PILL)
+                .fill(tokens.surface_track)
+                .cursor(Pointer)
+                .align_child(Center, Center)
+                .on_click(move |_| {
+                    Notifications::dismiss(id);
+                    amane::request_frame();
+                })
+                .child(
+                    Text::new("󰅖")
+                        .size(10.0)
+                        .color(tokens.text_secondary)
+                        .font(&tokens.font_mono)
+                        .tight(),
+                );
+
+            let header_actions = Row::new(vec![Box::new(mark_read_btn), Box::new(dismiss_btn)])
+                .gap(6.0)
+                .align(Align::Center);
+
+            let notif_header = Row::new(vec![
+                Box::new(
+                    Text::new(app_name)
+                        .size(typography::CAPTION)
+                        .weight(Weight::SemiBold)
+                        .color(header_col)
+                        .font(font),
+                ),
+                Box::new(header_actions),
+            ])
+            .width(Parent)
+            .justify(Justify::SpaceBetween)
+            .align(Align::Center);
+
+            let mut card_children: Vec<Box<dyn Widget>> = vec![
+                Box::new(notif_header),
+                Box::new(
+                    Text::new(notif.summary())
+                        .size(typography::SECONDARY)
+                        .weight(Weight::SemiBold)
+                        .color(tokens.text_primary)
+                        .font(font),
+                ),
+            ];
+
+            if !notif.body().is_empty() {
+                card_children.push(Box::new(
+                    Text::new(notif.body())
+                        .size(typography::CAPTION)
+                        .color(tokens.text_secondary)
+                        .font(font),
+                ));
+            }
+
+            let card_h = if notif.body().is_empty() { 56.0 } else { 72.0 };
+            let card = Rectangle::new()
+                .width(Parent)
+                .height(card_h)
+                .radius(radius::SM)
+                .fill(tokens.surface_elevated)
+                .border(1.0, border_col)
+                .cursor(Pointer)
+                .padding(Padding {
+                    top: 6.0,
+                    bottom: 6.0,
+                    left: 10.0,
+                    right: 10.0,
+                })
+                .on_click(move |_| {
+                    Notifications::click(id);
+                    amane::request_frame();
+                })
+                .child(
+                    Column::new(card_children)
+                        .width(Parent)
+                        .gap(spacing::GAP_XS),
+                );
+
+            elements.push(Box::new(card));
+        }
+    }
+
+    Box::new(Column::new(elements).width(Parent).gap(spacing::GAP_SM))
 }
 
 fn render_power_button<F>(
@@ -1214,7 +1356,11 @@ where
                 Box::new(
                     Text::new(label)
                         .size(typography::BADGE)
-                        .color(tokens.text_primary)
+                        .color(if bg_col == tokens.danger {
+                            tokens.text_on_danger
+                        } else {
+                            tokens.text_primary
+                        })
                         .font(&tokens.font_sans)
                         .tight(),
                 ),
@@ -1272,9 +1418,9 @@ fn render_power_actions(tokens: &ThemeTokens, _font: &str) -> Rectangle {
         render_power_button(
             "󰐥",
             "Power",
-            tokens.danger,
+            tokens.text_on_danger,
             tokens.border_danger,
-            tokens.surface_active,
+            tokens.danger,
             tokens,
             || {
                 let _ = std::process::Command::new("systemctl")
@@ -1312,7 +1458,8 @@ mod tests {
     #[test]
     fn test_control_center_service_default() {
         let svc = ControlCenterService::new();
-        assert!(!svc.open);
+        assert!(!svc.is_open());
+        assert_eq!(svc.active_view, None);
         assert!(!svc.dnd);
     }
 
@@ -1320,12 +1467,21 @@ mod tests {
     fn test_control_center_lifecycle_and_views() {
         let _lock = crate::ui::TEST_UI_MUTEX.lock().unwrap();
         toggle();
-        assert!(ControlCenterService::read().open);
+        assert_eq!(
+            ControlCenterService::read().active_view,
+            Some(ActiveView::Main)
+        );
         open_view(ActiveView::Network);
-        assert_eq!(ControlCenterService::read().view, ActiveView::Network);
+        assert_eq!(
+            ControlCenterService::read().active_view,
+            Some(ActiveView::Network)
+        );
         open_view(ActiveView::Audio);
-        assert_eq!(ControlCenterService::read().view, ActiveView::Audio);
+        assert_eq!(
+            ControlCenterService::read().active_view,
+            Some(ActiveView::Audio)
+        );
         close();
-        assert!(!ControlCenterService::read().open);
+        assert!(!ControlCenterService::read().is_open());
     }
 }

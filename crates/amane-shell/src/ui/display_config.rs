@@ -1,5 +1,5 @@
 use std::process::Command;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use amane::{
     Align, Column, Horizontal, Key, Keyboard, Layer, LayerWindow, Margin, OutputTarget, Parent,
@@ -74,7 +74,6 @@ pub static PRESETS: &[DisplayPreset] = &[
 
 pub struct DisplayConfigService {
     pub open: bool,
-    pub open_time: Option<Instant>,
     pub selected: usize,
     pub hover_index: Option<usize>,
     pub status_message: Option<String>,
@@ -84,7 +83,6 @@ impl Service for DisplayConfigService {
     fn new() -> Self {
         Self {
             open: false,
-            open_time: None,
             selected: 0,
             hover_index: None,
             status_message: None,
@@ -100,7 +98,6 @@ pub fn toggle() {
     let is_open = {
         let mut svc = DisplayConfigService::write();
         svc.open = !svc.open;
-        svc.open_time = if svc.open { Some(Instant::now()) } else { None };
         svc.selected = 0;
         svc.hover_index = None;
         svc.status_message = None;
@@ -120,7 +117,6 @@ pub fn open() {
 
     let mut svc = DisplayConfigService::write();
     svc.open = true;
-    svc.open_time = Some(Instant::now());
     svc.selected = 0;
     svc.hover_index = None;
     svc.status_message = None;
@@ -129,7 +125,6 @@ pub fn open() {
 pub fn close() {
     let mut svc = DisplayConfigService::write();
     svc.open = false;
-    svc.open_time = None;
     svc.hover_index = None;
     svc.status_message = None;
 }
@@ -449,8 +444,9 @@ pub fn display_config_overlay() -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
     let svc = DisplayConfigService::read();
 
-    let is_visible = svc.open;
-    if !is_visible {
+    let is_open = svc.open;
+    let motion = crate::ui::animation::panel_motion("display_config", is_open);
+    if !motion.visible {
         return LayerWindow::new()
             .width(1.0)
             .height(1.0)
@@ -495,7 +491,8 @@ pub fn display_config_overlay() -> LayerWindow {
                         } else {
                             tokens.text_secondary
                         })
-                        .font(&tokens.font_mono),
+                        .font(&tokens.font_mono)
+                        .tight(),
                 ),
         );
 
@@ -539,11 +536,7 @@ pub fn display_config_overlay() -> LayerWindow {
         &tokens,
     );
 
-    let transition = crate::ui::animation::ModalTransition::compute(
-        svc.open_time,
-        crate::ui::animation::DEFAULT_MODAL_ANIMATION_DURATION,
-    );
-    let dialog = transition.apply(dialog);
+    let dialog = motion.apply_centered_modal(dialog);
 
     LayerWindow::new()
         .width(480.0)
@@ -558,12 +551,16 @@ pub fn display_config_overlay() -> LayerWindow {
             right: 0,
         })
         .layer(Layer::Overlay)
-        .keyboard(Keyboard::OnDemand)
+        .keyboard(if is_open {
+            Keyboard::OnDemand
+        } else {
+            Keyboard::None
+        })
         .on_key(move |key| {
             handle_key(key, total_presets);
         })
         .space(Zone::Ignore)
-        .visible(is_visible)
+        .visible(motion.visible)
         .namespace("dotfield-shell-display-config")
         .child(dialog)
 }
@@ -616,14 +613,11 @@ mod tests {
         let _lock = crate::ui::TEST_UI_MUTEX.lock().unwrap();
         close();
         assert!(!DisplayConfigService::read().open);
-        assert!(DisplayConfigService::read().open_time.is_none());
 
         toggle();
         assert!(DisplayConfigService::read().open);
-        assert!(DisplayConfigService::read().open_time.is_some());
 
         close();
         assert!(!DisplayConfigService::read().open);
-        assert!(DisplayConfigService::read().open_time.is_none());
     }
 }

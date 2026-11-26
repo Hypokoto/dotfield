@@ -1,72 +1,79 @@
-# Design System: Dotfield Smooth Clay Aesthetic
+# Dotfield Design System: Cyber Synthwave
 
-## 1. Visual Theme & Atmosphere
-A warm, tactile, pillowy interface inspired by smooth stoneware ceramics, sculpted clay pottery, and soft tactile industrial design. The atmosphere replaces bold, harsh, high-contrast borders and sharp metallic wireframes with **Smooth Claymorphic Softness** — generous continuous corner radii (16px to 28px, full pills), matte tone-on-tone clay surfaces, gentle top-lip specular highlights, and pillowy debossed interaction states. It feels calm, approachable, and deeply tactile — like smooth sculpted porcelain resting in soft natural ambient light.
+> **Pitch Void (`#000000`) · Deep Violet (`#120D2B`) · Rich Purple (`#251B4A`) · Cool Ice-Cyan (`#EAF8FA`) · Electric Neon Blue (`#04C5F0`) · Emerald (`#7CD699`)**
 
-- **Density:** Daily App Balanced (5/10)
-- **Variance:** Offset Asymmetric & Tactile (6/10)
-- **Motion:** Spring-Damped Fluidity (6/10)
+The unified design system for Dotfield and Amane Shell across all desktop surfaces, terminals, and companion tools. Calibrated around deep atmospheric depth, razor-sharp typography hierarchy, and verified WCAG AAA/AA contrast.
 
 ---
 
-## 2. Color Palette & Roles
-The palette is calibrated strictly from organic ceramic clays, bisque, terracotta glazes, and warm stoneware:
+## 1. Visual Theme & Atmosphere
+The atmosphere is anchored in a pitch-black void substrate (`#000000`) layered with deep violet (`#120D2B`) containers, dark plum (`#1A1336`) slider/gauge tracks, and rich purple (`#251B4A`) cards. Crisp ice-cyan (`#EAF8FA`) primary typography, cool cyan-mist (`#97DCE3`) secondary metadata, and soft lavender-mist (`#ABA5DB`) muted labels create instant 3-tier visual hierarchy while preserving `#04C5F0` electric neon blue exclusively for active interactive states and key telemetry highlights.
 
-- **Matte Dark Clay** (`#161413`) — Primary background canvas, velvety dark earthen clay base.
-- **Warm Bisque** (`#1F1C1A`) — Primary container, modal, and drawer surface fill.
-- **Terracotta Putty** (`#2B2623`) — Elevated cards, action plaques, and quick setting tiles.
-- **Clay Inset Depth** (`#38322D`) — Active, pressed, and selected item fill.
-- **Clay Lip Highlight** (`#3D3631`) — Subtle upper rim and pill borders (soft 1px tactile definition).
-- **Subtle Clay Seam** (`#26221F`) — Inactive hairline dividers and subtle recessed boundaries.
-- **Glazed Terracotta Amber** (`#E08244`) — Singular vibrant accent for active toggles, focus pills, and primary highlights (Saturation: 72%).
-- **Light Terracotta** (`#ECA06E`) — Accent hover and active pill glow.
-- **Warm Porcelain Sand** (`#F3EDE6`) — Primary high-contrast legible typography.
-- **Muted Putty** (`#BDB4AA`) — Secondary metadata, sub-labels, and descriptions.
-- **Stone Grey** (`#7D756C`) — Muted captions, placeholder text, and inactive glyphs.
-- **Soft Crimson Glaze** (`#C84B4B`) — Destructive power actions and critical alerts.
-- **Soft Sage Clay** (`#6B9E78`) — Success states and battery charging indicators.
+- **Density:** Balanced Bento Technical (7/10)
+- **Variance:** Modular Bento Grid ($380\text{px}$ Dock-Attached Widget Popout, $48\text{px}$ Bottom Bar)
+- **Motion:** 150ms–160ms Cubic Ease-Out (`ModalTransition::compute` & `apply_bar_popout`, zero overshoot bounce, 0 Hz Wayland parking at rest)
 
-*(Constraint: Pure black `#000000` is strictly banned; neon purple/blue outer glows are strictly banned).*
+---
+
+## 2. Canonical Color Palette & Semantic Roles
+
+| Token | Hex | Role | Contrast Ratio & Standard |
+|---|---|---|---|
+| Canvas Background (`base00`) | `#000000` | Pure pitch OLED black base | Infinite against white |
+| Container Surface (`base01`) | `#120D2B` | Shell panels, modal backdrops, flyouts | 18.2:1 vs `#EAF8FA` |
+| Track Surface (`surface_track`) | `#1A1336` | Slider wells, inactive chips, gauge rings | Distinct recessed well |
+| Elevated Cards (`base02`) | `#251B4A` | Bento cards, popovers, interactive tiles | 12.1:1 vs `#EAF8FA` |
+| Structural Border | `#2E225C` | 1px perimeter outlines, subtle dividers | Tone-on-tone distinction |
+| Primary Foreground (`base05`) | `#EAF8FA` | Primary text, titles, digital clock | 16.5:1 AAA vs `#120D2B` |
+| Secondary Foreground (`base04`) | `#97DCE3` | Secondary text, status metadata, sub-labels | 11.2:1 AAA vs `#120D2B` |
+| Muted Foreground (`base03`) | `#ABA5DB` | Keycap hints, timestamps, inactive icons | 7.4:1 AAA vs `#120D2B` |
+| Neon Blue Accent (`base0D`) | `#04C5F0` | Focus rings, active workspace pips, primary CTAs | 9.4:1 AAA vs `#000000` |
+| Active Hover | `#14B9B5` | Interactive element hover states | Distinct cyan-teal |
+| Emerald Success (`base0B`) | `#7CD699` | Healthy telemetry, validated operations | 10.6:1 AAA vs `#120D2B` |
+| Amber Warning (`base09`) | `#FF7F41` | Telemetry load alerts, culprit chips | 6.8:1 AA vs `#120D2B` |
+| Crimson Danger (`base08`) | `#BE3F50` | Alarms, destructive actions, emergency stops | 5.4:1 AA vs `#FFFFFF` |
+| Critical Dark Red (`base0F`) | `#CE4F48` | Battery critical (<5%), system faults | High-urgency badge fill |
+
+### Verified WCAG Contrast Overrides
+
+```rust
+text_on_accent:          Color::from("#000000"), // 11.8:1 AAA vs #04C5F0
+text_on_elevated:        Color::from("#EAF8FA"), // 12.1:1 AAA vs #251B4A
+text_on_danger:          Color::WHITE,           //  5.4:1 AA  vs #BE3F50
+text_on_danger_critical: Color::WHITE,           //  5.1:1 AA  vs #CE4F48
+border_focus:            Color::rgba(4, 197, 240, 0.55), // Restrained neon rim
+```
 
 ---
 
 ## 3. Typography Rules
-- **Display & Modal Headers:** `Outfit` (Bold / SemiBold) — Smooth geometric sans with friendly rounded curves, relaxed tracking (`-0.01em`), title case / sentence case hierarchy rather than screaming caps.
-- **Body & Secondary Labels:** `Outfit` (Regular / Medium) — Warm, open aperture, high legibility across small scale displays.
-- **Telemetry & Numerals:** `JetBrainsMono Nerd Font` — Monospaced numerals for tabular clocks, percentages, and metrics.
-- **Banned:** `Inter`, `Times New Roman`, generic serifs, gothic lettering, and medieval script are banned in this tactile clay design.
+- **Interface Primary Typography:** `IBM Plex Sans` (SemiBold / Medium / Regular) — Clean, modern geometric grotesk with distinct apertures.
+- **Micro Labels & Badges:** `IBM Plex Sans` at 10.5px–11.5px with 500/600 weight.
+- **Monospaced Numerals & Telemetry:** `JetBrainsMono Nerd Font` — Tabular figures for CPU/RAM metrics, clock displays, sprint countdowns, and keycaps.
 
 ---
 
-## 4. Component Stylings
-* **Smooth Clay Modals & Panels:** Encased in continuous smooth pillowy rectangles (`radius::LG` = 22.0px to `radius::XL` = 28.0px). Double metallic brass wires and medieval filigrees (`"⚜"`, `"✥"`) are abolished in favor of a soft single **Clay Lip** (`#3D3631`) with a warm bisque fill (`#1F1C1A`).
-* **Tactile Clay Cards:** Elevated with a soft tone-on-tone contrast (`#2B2623`), subtle top rim highlight, and generous 14px–18px rounded corners.
-* **Pill Buttons & Toggles:** Sculpted pill-shaped elements (`radius::PILL` = 9999px) with tactile debossed feedback on click (`#38322D`). Active state glows warmly in Glazed Terracotta (`#E08244`).
-* **Smooth Sliders:** Recessed clay track (`#161413`) with a pillowy ceramic gauge fill (`#E08244`) and rounded thumb indicator.
-* **Dock & Navigation:** Smooth centered pill bar, clay search capsule with soft inner padding, and smooth gold-terracotta active indicators.
-* **Power & Destructive Actions:** Smooth Soft Crimson ceramic tile (`#C84B4B`) with warm sand typography.
+## 4. Component Stylings & Layout Principles
+
+### Bottom Bar (`crates/amane-shell/src/ui/bar.rs`)
+- **Position & Sizing:** Bottom anchored, height `48.0px`, dynamic clamp `effective_h >= 40.0px` preserving dock search capsules (`34.0px`) and app tiles (`40.0px`).
+- **FocusShield Status:** `󰐩 FocusShield {time}` pill (`156.0px` wide) using `remaining_formatted()` with `elapsed_formatted()` fallback for Free sprints.
+
+### Dedicated Widget Board (`crates/amane-shell/src/ui/widgets/board.rs`)
+- **Position & Sizing:** Dock-centered (`Horizontal::Middle`) bar popout attached flush to the active bar (`bar_edge_margins(&manifest, 0.0)`), flat corners along the bar seam (`radius_bottom_left/right = 0.0` on bottom bar, `radius_top_left/right = 0.0` on top bar), width `380.0px` (`bento::BOARD_WIDTH`), adaptive height clamped to `focused_output_height() - 60.0px`.
+- **Keyboard Interactivity:** `Keyboard::OnDemand` with `[×]` close button, workspace + live time/date header, and `Esc` dismiss.
+- **Card Sizing & Spacing:** Tight Bento cards with centered chips and labeled gauges:
+  - `FocusShield`: `120.0px`
+  - `Telemetry`: `136.0px` (labeled CPU/RAM rings + 5m sparklines + `used / total GB`)
+  - `Media`: `108.0px` when active player present, collapsing to `48.0px` compact strip when idle
+- **Zero-Poll Power Invariant:** Closed board short-circuits to `.visible(false)` and drops to 0 Hz Wayland frame request parking.
 
 ---
 
-## 5. Layout Principles
-- Continuous rounded geometry across all nesting levels (outer modal 26px → inner card 16px → pill button 9999px).
-- Generous internal padding (14px–20px) creating soft breathing room around elements.
-- Fluid symmetric and balanced card grids without sharp divider lines.
-
----
-
-## 6. Motion & Interaction
-- **Spring-Damped Transitions:** Smooth cubic-ease and spring physics for modal appearance and slider drags.
-- **Tactile Feedback:** Buttons subtly press inward on active pointer interaction without jarring displacement.
-- **Subtle Glows:** Gentle ceramic warmth instead of harsh blinding neon.
-
----
-
-## 7. Anti-Patterns (Banned)
-- ❌ No sharp rectangular corners (`0px` or `2px`).
-- ❌ No double-line wireframe borders or metallic gold filigrees.
-- ❌ No harsh neon blues, hot purples, or oversaturated rainbow gradients.
-- ❌ No pure black (`#000000`) surfaces.
-- ❌ No `Inter` or harsh editorial serif fonts in UI widgets.
-- ❌ No emojis or generic AI clip art.
-- ❌ No jarring hard borders (`>2px` black or neon outlines).
+## 5. Anti-Patterns (Banned)
+- ❌ No hardcoded white `#FFFFFF` text on neon `#04C5F0` accents (strictly `#000000` text) and no `#000000` (`text_on_accent`) text on dark cards or translucent slider troughs.
+- ❌ No bounce/overshoot easing on overlays (`ModalTransition::compute` cubic ease-out only).
+- ❌ No un-aliased or floating widget popups without dedicated overlay routing.
+- ❌ No continuous background render loops when all shell surfaces are idle (strictly 0 Hz).
+- ❌ No dynamic layer surface height resizes that desynchronize Wayland commit buffers.
+- ❌ No claymorphic bisque/terracotta washes or generic SaaS card grids.

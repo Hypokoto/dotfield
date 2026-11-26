@@ -93,20 +93,21 @@ The interface pairs a pitch-black void substrate (`#000000`) and deep violet/pur
 | Urgent border | `#BE3F50` |
 | Progress bar | `#04C5F0` |
 
-### Amane Desktop Shell (Niri Status Bar, Flyouts, Control Center, Overview)
+### Amane Desktop Shell (Niri Status Bar, Flyouts, Control Center, Widget Popout)
 
 | Element | Color |
 |---|---|
-| Background / Panels | `#000000` / `#140e29` |
-| Cards / Elevated surfaces | `#251b4a` |
-| Borders & Dividers | `#251b4a` |
-| Primary text / Headings | `#14B9B5` |
-| Secondary / Muted labels | `#11AEB3` |
+| Background / Panels | `#000000` / `#120D2B` |
+| Track / Recessed wells | `#1A1336` |
+| Cards / Elevated surfaces | `#251B4A` |
+| Borders & Dividers | `#2E225C` / `rgba(4, 197, 240, 0.55)` focus |
+| Primary text / Headings | `#EAF8FA` |
+| Secondary / Muted labels | `#97DCE3` / `#ABA5DB` |
 | Primary Accent & Active Pips | `#04C5F0` (Electric Neon Blue) |
-| Accent Hover & Highlights | `#9147a8` (Electric Purple) |
+| Accent Hover & Highlights | `#14B9B5` (Cyan-Teal) |
 | Warnings & Notifications | `#FF7F41` (Warning Orange) |
 | Critical / Alarms / Mute | `#BE3F50` (Red Accent) |
-| Success & Status | `#7cd699` (Emerald Green) |
+| Success & Status | `#7CD699` (Emerald Green) |
 
 ---
 

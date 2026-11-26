@@ -105,7 +105,7 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
         .height(30.0)
         .radius(radius::SM)
         .fill(if is_connected {
-            tokens.danger_subtle
+            tokens.danger
         } else {
             tokens.surface_elevated
         })
@@ -128,7 +128,7 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
                     Text::new("󰅙")
                         .size(13.0)
                         .color(if is_connected {
-                            tokens.danger
+                            tokens.text_on_danger
                         } else {
                             tokens.text_muted
                         })
@@ -138,7 +138,7 @@ pub fn render_network_widget(manifest: &ShellManifest, font: &str) -> Box<dyn Wi
                     Text::new("Disconnect")
                         .size(typography::SECONDARY)
                         .color(if is_connected {
-                            tokens.danger
+                            tokens.text_on_danger
                         } else {
                             tokens.text_muted
                         })

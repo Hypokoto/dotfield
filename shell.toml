@@ -1,29 +1,65 @@
+[bar]
+enabled = true
+height = 48.0
+position = "bottom"
+show_workspaces = true
+show_title = true
+show_telemetry = true
+
 [theme]
-font_family = "Inter"
-font_size = 10.0
+font_family = "IBM Plex Sans"
+font_size = 11.5
 style = "cyber-synthwave"
 
 [palette]
 background = "#000000"
 surface = "#140e29"
 overlay = "#251b4a"
-muted = "#ffbe74"
+muted = "#ABA5DB"
 accent = "#04C5F0"
 highlight = "#FF7F41"
-foreground = "#14B9B5"
-border = "#251b4a"
-hover = "#11AEB3"
+foreground = "#EAF8FA"
+border = "#342766"
+hover = "#97DCE3"
 steel = "#ffbe74"
 success = "#7cd699"
 danger_critical = "#CE4F48"
 
-[bar]
+[widgets]
 enabled = true
-height = 32.0
-position = "top"
-show_workspaces = true
-show_title = true
-show_telemetry = true
+board_enabled = true
+grid_columns = 2
+
+[[widgets.items]]
+kind = "focus_shield"
+size = "2x1"
+enabled = true
+
+[[widgets.items]]
+kind = "telemetry"
+size = "2x1"
+enabled = true
+
+[[widgets.items]]
+kind = "workspaces"
+size = "2x1"
+enabled = true
+
+# Optional modules implemented in cards.rs (uncomment to enable):
+# [[widgets.items]]
+# kind = "media"
+# size = "2x1"
+# enabled = true
+#
+# [[widgets.items]]
+# kind = "clock"
+# size = "1x1"
+# enabled = true
+#
+# [[widgets.items]]
+# kind = "notifications"
+# size = "2x1"
+# enabled = true
 
 [osd]
 enabled = true

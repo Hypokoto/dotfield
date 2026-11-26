@@ -1,214 +1,236 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use amane::{Rectangle, request_frame};
 
-/// Restrained 150ms modal transition duration adhering to Dotfield 120-180ms discipline.
-pub const DEFAULT_MODAL_ANIMATION_DURATION: Duration = Duration::from_millis(150);
+/// Suzuha-inspired motion tokens: critically damped spatial motion (zero overshoot).
+pub const MOTION_SPATIAL_CURVE: [f32; 4] = [0.2, 0.0, 0.0, 1.0];
+pub const MOTION_EFFECTS_CURVE: [f32; 4] = [0.34, 0.8, 0.34, 1.0];
 
-/// Represents the instantaneous progress of a modal summon animation.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ModalTransition {
-    /// Normalized linear progress in [0.0, 1.0].
-    pub progress: f32,
-    /// Eased progress in [0.0, 1.0] using cubic ease-out.
-    pub eased: f32,
-}
+pub const PANEL_STIFFNESS: f32 = 500.0;
+pub const PANEL_OPEN_DAMPING: f32 = 44.72; // 2 * sqrt(500) -> critically damped
+pub const PANEL_CLOSE_DAMPING: f32 = 50.0; // Slightly overdamped crisp tuck
 
-impl ModalTransition {
-    /// Computes the modal transition progress given an optional start timestamp.
-    ///
-    /// When `started_at` is `None` or elapsed time exceeds `duration`, the animation is
-    /// considered at rest ($t=1.0$), and `request_frame()` is NOT called, parking the
-    /// Wayland surface at 0 Hz.
-    ///
-    /// While $t < 1.0$, `request_frame()` is called to request consecutive compositor
-    /// frame callbacks until arrival.
-    pub fn compute(started_at: Option<Instant>, duration: Duration) -> Self {
-        let Some(started) = started_at else {
-            return Self {
-                progress: 1.0,
-                eased: 1.0,
-            };
-        };
+const SPRING_MAX_STEP: f32 = 1.0 / 30.0;
+const SPRING_SETTLED_POS: f32 = 0.002;
+const SPRING_SETTLED_VEL: f32 = 0.005;
 
-        if duration.is_zero() {
-            return Self {
-                progress: 1.0,
-                eased: 1.0,
-            };
-        }
-
-        let elapsed = started.elapsed();
-        if elapsed >= duration {
-            Self {
-                progress: 1.0,
-                eased: 1.0,
-            }
-        } else {
-            let progress = (elapsed.as_secs_f32() / duration.as_secs_f32()).clamp(0.0, 1.0);
-            let eased = cubic_ease_out(progress);
-            // Actively tick frame callback while transition is running
-            request_frame();
-            Self { progress, eased }
-        }
+/// Evaluates a 1D normalized cubic-bezier easing curve `[x1, y1, x2, y2]` at `t` in `[0.0, 1.0]`.
+pub fn cubic_bezier(curve: [f32; 4], t: f32) -> f32 {
+    let t = t.clamp(0.0, 1.0);
+    if t <= 0.0 || t >= 1.0 {
+        return t;
     }
 
-    /// Returns `true` if the transition is actively moving.
-    #[inline]
-    pub fn is_animating(&self) -> bool {
-        self.progress < 1.0
-    }
-
-    /// Transforms a container rectangle with subtle scale, vertical slide, and opacity easing.
-    /// When at rest ($t \ge 1.0$), passes through the rectangle unmodified for zero-overhead rendering.
-    pub fn apply(&self, rect: Rectangle) -> Rectangle {
-        if self.progress >= 1.0 {
-            return rect;
-        }
-
-        let scale = 0.96 + 0.04 * self.eased;
-        let y_offset = (1.0 - self.eased) * -6.0;
-        let opacity = 0.2 + 0.8 * self.eased;
-
-        rect.scale(scale).translate(0.0, y_offset).opacity(opacity)
-    }
-}
-
-/// Analytical Damped Harmonic Oscillator representing physical Apple / iOS spring physics.
-///
-/// Models the standard closed-form spring equation:
-/// $$\omega_n = \frac{2\pi}{\text{response}}$$
-/// $$\omega_d = \omega_n \sqrt{|1 - \zeta^2|}$$
-/// Underdamped ($\zeta < 1$):
-/// $$x(t) = 1.0 - e^{-\zeta \omega_n t} \left( \cos(\omega_d t) + \frac{\zeta}{\sqrt{1 - \zeta^2}} \sin(\omega_d t) \right)$$
-///
-/// Zero CPU overhead: Once settled within $\epsilon = 0.001$, `request_frame()` stops being
-/// invoked, parking Wayland surface rendering at 0 Hz.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct SpringTransition {
-    /// Progress value from 0.0 to ~1.0 (may subtly overshoot 1.0 when underdamped).
-    pub value: f32,
-    /// Whether the spring has settled within rest threshold.
-    pub is_settled: bool,
-}
-
-impl SpringTransition {
-    /// Instantaneous rest state ($x=1.0$, settled).
-    pub const AT_REST: Self = Self {
-        value: 1.0,
-        is_settled: true,
+    let [x1, y1, x2, y2] = curve;
+    let bezier = |p1: f32, p2: f32, u: f32| -> f32 {
+        let inv = 1.0 - u;
+        3.0 * inv * inv * u * p1 + 3.0 * inv * u * u * p2 + u * u * u
     };
 
-    /// Apple HIG Snappy spring preset (`response = 0.26s`, `damping_ratio = 0.85`).
-    /// Ideal for tactile control switches, squircle buttons, and compact bento toggles.
-    pub fn snappy(started_at: Option<Instant>) -> Self {
-        Self::compute(started_at, 0.26, 0.85)
-    }
-
-    /// Apple HIG Smooth spring preset (`response = 0.35s`, `damping_ratio = 0.82`).
-    /// Ideal for modal sheets, control center panels, and bento card expansions.
-    pub fn smooth(started_at: Option<Instant>) -> Self {
-        Self::compute(started_at, 0.35, 0.82)
-    }
-
-    /// Apple HIG Bouncy / Playful spring preset (`response = 0.40s`, `damping_ratio = 0.68`).
-    /// Has intentional tasteful overshoot for interactive notifications and dynamic island pills.
-    pub fn bouncy(started_at: Option<Instant>) -> Self {
-        Self::compute(started_at, 0.40, 0.68)
-    }
-
-    /// Computes the closed-form damped harmonic oscillator displacement at elapsed time.
-    ///
-    /// - `response`: Duration (in seconds) of one undamped cycle ($T_n = 2\pi / \omega_n$).
-    /// - `damping_ratio`: Damping factor $\zeta$. 1.0 = critically damped, <1.0 = underdamped.
-    pub fn compute(started_at: Option<Instant>, response: f32, damping_ratio: f32) -> Self {
-        let Some(started) = started_at else {
-            return Self::AT_REST;
-        };
-
-        let t = started.elapsed().as_secs_f32();
-        if t <= 0.0 {
-            request_frame();
-            return Self {
-                value: 0.0,
-                is_settled: false,
-            };
-        }
-
-        let resp = response.max(0.01);
-        let zeta = damping_ratio.max(0.01);
-        let omega_n = (2.0 * std::f32::consts::PI) / resp;
-
-        // Settling time heuristic: when envelope e^(-zeta * omega_n * t) < 0.002
-        let decay = (-zeta * omega_n * t).exp();
-        if decay < 0.002 {
-            return Self::AT_REST;
-        }
-
-        let value = if (zeta - 1.0).abs() < 1e-4 {
-            // Critically damped (zeta = 1)
-            1.0 - (1.0 + omega_n * t) * decay
-        } else if zeta < 1.0 {
-            // Underdamped (oscillatory with decay envelope)
-            let omega_d = omega_n * (1.0 - zeta * zeta).sqrt();
-            let sin_term = (zeta / (1.0 - zeta * zeta).sqrt()) * (omega_d * t).sin();
-            let cos_term = (omega_d * t).cos();
-            1.0 - decay * (cos_term + sin_term)
+    let mut lo = 0.0_f32;
+    let mut hi = 1.0_f32;
+    for _ in 0..24 {
+        let mid = (lo + hi) * 0.5;
+        if bezier(x1, x2, mid) < t {
+            lo = mid;
         } else {
-            // Overdamped (zeta > 1)
-            let alpha = omega_n * (zeta * zeta - 1.0).sqrt();
-            let c1 = 0.5 * (1.0 + (zeta * omega_n) / alpha);
-            let c2 = 0.5 * (-1.0 + (zeta * omega_n) / alpha);
-            1.0 - (c1 * ((-zeta * omega_n + alpha) * t).exp()
-                + c2 * ((-zeta * omega_n - alpha) * t).exp())
-        };
+            hi = mid;
+        }
+    }
+    bezier(y1, y2, (lo + hi) * 0.5).clamp(0.0, 1.0)
+}
 
-        // If the deviation from 1.0 is negligible and envelope is small, park
-        if (value - 1.0).abs() < 0.001 && decay < 0.01 {
-            Self::AT_REST
-        } else {
-            // Actively tick frame callback until settled
-            request_frame();
-            Self {
-                value,
-                is_settled: false,
+/// Closed-form damped harmonic oscillator preserving position and velocity across mid-flight redirects.
+#[derive(Debug, Clone, Copy)]
+pub struct PanelSpring {
+    value: f32,
+    velocity: f32,
+    target: f32,
+    stiffness: f32,
+    damping: f32,
+    last_tick: Option<Instant>,
+}
+
+impl PanelSpring {
+    pub fn new(initial: f32, stiffness: f32, damping: f32) -> Self {
+        Self {
+            value: initial,
+            velocity: 0.0,
+            target: initial,
+            stiffness,
+            damping,
+            last_tick: None,
+        }
+    }
+
+    /// Redirects the spring toward `target` with `damping`, keeping current displacement & velocity.
+    pub fn set_target(&mut self, target: f32, damping: f32) {
+        if (self.target - target).abs() > 1e-4 {
+            self.target = target;
+            self.damping = damping;
+            if self.last_tick.is_none() {
+                self.last_tick = Some(Instant::now());
             }
         }
     }
 
-    /// Returns `true` if the spring is still active.
     #[inline]
-    pub fn is_animating(&self) -> bool {
-        !self.is_settled
+    pub fn value(&self) -> f32 {
+        self.value
     }
 
-    /// Transforms a modal container rectangle with iOS-grade spring scale, subtle vertical glide, and opacity.
-    pub fn apply_modal(&self, rect: Rectangle) -> Rectangle {
-        if self.is_settled {
-            return rect;
+    #[inline]
+    pub fn velocity(&self) -> f32 {
+        self.velocity
+    }
+
+    #[inline]
+    pub fn is_moving(&self) -> bool {
+        (self.target - self.value).abs() > SPRING_SETTLED_POS
+            || self.velocity.abs() > SPRING_SETTLED_VEL
+    }
+
+    /// Advances the spring using real elapsed time and returns its current value (`[0.0, 1.0]`).
+    pub fn advance(&mut self) -> f32 {
+        let now = Instant::now();
+        let dt = self
+            .last_tick
+            .map(|prev| now.duration_since(prev).as_secs_f32().min(SPRING_MAX_STEP))
+            .unwrap_or(1.0 / 60.0);
+        self.last_tick = Some(now);
+        self.step(dt)
+    }
+
+    /// Deterministic single-step advancement for physics integration and unit tests.
+    pub fn step(&mut self, dt: f32) -> f32 {
+        if dt <= 0.0 {
+            return self.value;
+        }
+        let dt = dt.min(SPRING_MAX_STEP);
+        let disp = self.value - self.target;
+        let omega = self.stiffness.max(1.0).sqrt();
+        let gamma = self.damping * 0.5;
+        let discriminant = gamma * gamma - self.stiffness;
+
+        let (next_disp, next_vel) = if discriminant.abs() < 1e-3 {
+            // Critically damped
+            let c1 = disp;
+            let c2 = self.velocity + omega * disp;
+            let decay = (-omega * dt).exp();
+            (
+                (c1 + c2 * dt) * decay,
+                (c2 - omega * (c1 + c2 * dt)) * decay,
+            )
+        } else if discriminant < 0.0 {
+            // Underdamped
+            let omega_d = (-discriminant).sqrt();
+            let c1 = disp;
+            let c2 = (self.velocity + gamma * disp) / omega_d;
+            let decay = (-gamma * dt).exp();
+            let cos_w = (omega_d * dt).cos();
+            let sin_w = (omega_d * dt).sin();
+            (
+                decay * (c1 * cos_w + c2 * sin_w),
+                decay
+                    * ((-gamma * c1 + omega_d * c2) * cos_w + (-gamma * c2 - omega_d * c1) * sin_w),
+            )
+        } else {
+            // Overdamped
+            let root = discriminant.sqrt();
+            let r1 = -gamma + root;
+            let r2 = -gamma - root;
+            let c1 = (self.velocity - r2 * disp) / (2.0 * root);
+            let c2 = disp - c1;
+            let e1 = (r1 * dt).exp();
+            let e2 = (r2 * dt).exp();
+            (c1 * e1 + c2 * e2, c1 * r1 * e1 + c2 * r2 * e2)
+        };
+
+        self.value = (self.target + next_disp).clamp(0.0, 1.0);
+        self.velocity = next_vel;
+
+        if !self.is_moving() {
+            self.value = self.target;
+            self.velocity = 0.0;
+            self.last_tick = None;
         }
 
-        let scale = 0.94 + 0.06 * self.value;
-        let y_offset = (1.0 - self.value) * -8.0;
-        let opacity = (0.2 + 0.8 * self.value).clamp(0.0, 1.0);
-
-        rect.scale(scale).translate(0.0, y_offset).opacity(opacity)
-    }
-
-    /// Transforms an interactive control with tactile spring press depression (scale down to 0.96).
-    pub fn apply_press(&self, rect: Rectangle, is_pressed: bool) -> Rectangle {
-        let target_scale = if is_pressed { 0.95 } else { 1.0 };
-        let current_scale = 1.0 - (1.0 - target_scale) * self.value;
-        rect.scale(current_scale)
+        self.value
     }
 }
 
-/// Standard cubic ease-out curve: $1 - (1 - t)^3$.
-/// Fast initial acceleration with gentle deceleration into rest.
-pub fn cubic_ease_out(t: f32) -> f32 {
-    let clamped = t.clamp(0.0, 1.0);
-    let remaining = 1.0 - clamped;
-    1.0 - remaining * remaining * remaining
+/// Resolved frame state for an animated overlay/panel supporting smooth open AND close.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PanelMotion {
+    /// Spring spatial displacement in `[0.0, 1.0]` (`0.0` closed, `1.0` open).
+    pub progress: f32,
+    /// Faster visual opacity curve (`0.0..=1.0`) avoiding muddy semi-transparent fades.
+    pub alpha: f32,
+    /// True while open or still retracting back to `0.0`.
+    pub visible: bool,
+    /// True while another compositor frame callback is needed (`0 Hz` when false).
+    pub animating: bool,
+}
+
+impl PanelMotion {
+    /// Applies centered modal spring scale, micro-slide, and opacity.
+    pub fn apply_centered_modal(&self, rect: Rectangle) -> Rectangle {
+        if !self.animating && self.progress >= 1.0 {
+            return rect;
+        }
+        let scale = 0.95 + 0.05 * self.progress;
+        let y_offset = (1.0 - self.progress) * -8.0;
+        let opacity = (0.15 + 0.85 * self.alpha).clamp(0.0, 1.0);
+        rect.scale(scale).translate(0.0, y_offset).opacity(opacity)
+    }
+}
+
+/// Evaluates and advances a persistent named panel spring outside `Service` state.
+///
+/// Parks cleanly at 0 Hz (does not call `request_frame()`) once settled at `0.0` or `1.0`.
+pub fn panel_motion(id: &'static str, open: bool) -> PanelMotion {
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+
+    thread_local! {
+        static PANEL_SPRINGS: RefCell<HashMap<&'static str, PanelSpring>> =
+            RefCell::new(HashMap::new());
+    }
+
+    PANEL_SPRINGS.with(|cell| {
+        let mut map = cell.borrow_mut();
+        let spring = map
+            .entry(id)
+            .or_insert_with(|| PanelSpring::new(0.0, PANEL_STIFFNESS, PANEL_CLOSE_DAMPING));
+
+        let (target, damping) = if open {
+            (1.0, PANEL_OPEN_DAMPING)
+        } else {
+            (0.0, PANEL_CLOSE_DAMPING)
+        };
+        spring.set_target(target, damping);
+
+        let animating = spring.is_moving();
+        let progress = if animating {
+            let v = spring.advance();
+            if spring.is_moving() {
+                request_frame();
+            }
+            v
+        } else {
+            spring.value()
+        };
+
+        let alpha = cubic_bezier(MOTION_EFFECTS_CURVE, (progress * 1.15).clamp(0.0, 1.0));
+        let still_animating = spring.is_moving();
+
+        PanelMotion {
+            progress,
+            alpha,
+            visible: open || progress > SPRING_SETTLED_POS || still_animating,
+            animating: still_animating,
+        }
+    })
 }
 
 #[cfg(test)]
@@ -216,104 +238,51 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_cubic_ease_out_boundaries() {
-        assert_eq!(cubic_ease_out(0.0), 0.0);
-        assert_eq!(cubic_ease_out(1.0), 1.0);
-        assert_eq!(cubic_ease_out(-0.5), 0.0);
-        assert_eq!(cubic_ease_out(1.5), 1.0);
-    }
-
-    #[test]
-    fn test_cubic_ease_out_monotonicity() {
+    fn test_cubic_bezier_spatial_endpoints_and_monotonicity() {
+        assert_eq!(cubic_bezier(MOTION_SPATIAL_CURVE, 0.0), 0.0);
+        assert_eq!(cubic_bezier(MOTION_SPATIAL_CURVE, 1.0), 1.0);
         let mut prev = 0.0;
         for step in 0..=100 {
-            let t = step as f32 / 100.0;
-            let val = cubic_ease_out(t);
-            assert!(
-                val >= prev,
-                "easing must be monotonic: at t={}, val={} < prev={}",
-                t,
-                val,
-                prev
-            );
-            prev = val;
+            let v = cubic_bezier(MOTION_SPATIAL_CURVE, step as f32 / 100.0);
+            assert!(v >= prev && v <= 1.0);
+            prev = v;
         }
     }
 
     #[test]
-    fn test_cubic_ease_out_curvature() {
-        // At t = 0.5, cubic ease out should have traveled more than 50%
-        let mid = cubic_ease_out(0.5);
-        assert!(
-            mid > 0.5,
-            "ease-out should have greater progress in first half"
-        );
-        assert_eq!(mid, 0.875);
+    fn test_panel_spring_critically_damped_no_bounce_and_settles() {
+        let mut s = PanelSpring::new(0.0, PANEL_STIFFNESS, PANEL_OPEN_DAMPING);
+        s.set_target(1.0, PANEL_OPEN_DAMPING);
+        let mut prev = 0.0;
+        for _ in 0..40 {
+            let v = s.step(1.0 / 60.0);
+            assert!(
+                v <= 1.0,
+                "critical panel spring must never bounce past 1.0 (got {v})"
+            );
+            assert!(v >= prev - 1e-4);
+            prev = v;
+        }
+        assert!(!s.is_moving());
+        assert_eq!(s.value(), 1.0);
     }
 
     #[test]
-    fn test_modal_transition_none_parks_at_rest() {
-        let transition = ModalTransition::compute(None, DEFAULT_MODAL_ANIMATION_DURATION);
-        assert_eq!(transition.progress, 1.0);
-        assert_eq!(transition.eased, 1.0);
-        assert!(!transition.is_animating());
-    }
-
-    #[test]
-    fn test_modal_transition_elapsed_parks_at_rest() {
-        let started = Instant::now() - Duration::from_millis(300);
-        let transition = ModalTransition::compute(Some(started), Duration::from_millis(150));
-        assert_eq!(transition.progress, 1.0);
-        assert_eq!(transition.eased, 1.0);
-        assert!(!transition.is_animating());
-    }
-
-    #[test]
-    fn test_modal_transition_active_ticks() {
-        let started = Instant::now();
-        let transition = ModalTransition::compute(Some(started), Duration::from_secs(10));
-        assert!(transition.progress < 1.0);
-        assert!(transition.is_animating());
-    }
-
-    #[test]
-    fn test_spring_transition_none_parks_at_rest() {
-        let spring = SpringTransition::smooth(None);
-        assert_eq!(spring.value, 1.0);
-        assert!(spring.is_settled);
-        assert!(!spring.is_animating());
-    }
-
-    #[test]
-    fn test_spring_transition_presets() {
-        let snappy = SpringTransition::snappy(None);
-        assert_eq!(snappy, SpringTransition::AT_REST);
-        let smooth = SpringTransition::smooth(None);
-        assert_eq!(smooth, SpringTransition::AT_REST);
-        let bouncy = SpringTransition::bouncy(None);
-        assert_eq!(bouncy, SpringTransition::AT_REST);
-    }
-
-    #[test]
-    fn test_spring_transition_elapsed_parks() {
-        let started = Instant::now() - Duration::from_secs(2);
-        let spring = SpringTransition::smooth(Some(started));
-        assert_eq!(spring.value, 1.0);
-        assert!(spring.is_settled);
-        assert!(!spring.is_animating());
-    }
-
-    #[test]
-    fn test_spring_transition_active_ticks() {
-        let started = Instant::now();
-        let spring = SpringTransition::smooth(Some(started));
-        assert!(spring.is_animating());
-    }
-
-    #[test]
-    fn test_spring_apply_modal_at_rest_is_noop() {
-        let spring = SpringTransition::AT_REST;
-        let rect = Rectangle::new().width(100.0).height(100.0);
-        let _applied = spring.apply_modal(rect);
+    fn test_panel_spring_mid_flight_reversal_preserves_continuity() {
+        let mut s = PanelSpring::new(0.0, PANEL_STIFFNESS, PANEL_OPEN_DAMPING);
+        s.set_target(1.0, PANEL_OPEN_DAMPING);
+        for _ in 0..4 {
+            s.step(1.0 / 60.0);
+        }
+        let mid = s.value();
+        assert!(mid > 0.05 && mid < 0.95);
+        s.set_target(0.0, PANEL_CLOSE_DAMPING);
+        assert_eq!(s.value(), mid);
+        assert!(s.is_moving());
+        for _ in 0..40 {
+            s.step(1.0 / 60.0);
+        }
+        assert!(!s.is_moving());
+        assert_eq!(s.value(), 0.0);
     }
 }

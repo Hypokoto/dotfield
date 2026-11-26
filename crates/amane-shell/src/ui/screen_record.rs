@@ -2,8 +2,8 @@ use std::process::Command;
 use std::time::{Duration, Instant};
 
 use amane::{
-    Align, Center, Color, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin,
-    OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Zone,
+    Align, Center, Column, Horizontal, Justify, Key, Keyboard, Layer, LayerWindow, Margin,
+    OutputTarget, Parent, Pointer, Rectangle, Row, Service, Text, Vertical, Zone,
 };
 
 use crate::config::ConfigService;
@@ -168,8 +168,9 @@ pub fn screen_record_overlay() -> LayerWindow {
     let manifest = ConfigService::read().manifest.clone();
     let rec = ScreenRecordService::read();
 
-    let is_visible = rec.open;
-    if !is_visible {
+    let is_open = rec.open;
+    let motion = crate::ui::animation::panel_motion("screen_record", is_open);
+    if !motion.visible {
         return LayerWindow::new()
             .width(1.0)
             .height(1.0)
@@ -269,11 +270,16 @@ pub fn screen_record_overlay() -> LayerWindow {
             })
             .child(
                 Row::new(vec![
-                    Box::new(Text::new("󰙦").size(16.0).color(Color::WHITE).font(&font)),
+                    Box::new(
+                        Text::new("󰙦")
+                            .size(16.0)
+                            .color(tokens.text_on_danger)
+                            .font(&font),
+                    ),
                     Box::new(
                         Text::new("Stop Recording")
                             .size(typography::BODY)
-                            .color(Color::WHITE)
+                            .color(tokens.text_on_danger)
                             .font(&font),
                     ),
                     Box::new(components::keycap("Space", &tokens)),
@@ -314,7 +320,8 @@ pub fn screen_record_overlay() -> LayerWindow {
                                 Text::new("󰩭")
                                     .size(20.0)
                                     .color(tokens.accent)
-                                    .font(&tokens.font_mono),
+                                    .font(&tokens.font_mono)
+                                    .tight(),
                             ),
                             Box::new(
                                 Text::new("Region")
@@ -357,7 +364,8 @@ pub fn screen_record_overlay() -> LayerWindow {
                                 Text::new("󰍹")
                                     .size(20.0)
                                     .color(tokens.accent)
-                                    .font(&tokens.font_mono),
+                                    .font(&tokens.font_mono)
+                                    .tight(),
                             ),
                             Box::new(
                                 Text::new("Fullscreen")
@@ -416,7 +424,8 @@ pub fn screen_record_overlay() -> LayerWindow {
                                 Text::new(if rec.with_audio { "󰍬" } else { "󰍭" })
                                     .size(13.0)
                                     .color(audio_fg)
-                                    .font(&tokens.font_mono),
+                                    .font(&tokens.font_mono)
+                                    .tight(),
                             ),
                             Box::new(
                                 Text::new(if rec.with_audio {
@@ -475,19 +484,8 @@ pub fn screen_record_overlay() -> LayerWindow {
         .gap(spacing::GAP_MD)
     };
 
-    let panel = Rectangle::new()
-        .width(520.0)
-        .height(218.0)
-        .radius(radius::LG)
-        .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
-        .padding(Padding {
-            top: spacing::PAD_MD,
-            bottom: spacing::PAD_MD,
-            left: spacing::PAD_MD,
-            right: spacing::PAD_MD,
-        })
-        .child(content_box);
+    let panel = components::clay_modal_frame(520.0, 218.0, content_box, &tokens);
+    let panel = motion.apply_centered_modal(panel);
 
     LayerWindow::new()
         .width(520.0)
@@ -503,12 +501,12 @@ pub fn screen_record_overlay() -> LayerWindow {
         })
         .layer(Layer::Overlay)
         .space(Zone::Ignore)
-        .keyboard(if is_visible {
+        .keyboard(if is_open {
             Keyboard::OnDemand
         } else {
             Keyboard::None
         })
-        .visible(is_visible)
+        .visible(motion.visible)
         .namespace("dotfield-shell-screen-record")
         .on_key(|key| match key {
             Key::Escape | Key::Character('q') | Key::Character('Q') => {

@@ -227,17 +227,17 @@ pub fn control_center_panel() -> LayerWindow {
     );
 
     let (win_w, win_h) = components::bar_connected_window_size(380.0, panel_height);
-    let top_margin = (crate::ui::bar::TOP_ISLAND_HEIGHT + 6.0 + 10.0).round() as i32;
+    let top_margin = crate::ui::bar::top_bar_clearance(8.0);
 
     LayerWindow::new()
         .width(win_w)
         .height(win_h)
         .target_output(OutputTarget::Active)
         .anchor_vertical(amane::Vertical::Top)
-        .anchor_horizontal(Horizontal::Middle)
+        .anchor_horizontal(Horizontal::Right)
         .margin(Margin {
             top: top_margin,
-            right: 0,
+            right: 12,
             bottom: 0,
             left: 0,
         })

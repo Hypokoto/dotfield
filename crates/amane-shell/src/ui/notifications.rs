@@ -200,6 +200,12 @@ pub fn notification_popups() -> LayerWindow {
     let gaps_h = (cards.len().saturating_sub(1) as f32) * spacing::GAP_SM;
     let window_h = (total_cards_h + gaps_h).clamp(96.0, 720.0);
 
+    let top_margin = if crate::services::niri::NiriWindowService::read().is_fullscreen {
+        12
+    } else {
+        crate::ui::bar::top_bar_clearance(8.0)
+    };
+
     LayerWindow::new()
         .width(360.0)
         .height(window_h)
@@ -207,8 +213,8 @@ pub fn notification_popups() -> LayerWindow {
         .anchor_vertical(Vertical::Top)
         .anchor_horizontal(Horizontal::Right)
         .margin(Margin {
-            top: 14,
-            right: 16,
+            top: top_margin,
+            right: 12,
             bottom: 0,
             left: 0,
         })

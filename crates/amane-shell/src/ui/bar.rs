@@ -1,7 +1,7 @@
 use amane::{
-    Align, Audio, Battery, Center, Color, Horizontal, Layer, LayerWindow, Margin, Network,
-    Notifications, OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Scroll, Service, Text,
-    Vertical, Weight, Widget, Workspaces, Zone,
+    Align, Audio, Battery, Center, Color, Column, Full, Horizontal, Justify, Layer, LayerWindow,
+    Margin, Network, Notifications, OutputTarget, Padding, Parent, Pointer, Rectangle, Row, Scroll,
+    Service, Text, Vertical, Weight, Widget, Workspaces, Zone,
 };
 
 use crate::config::{ConfigService, ShellManifest};
@@ -44,7 +44,12 @@ pub fn bar_edge_margins(manifest: &ShellManifest, gap: f32) -> (i32, i32) {
     }
 }
 
-pub const TOP_ISLAND_HEIGHT: f32 = 40.0;
+pub const TOP_ISLAND_HEIGHT: f32 = 36.0;
+
+/// Returns the vertical top margin required for overlays anchored beneath the flush top bar.
+pub fn top_bar_clearance(gap: f32) -> i32 {
+    (TOP_ISLAND_HEIGHT + gap).max(0.0).round() as i32
+}
 
 pub fn top_island_monitor(monitor: &amane::Monitor) -> LayerWindow {
     build_top_island(Some(&monitor.name))
@@ -55,7 +60,10 @@ fn build_top_island(monitor_name: Option<&str>) -> LayerWindow {
     let tokens = ThemeTokens::from_manifest(&manifest);
     let (_, _, is_visible, _) = bar_layer_properties(&manifest);
 
-    // Auto-hide when a fullscreen window is active on this output
+    // Explicitly subscribe to overlay services so top-bar widgets update immediately
+    let _cc = crate::ui::control_center::ControlCenterService::read();
+    let _cal = crate::ui::calendar::CalendarService::read();
+    // Auto-hide only when a true fullscreen window covers the entire output
     // Reading NiriWindowService subscribes this LayerWindow to changes so it auto-toggles
     let niri_win = crate::services::niri::NiriWindowService::read();
     let is_fullscreen = niri_win.is_fullscreen;
@@ -66,21 +74,43 @@ fn build_top_island(monitor_name: Option<&str>) -> LayerWindow {
         Zone::Reserve
     };
 
-    let mut items: Vec<Box<dyn Widget>> = Vec::new();
-    let mut content_w = 0.0_f32;
-
+    let mut left_items: Vec<Box<dyn Widget>> = Vec::new();
     if manifest.bar.show_workspaces {
-        let (ws_widget, ws_w) = render_workspaces(&manifest, &tokens, monitor_name);
-        items.push(Box::new(ws_widget));
-        content_w += ws_w;
+        let (ws_widget, _ws_w) = render_workspaces(&manifest, &tokens, monitor_name);
+        left_items.push(Box::new(ws_widget));
     }
+
+    if niri_win.id != 0 && !niri_win.display_title.is_empty() {
+        let active_indicator = Row::new(vec![
+            Box::new(
+                Rectangle::new()
+                    .width(6.0)
+                    .height(6.0)
+                    .radius(radius::PILL)
+                    .fill(tokens.accent),
+            ),
+            Box::new(
+                Text::new(&niri_win.display_title)
+                    .size(typography::SECONDARY)
+                    .weight(Weight::Medium)
+                    .color(tokens.text_secondary)
+                    .font(&tokens.font_sans),
+            ),
+        ])
+        .gap(8.0)
+        .align(Align::Center);
+        left_items.push(Box::new(active_indicator));
+    }
+
+    let left_group = Row::new(left_items).gap(12.0).align(Align::Center);
+
+    let mut right_items: Vec<Box<dyn Widget>> = Vec::new();
 
     // Compact Clock + Date trigger (opens Calendar)
     let clock = crate::services::clock::ClockService::read();
     let clock_label = format!("{}  {}", clock.time(), clock.date());
-    let clock_w = 136.0;
     let clock_pill = Rectangle::new()
-        .width(clock_w)
+        .width(136.0)
         .height(28.0)
         .radius(radius::PILL)
         .fill(tokens.surface_elevated)
@@ -98,13 +128,11 @@ fn build_top_island(monitor_name: Option<&str>) -> LayerWindow {
                 .font(&tokens.font_mono)
                 .tight(),
         );
-    items.push(Box::new(clock_pill));
-    content_w += clock_w;
+    right_items.push(Box::new(clock_pill));
 
     // Quick Settings (Wi-Fi, Volume, Battery -> opens Control Center)
     let qs_pill = render_quick_settings_pill(&tokens, &manifest.theme.font_family);
-    items.push(Box::new(qs_pill));
-    content_w += 90.0;
+    right_items.push(Box::new(qs_pill));
 
     // Notification counter / bell pill
     let notifs_count = Notifications::read().list().len();
@@ -146,36 +174,46 @@ fn build_top_island(monitor_name: Option<&str>) -> LayerWindow {
                 .font(&tokens.font_mono)
                 .tight()
         });
-    items.push(Box::new(notif_pill));
-    content_w += notif_w;
+    right_items.push(Box::new(notif_pill));
 
-    // Width: sum of all pill widths + inter-pill gaps (8px each) + 24px island horizontal padding
-    let gap_total = (items.len().saturating_sub(1) as f32) * 8.0;
-    let island_w = content_w + gap_total + 24.0;
+    let right_group = Row::new(right_items).gap(8.0).align(Align::Center);
 
-    let island_row = Row::new(items)
-        .gap(8.0)
+    let bar_row = Row::new(vec![Box::new(left_group), Box::new(right_group)])
+        .justify(Justify::SpaceBetween)
         .align(Align::Center)
         .width(Parent)
         .height(Parent);
 
-    let island_frame = Rectangle::new()
-        .width(island_w)
-        .height(TOP_ISLAND_HEIGHT)
-        .radius(radius::PILL)
-        .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+    let bar_inner = Rectangle::new()
+        .width(Parent)
+        .height(TOP_ISLAND_HEIGHT - 1.0)
         .padding(Padding {
-            top: 4.0,
-            bottom: 4.0,
+            top: 0.0,
+            bottom: 0.0,
             left: 12.0,
             right: 12.0,
         })
         .align_child(Align::Center, Align::Center)
-        .child(island_row);
+        .child(bar_row);
+
+    let bottom_divider = Rectangle::new()
+        .width(Parent)
+        .height(1.0)
+        .fill(tokens.border_subtle);
+
+    let bar_frame = Rectangle::new()
+        .width(Parent)
+        .height(TOP_ISLAND_HEIGHT)
+        .radius(0.0)
+        .fill(tokens.surface)
+        .child(
+            Column::new(vec![Box::new(bar_inner), Box::new(bottom_divider)])
+                .width(Parent)
+                .height(Parent),
+        );
 
     LayerWindow::new()
-        .width(island_w)
+        .width(Full)
         .height(TOP_ISLAND_HEIGHT)
         .target_output(monitor_name.map_or(OutputTarget::Active, |n| {
             OutputTarget::Named(Box::leak(n.to_string().into_boxed_str()))
@@ -183,7 +221,7 @@ fn build_top_island(monitor_name: Option<&str>) -> LayerWindow {
         .anchor_vertical(Vertical::Top)
         .anchor_horizontal(Horizontal::Middle)
         .margin(Margin {
-            top: 6,
+            top: 0,
             right: 0,
             bottom: 0,
             left: 0,
@@ -192,7 +230,7 @@ fn build_top_island(monitor_name: Option<&str>) -> LayerWindow {
         .space(zone)
         .visible(visible)
         .namespace("dotfield-shell-top-island")
-        .child(island_frame)
+        .child(bar_frame)
 }
 
 fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
@@ -200,16 +238,13 @@ fn build_top_bar(monitor_name: Option<&str>) -> LayerWindow {
     let tokens = ThemeTokens::from_manifest(&manifest);
     let (height, bar_zone, is_visible, _) = bar_layer_properties(&manifest);
 
-    // Auto-hide dock island when a fullscreen window is active
+    // Auto-hide the floating dock whenever the focused window is maximized or fullscreen
+    // so full-width apps claim maximum vertical space without leaving a wallpaper strip.
     // Reading NiriWindowService subscribes this LayerWindow to changes so it auto-toggles
     let niri_win = crate::services::niri::NiriWindowService::read();
-    let is_fullscreen = niri_win.is_fullscreen;
-    let visible = is_visible && !is_fullscreen;
-    let effective_zone = if is_fullscreen {
-        Zone::Ignore
-    } else {
-        bar_zone
-    };
+    let hide_dock = niri_win.is_maximized || niri_win.is_fullscreen;
+    let visible = is_visible && !hide_dock;
+    let effective_zone = if hide_dock { Zone::Ignore } else { bar_zone };
 
     let (dock_widget, dock_width) = crate::ui::dock::render_dock(&manifest, &tokens);
     let dock_island_w = (dock_width + 24.0).max(160.0);
@@ -310,7 +345,7 @@ fn render_workspaces(
             continue;
         }
 
-        let pill_width = 28.0;
+        let pill_width = 24.0;
 
         let fill = if is_focused {
             tokens.accent
@@ -348,7 +383,7 @@ fn render_workspaces(
 
         let tile = Rectangle::new()
             .width(pill_width)
-            .height(28.0)
+            .height(22.0)
             .radius(radius::PILL)
             .fill(fill)
             .border(1.0, tile_border)
@@ -363,7 +398,7 @@ fn render_workspaces(
             })
             .child(
                 Text::new(format!("{num}"))
-                    .size(typography::BODY)
+                    .size(typography::CAPTION)
                     .color(text_color)
                     .font(&tokens.font_mono),
             );
@@ -373,11 +408,11 @@ fn render_workspaces(
     }
 
     if buttons.is_empty() {
-        let pill_width = 28.0;
+        let pill_width = 24.0;
         let target_name = CANONICAL_WORKSPACES[0].to_string();
         let tile = Rectangle::new()
             .width(pill_width)
-            .height(28.0)
+            .height(22.0)
             .radius(radius::PILL)
             .fill(tokens.accent)
             .border(1.0, tokens.border_focus)
@@ -388,7 +423,7 @@ fn render_workspaces(
             })
             .child(
                 Text::new("1")
-                    .size(typography::BODY)
+                    .size(typography::CAPTION)
                     .color(tokens.text_on_accent)
                     .font(&tokens.font_mono),
             );
@@ -404,7 +439,7 @@ fn render_workspaces(
     let capsule_width = total_width + 8.0;
     let capsule = Rectangle::new()
         .width(capsule_width)
-        .height(34.0)
+        .height(28.0)
         .radius(radius::PILL)
         .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
@@ -502,7 +537,7 @@ fn render_quick_settings_pill(tokens: &ThemeTokens, _font: &str) -> Rectangle {
 
     Rectangle::new()
         .width(90.0)
-        .height(34.0)
+        .height(28.0)
         .radius(radius::PILL)
         .fill(tokens.surface_elevated)
         .border(1.0, tokens.border_subtle)
@@ -564,5 +599,11 @@ mod tests {
         assert_eq!(zone, Zone::Reserve);
         assert_eq!(height, 48.0);
         assert_eq!(anchor, Vertical::Bottom);
+    }
+
+    #[test]
+    fn test_top_bar_clearance_matches_flush_bar() {
+        assert_eq!(top_bar_clearance(8.0), 44);
+        assert_eq!(top_bar_clearance(0.0), 36);
     }
 }

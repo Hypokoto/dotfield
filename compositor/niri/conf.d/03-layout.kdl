@@ -47,8 +47,9 @@ layout {
     }
 }
 
-// Window corner radius (Windows 11 8px rounding)
+// Keep tiled and edge-maximized windows flush (0px corners) while rounding floating windows
 window-rule {
-    geometry-corner-radius 8
+    match is-floating=true
+    geometry-corner-radius 10
     clip-to-geometry true
 }

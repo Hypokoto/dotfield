@@ -53,8 +53,15 @@ static FOCUSED_WINDOW: LazyLock<ArcSwap<NiriFocusedWindow>> =
 static CACHED_WINDOWS: LazyLock<ArcSwap<Vec<Window>>> =
     LazyLock::new(|| ArcSwap::from_pointee(Vec::new()));
 
+static FOCUSED_OUTPUT_WIDTH: LazyLock<ArcSwap<f32>> =
+    LazyLock::new(|| ArcSwap::from_pointee(1920.0));
+
 static FOCUSED_OUTPUT_HEIGHT: LazyLock<ArcSwap<f32>> =
     LazyLock::new(|| ArcSwap::from_pointee(1080.0));
+
+/// True when the focused window occupies the full output width or height (maximized or fullscreen).
+/// Updated atomically by the Niri event loop — zero-lock read from the render thread.
+static IS_MAXIMIZED_ACTIVE: AtomicBool = AtomicBool::new(false);
 
 /// True when the focused window occupies the full output (fullscreen mode).
 /// Updated atomically by the Niri event loop — zero-lock read from the render thread.
@@ -68,6 +75,7 @@ pub struct NiriWindowService {
     pub display_title: String,
     pub layout_width: f32,
     pub window_count: usize,
+    pub is_maximized: bool,
     pub is_fullscreen: bool,
 }
 
@@ -188,7 +196,7 @@ impl NiriService {
             .map_err(|_| NiriError::IoError)?
         {
             Ok(Response::Outputs(outputs)) => {
-                Self::update_cached_output_height(&outputs);
+                Self::update_cached_output_size(&outputs);
                 Ok(outputs)
             }
             Ok(_) => Err(NiriError::UnexpectedResponse),
@@ -196,12 +204,16 @@ impl NiriService {
         }
     }
 
-    fn update_cached_output_height(outputs: &HashMap<String, Output>) {
+    fn update_cached_output_size(outputs: &HashMap<String, Output>) {
         if let Some(out) = outputs.values().find(|o| o.logical.is_some())
             && let Some(logical) = &out.logical
-            && logical.height > 0
         {
-            FOCUSED_OUTPUT_HEIGHT.store(Arc::new(logical.height as f32));
+            if logical.width > 0 {
+                FOCUSED_OUTPUT_WIDTH.store(Arc::new(logical.width as f32));
+            }
+            if logical.height > 0 {
+                FOCUSED_OUTPUT_HEIGHT.store(Arc::new(logical.height as f32));
+            }
         }
     }
 
@@ -223,9 +235,20 @@ impl NiriService {
         CACHED_WINDOWS.load_full()
     }
 
+    /// Returns the cached width of the primary or focused output in logical pixels (default 1920.0).
+    pub fn focused_output_width() -> f32 {
+        *FOCUSED_OUTPUT_WIDTH.load_full()
+    }
+
     /// Returns the cached height of the primary or focused output in logical pixels (default 1080.0).
     pub fn focused_output_height() -> f32 {
         *FOCUSED_OUTPUT_HEIGHT.load_full()
+    }
+
+    /// Returns true when the focused window is maximized (edge-to-edge width) or fullscreen.
+    /// Cheap lock-free read — safe to call every render frame.
+    pub fn is_maximized() -> bool {
+        IS_MAXIMIZED_ACTIVE.load(Ordering::Relaxed)
     }
 
     /// Returns true when the focused window currently occupies the full output (fullscreen).
@@ -316,19 +339,35 @@ impl NiriService {
         svc.window_count = count;
     }
 
-    /// Update the IS_FULLSCREEN_ACTIVE flag from a niri_ipc Window's tile_size.
-    /// Fullscreen is detected when tile height >= (output_height - 4) to tolerate HiDPI rounding.
-    /// Passing tile_size = None clears the flag (window closed / focus lost).
-    fn update_fullscreen_flag(tile_size: Option<(f64, f64)>) {
-        let is_fs = match tile_size {
-            Some((_, h)) => {
-                let out_h = *FOCUSED_OUTPUT_HEIGHT.load_full() as f64;
-                h >= out_h - 4.0
+    /// Compute `(is_maximized, is_fullscreen)` from tile dimensions vs output dimensions.
+    /// Tolerates 4.0 logical px for HiDPI fractional rounding.
+    fn compute_window_fill_flags(
+        tile_size: Option<(f64, f64)>,
+        out_w: f64,
+        out_h: f64,
+    ) -> (bool, bool) {
+        match tile_size {
+            Some((w, h)) => {
+                let is_fs = h >= out_h - 4.0 && w >= out_w - 4.0;
+                let is_max = is_fs || w >= out_w - 4.0;
+                (is_max, is_fs)
             }
-            None => false,
-        };
+            None => (false, false),
+        }
+    }
+
+    /// Update IS_MAXIMIZED_ACTIVE and IS_FULLSCREEN_ACTIVE flags from a niri_ipc Window's tile_size.
+    /// Passing tile_size = None clears both flags (window closed / focus lost).
+    fn update_window_fill_flags(tile_size: Option<(f64, f64)>) {
+        let out_w = *FOCUSED_OUTPUT_WIDTH.load_full() as f64;
+        let out_h = *FOCUSED_OUTPUT_HEIGHT.load_full() as f64;
+        let (is_max, is_fs) = Self::compute_window_fill_flags(tile_size, out_w, out_h);
+
+        IS_MAXIMIZED_ACTIVE.store(is_max, Ordering::Relaxed);
         IS_FULLSCREEN_ACTIVE.store(is_fs, Ordering::Relaxed);
+
         let mut svc = NiriWindowService::write();
+        svc.is_maximized = is_max;
         svc.is_fullscreen = is_fs;
     }
 
@@ -346,12 +385,17 @@ impl NiriService {
         let mut socket = Socket::connect()?;
         let mut windows: HashMap<u64, Window> = HashMap::new();
 
+        // Seed initial output dimensions before computing window fill flags
+        if let Ok(Ok(Response::Outputs(outs))) = socket.send(Request::Outputs) {
+            Self::update_cached_output_size(&outs);
+        }
+
         // Seed initial focused window
         if let Ok(Ok(Response::FocusedWindow(Some(win)))) = socket.send(Request::FocusedWindow) {
             let title = win.title.clone().unwrap_or_default();
             let app_id = win.app_id.clone().unwrap_or_default();
             Self::update_active_window(win.id, &title, &app_id, 1);
-            Self::update_fullscreen_flag(Some(win.layout.tile_size));
+            Self::update_window_fill_flags(Some(win.layout.tile_size));
             windows.insert(win.id, win);
         }
 
@@ -363,16 +407,11 @@ impl NiriService {
                     let title = win.title.clone().unwrap_or_default();
                     let app_id = win.app_id.clone().unwrap_or_default();
                     Self::update_active_window(win.id, &title, &app_id, total);
-                    Self::update_fullscreen_flag(Some(win.layout.tile_size));
+                    Self::update_window_fill_flags(Some(win.layout.tile_size));
                 }
                 windows.insert(win.id, win.clone());
             }
             CACHED_WINDOWS.store(Arc::new(wins));
-        }
-
-        // Seed initial output height
-        if let Ok(Ok(Response::Outputs(outs))) = socket.send(Request::Outputs) {
-            Self::update_cached_output_height(&outs);
         }
 
         drop(socket);
@@ -415,14 +454,14 @@ impl NiriService {
                                 let title = win.title.clone().unwrap_or_default();
                                 let app_id = win.app_id.clone().unwrap_or_default();
                                 Self::update_active_window(win.id, &title, &app_id, total);
-                                Self::update_fullscreen_flag(Some(win.layout.tile_size));
+                                Self::update_window_fill_flags(Some(win.layout.tile_size));
                                 found_focused = true;
                             }
                             windows.insert(win.id, win.clone());
                         }
                         if !found_focused && windows.is_empty() {
                             Self::update_active_window(0, "", "", 0);
-                            Self::update_fullscreen_flag(None);
+                            Self::update_window_fill_flags(None);
                         }
                         CACHED_WINDOWS.store(Arc::new(new_windows));
                     }
@@ -437,7 +476,7 @@ impl NiriService {
 
                         if is_focused || FOCUSED_WINDOW.load().id == id {
                             Self::update_active_window(id, &title, &app_id, total);
-                            Self::update_fullscreen_flag(Some(tile_size));
+                            Self::update_window_fill_flags(Some(tile_size));
                         }
                         CACHED_WINDOWS.store(Arc::new(windows.values().cloned().collect()));
                     }
@@ -446,7 +485,7 @@ impl NiriService {
                         let total = windows.len();
                         if FOCUSED_WINDOW.load().id == id {
                             Self::update_active_window(0, "", "", total);
-                            Self::update_fullscreen_flag(None);
+                            Self::update_window_fill_flags(None);
                         } else {
                             NiriWindowService::write().window_count = total;
                         }
@@ -463,16 +502,32 @@ impl NiriService {
                                     let title = win.title.clone().unwrap_or_default();
                                     let app_id = win.app_id.clone().unwrap_or_default();
                                     Self::update_active_window(win.id, &title, &app_id, total);
-                                    Self::update_fullscreen_flag(Some(win.layout.tile_size));
+                                    Self::update_window_fill_flags(Some(win.layout.tile_size));
                                 } else {
                                     Self::update_active_window(win_id, "", "", total);
-                                    Self::update_fullscreen_flag(None);
+                                    Self::update_window_fill_flags(None);
                                 }
                             }
                             None => {
                                 Self::update_active_window(0, "", "", total);
-                                Self::update_fullscreen_flag(None);
+                                Self::update_window_fill_flags(None);
                             }
+                        }
+                        CACHED_WINDOWS.store(Arc::new(windows.values().cloned().collect()));
+                    }
+                    Event::WindowLayoutsChanged { changes } => {
+                        let focused_id = FOCUSED_WINDOW.load().id;
+                        let mut focused_tile = None;
+                        for (id, layout) in changes {
+                            if let Some(win) = windows.get_mut(&id) {
+                                win.layout = layout;
+                                if id == focused_id || win.is_focused {
+                                    focused_tile = Some(win.layout.tile_size);
+                                }
+                            }
+                        }
+                        if let Some(tile_size) = focused_tile {
+                            Self::update_window_fill_flags(Some(tile_size));
                         }
                         CACHED_WINDOWS.store(Arc::new(windows.values().cloned().collect()));
                     }
@@ -620,20 +675,29 @@ mod tests {
     }
 
     #[test]
-    fn test_niri_fullscreen_detection() {
+    fn test_niri_fullscreen_and_maximized_detection() {
         let _lock = TEST_MUTEX.lock().unwrap();
+        let out_w = NiriService::focused_output_width() as f64;
         let out_h = NiriService::focused_output_height() as f64;
 
-        // Tile size matching output height -> fullscreen
-        NiriService::update_fullscreen_flag(Some((1920.0, out_h)));
-        assert!(NiriService::is_fullscreen());
-
-        // Smaller tile height -> not fullscreen
-        NiriService::update_fullscreen_flag(Some((1920.0, out_h - 100.0)));
+        // Tiled single column with 8px gaps -> neither maximized nor fullscreen
+        NiriService::update_window_fill_flags(Some((out_w - 16.0, out_h - 100.0)));
+        assert!(!NiriService::is_maximized());
         assert!(!NiriService::is_fullscreen());
 
-        // None (no focused window) -> not fullscreen
-        NiriService::update_fullscreen_flag(None);
+        // Maximized to edges below slim top bar -> maximized, NOT fullscreen
+        NiriService::update_window_fill_flags(Some((out_w, out_h - 36.0)));
+        assert!(NiriService::is_maximized());
+        assert!(!NiriService::is_fullscreen());
+
+        // Full output tile size -> both maximized and fullscreen
+        NiriService::update_window_fill_flags(Some((out_w, out_h)));
+        assert!(NiriService::is_maximized());
+        assert!(NiriService::is_fullscreen());
+
+        // None (no focused window) -> neither maximized nor fullscreen
+        NiriService::update_window_fill_flags(None);
+        assert!(!NiriService::is_maximized());
         assert!(!NiriService::is_fullscreen());
     }
 }

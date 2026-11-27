@@ -56,7 +56,5 @@ animations {
 window-rule {
     match app-id=r#"^(com\.mitchellh\.ghostty|ghostty|floating-term|foot|kitty|Alacritty)$"#
 
-    geometry-corner-radius 12
-    clip-to-geometry true
     draw-border-with-background false
 }

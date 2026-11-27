@@ -612,27 +612,127 @@ impl ThemeTokens {
         }
     }
 
+    pub fn from_palette_spec(spec: &crate::services::palettes::PaletteSpec) -> Self {
+        let bg = Color::from(spec.bg);
+        let surface = Color::from(spec.surface);
+        let surface_elevated = Color::from(spec.overlay);
+        let surface_track = Color::from(spec.track);
+        let text_primary = Color::from(spec.fg);
+        let text_secondary = Color::from(spec.fg_secondary);
+        let text_muted = Color::from(spec.fg_muted);
+        let accent = Color::from(spec.accent);
+        let border_subtle = Color::from(spec.border);
+        let success = Color::from(spec.success);
+        let warning = Color::from(spec.warning);
+        let danger = Color::from(spec.danger);
+
+        let mix = |a: Color, b: Color, t: f32| -> Color {
+            let lerp = |x: u8, y: u8| -> u8 {
+                ((x as f32) + ((y as f32) - (x as f32)) * t).clamp(0.0, 255.0) as u8
+            };
+            Color::rgb(
+                lerp(a.red(), b.red()),
+                lerp(a.green(), b.green()),
+                lerp(a.blue(), b.blue()),
+            )
+        };
+
+        let surface_hover = mix(surface_elevated, text_primary, 0.08);
+        let surface_active = mix(surface_elevated, accent, 0.18);
+        let surface_selected = mix(surface_elevated, accent, 0.14);
+
+        let border_hover = mix(border_subtle, text_primary, 0.18);
+        let border_focus = Color::rgba(accent.red(), accent.green(), accent.blue(), 145);
+        let border_danger = Color::rgba(danger.red(), danger.green(), danger.blue(), 160);
+        let border_specular = if spec.is_dark {
+            Color::rgba(255, 255, 255, 22)
+        } else {
+            Color::rgba(0, 0, 0, 24)
+        };
+
+        let accent_luma = 0.299 * (accent.red() as f32)
+            + 0.587 * (accent.green() as f32)
+            + 0.114 * (accent.blue() as f32);
+        let text_on_accent = if accent_luma > 150.0 {
+            Color::from("#000000")
+        } else {
+            Color::WHITE
+        };
+
+        let acrylic_bg = Color::rgba(surface.red(), surface.green(), surface.blue(), 248);
+
+        Self {
+            bg,
+            surface,
+            surface_elevated,
+            surface_hover,
+            surface_active,
+            surface_selected,
+            surface_track,
+            border_subtle,
+            border_hover,
+            border_focus,
+            border_danger,
+            border_specular,
+            text_primary,
+            text_secondary,
+            text_muted,
+            text_on_accent,
+            text_on_elevated: text_primary,
+            text_on_danger: Color::WHITE,
+            text_on_danger_critical: Color::WHITE,
+            accent,
+            accent_hover: mix(accent, text_primary, 0.2),
+            accent_subtle: mix(surface, accent, 0.16),
+            danger,
+            danger_critical: danger,
+            danger_subtle: mix(surface, danger, 0.16),
+            warning,
+            warning_subtle: mix(surface, warning, 0.16),
+            success,
+            steel: text_muted,
+            acrylic_bg,
+            acrylic_border: border_subtle,
+            card_bg: surface_elevated,
+            card_border: border_subtle,
+            indicator_active: accent,
+            font_family: "IBM Plex Sans".to_string(),
+            font_sans: "IBM Plex Sans".to_string(),
+            font_mono: "JetBrainsMono Nerd Font".to_string(),
+            accent_tint: Color::rgba(accent.red(), accent.green(), accent.blue(), 38),
+        }
+    }
+
     pub fn from_manifest(manifest: &ShellManifest) -> Self {
         let style = manifest.theme.style.to_lowercase();
+        let mut custom_spec = None;
         let mut tokens = if style.contains("ios")
             || style.contains("apple")
             || style.contains("bento")
             || style.contains("glass")
         {
             Self::ios_glass()
-        } else if style.contains("clay") || style.contains("playful") {
+        } else if style == "playful-clay" || style.contains("playful") {
             Self::playful_clay()
-        } else if style.contains("chaos") || style.contains("controlled") {
+        } else if style == "controlled-chaos" || style.contains("chaos") {
             Self::dark_controlled_chaos()
-        } else if style.contains("mint") || style.contains("obsidian-mint") {
+        } else if style == "obsidian-mint" {
             Self::obsidian_mint()
+        } else if let Some(spec) = crate::services::palettes::find_palette(&style) {
+            if spec.id == "cyber-synthwave" {
+                Self::cyber_synthwave()
+            } else {
+                custom_spec = Some(spec);
+                Self::from_palette_spec(spec)
+            }
         } else {
             Self::cyber_synthwave()
         };
 
         let default_palette = crate::config::PaletteConfig::default();
-        let is_synthwave = style.contains("synthwave")
-            || (!style.contains("ios")
+        let is_synthwave = style == "cyber-synthwave"
+            || (custom_spec.is_none()
+                && !style.contains("ios")
                 && !style.contains("apple")
                 && !style.contains("bento")
                 && !style.contains("glass")
@@ -643,53 +743,69 @@ impl ThemeTokens {
                 && !style.contains("mint"));
 
         let p = &manifest.palette;
-        if is_synthwave || p.background != default_palette.background {
-            tokens.bg = Color::from(p.background.as_str());
-        }
-        if is_synthwave || p.surface != default_palette.surface {
-            let sc = Color::from(p.surface.as_str());
-            tokens.surface = sc;
-            tokens.acrylic_bg = Color::rgba(sc.red(), sc.green(), sc.blue(), 250);
-        }
-        if is_synthwave || p.overlay != default_palette.overlay {
-            tokens.surface_elevated = Color::from(p.overlay.as_str());
-            tokens.card_bg = Color::from(p.overlay.as_str());
-        }
-        if is_synthwave || p.border != default_palette.border {
-            tokens.border_subtle = Color::from(p.border.as_str());
-            tokens.acrylic_border = Color::from(p.border.as_str());
-            tokens.card_border = Color::from(p.border.as_str());
-        }
-        if is_synthwave || p.foreground != default_palette.foreground {
-            tokens.text_primary = Color::from(p.foreground.as_str());
-        }
-        if is_synthwave || p.hover != default_palette.hover {
-            tokens.text_secondary = Color::from(p.hover.as_str());
-            tokens.accent_hover = Color::from(p.hover.as_str());
-        }
-        if is_synthwave || p.muted != default_palette.muted {
-            tokens.text_muted = Color::from(p.muted.as_str());
-        }
-        if is_synthwave || p.accent != default_palette.accent {
+        if is_synthwave {
+            if p.background != default_palette.background {
+                tokens.bg = Color::from(p.background.as_str());
+            }
+            if p.surface != default_palette.surface {
+                let sc = Color::from(p.surface.as_str());
+                tokens.surface = sc;
+                tokens.acrylic_bg = Color::rgba(sc.red(), sc.green(), sc.blue(), 250);
+            }
+            if p.overlay != default_palette.overlay {
+                tokens.surface_elevated = Color::from(p.overlay.as_str());
+                tokens.card_bg = Color::from(p.overlay.as_str());
+            }
+            if p.border != default_palette.border {
+                tokens.border_subtle = Color::from(p.border.as_str());
+                tokens.acrylic_border = Color::from(p.border.as_str());
+                tokens.card_border = Color::from(p.border.as_str());
+            }
+            if p.foreground != default_palette.foreground {
+                tokens.text_primary = Color::from(p.foreground.as_str());
+            }
+            if p.hover != default_palette.hover {
+                tokens.text_secondary = Color::from(p.hover.as_str());
+                tokens.accent_hover = Color::from(p.hover.as_str());
+            }
+            if p.muted != default_palette.muted {
+                tokens.text_muted = Color::from(p.muted.as_str());
+            }
+            if p.accent != default_palette.accent {
+                let ac = Color::from(p.accent.as_str());
+                tokens.accent = ac;
+                tokens.border_focus = Color::rgba(ac.red(), ac.green(), ac.blue(), 140);
+                tokens.indicator_active = ac;
+                tokens.accent_tint = Color::rgba(ac.red(), ac.green(), ac.blue(), 38);
+            }
+            if p.highlight != default_palette.highlight {
+                tokens.warning = Color::from(p.highlight.as_str());
+            }
+            if p.steel != default_palette.steel {
+                tokens.steel = Color::from(p.steel.as_str());
+            }
+            if p.success != default_palette.success {
+                tokens.success = Color::from(p.success.as_str());
+            }
+            if p.danger_critical != default_palette.danger_critical {
+                let dc = Color::from(p.danger_critical.as_str());
+                tokens.danger_critical = dc;
+                tokens.border_danger = Color::rgba(dc.red(), dc.green(), dc.blue(), 160);
+            }
+        } else if let Some(spec) = custom_spec {
+            if p.accent != spec.accent && p.accent != default_palette.accent {
+                let ac = Color::from(p.accent.as_str());
+                tokens.accent = ac;
+                tokens.border_focus = Color::rgba(ac.red(), ac.green(), ac.blue(), 145);
+                tokens.indicator_active = ac;
+                tokens.accent_tint = Color::rgba(ac.red(), ac.green(), ac.blue(), 38);
+            }
+        } else if p.accent != default_palette.accent {
             let ac = Color::from(p.accent.as_str());
             tokens.accent = ac;
             tokens.border_focus = Color::rgba(ac.red(), ac.green(), ac.blue(), 140);
             tokens.indicator_active = ac;
             tokens.accent_tint = Color::rgba(ac.red(), ac.green(), ac.blue(), 38);
-        }
-        if is_synthwave || p.highlight != default_palette.highlight {
-            tokens.warning = Color::from(p.highlight.as_str());
-        }
-        if is_synthwave || p.steel != default_palette.steel {
-            tokens.steel = Color::from(p.steel.as_str());
-        }
-        if is_synthwave || p.success != default_palette.success {
-            tokens.success = Color::from(p.success.as_str());
-        }
-        if is_synthwave || p.danger_critical != default_palette.danger_critical {
-            let dc = Color::from(p.danger_critical.as_str());
-            tokens.danger_critical = dc;
-            tokens.border_danger = Color::rgba(dc.red(), dc.green(), dc.blue(), 160);
         }
 
         if !manifest.theme.font_family.is_empty() && manifest.theme.font_family != "monospace" {
@@ -757,5 +873,33 @@ mod tests {
         let tokens = ThemeTokens::from_manifest(&manifest);
         assert_eq!(tokens.text_primary, Color::WHITE);
         assert_eq!(tokens.accent, Color::from("#007AFF"));
+    }
+
+    #[test]
+    fn test_tokens_from_manifest_curated_palettes_and_counterparts() {
+        for (id, expected_bg, expected_accent) in [
+            ("gruvbox-dark-hard", "#1d2021", "#fe8019"),
+            ("gruvbox-light-soft", "#f2e5bc", "#af3a03"),
+            ("everforest-dark-medium", "#2d353b", "#a7c080"),
+            ("ayu-mirage", "#1f2430", "#ffcc66"),
+            ("catppuccin-latte", "#eff1f5", "#8839ef"),
+            ("tokyo-night-storm", "#24283b", "#7aa2f7"),
+            ("kanagawa-wave", "#1f1f28", "#7e9cd8"),
+            ("monokai-pro", "#2d2a2e", "#ffd866"),
+        ] {
+            let mut manifest = ShellManifest::default();
+            manifest.theme.style = id.to_string();
+            let tokens = ThemeTokens::from_manifest(&manifest);
+            assert_eq!(tokens.bg, Color::from(expected_bg), "bg mismatch for {id}");
+            assert_eq!(
+                tokens.accent,
+                Color::from(expected_accent),
+                "accent mismatch for {id}"
+            );
+        }
+
+        let cat_mocha = crate::services::palettes::find_palette("catppuccin-mocha").unwrap();
+        assert_eq!(cat_mocha.counterpart, "catppuccin-latte");
+        assert!(cat_mocha.is_dark);
     }
 }

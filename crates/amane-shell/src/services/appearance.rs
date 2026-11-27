@@ -6,6 +6,7 @@ use std::time::Duration;
 use amane::Service;
 
 use crate::config::ConfigService;
+use crate::services::palettes::{PaletteSpec, default_palette_for_mode, find_palette};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RiceProfile {
@@ -24,10 +25,10 @@ pub const PROFILES: &[RiceProfile] = &[
     RiceProfile {
         id: "cyber-synthwave",
         name: "Cyber Synthwave",
-        description: "Neon magenta palette with rich synthwave tones",
+        description: "PALETTE.md OLED void with neon blue & cyan-teal",
         shell_style: "cyber-synthwave",
-        accent: "#FF007F",
-        font: "JetBrainsMono Nerd Font",
+        accent: "#04C5F0",
+        font: "IBM Plex Sans",
         gtk_theme: Some("Adwaita-dark"),
         icon_theme: Some("Papirus-Dark"),
         cursor_theme: Some("Bibata-Modern-Classic"),
@@ -83,8 +84,8 @@ pub const PROFILES: &[RiceProfile] = &[
         shell_style: "playful-clay",
         accent: "#FFB86C",
         font: "Inter",
-        gtk_theme: Some("Adwaita-dark"),
-        icon_theme: Some("Papirus-Dark"),
+        gtk_theme: Some("Adwaita"),
+        icon_theme: Some("Papirus"),
         cursor_theme: Some("Bibata-Modern-Classic"),
     },
 ];
@@ -101,6 +102,7 @@ pub struct AppearanceService {
     pub current_font: String,
     pub wallpapers: Vec<PathBuf>,
     pub current_wallpaper: Option<PathBuf>,
+    pub selected_palette_family: String,
     pub status_message: Option<String>,
 }
 
@@ -118,6 +120,7 @@ impl Service for AppearanceService {
             current_font: "JetBrainsMono Nerd Font".to_string(),
             wallpapers: Vec::new(),
             current_wallpaper: None,
+            selected_palette_family: "All".to_string(),
             status_message: None,
         };
         svc.refresh_all();
@@ -285,14 +288,74 @@ impl AppearanceService {
         amane::request_frame();
     }
 
+    pub fn apply_palette(spec: &PaletteSpec) {
+        let _ = ConfigService::update_and_save(|m| {
+            m.theme.style = spec.id.to_string();
+            m.theme.dark_mode = spec.is_dark;
+            m.palette.background = spec.bg.to_string();
+            m.palette.surface = spec.surface.to_string();
+            m.palette.overlay = spec.overlay.to_string();
+            m.palette.muted = spec.fg_muted.to_string();
+            m.palette.accent = spec.accent.to_string();
+            m.palette.highlight = spec.warning.to_string();
+            m.palette.foreground = spec.fg.to_string();
+            m.palette.border = spec.border.to_string();
+            m.palette.hover = spec.fg_secondary.to_string();
+            m.palette.steel = spec.fg_muted.to_string();
+            m.palette.success = spec.success.to_string();
+            m.palette.danger_critical = spec.danger.to_string();
+        });
+
+        let _ = write_gsetting(
+            "color-scheme",
+            if spec.is_dark {
+                "prefer-dark"
+            } else {
+                "prefer-light"
+            },
+        );
+
+        {
+            let mut svc = AppearanceService::write();
+            svc.sync_settings_ini();
+            svc.status_message = Some(format!(
+                "Applied {} ({})",
+                spec.name,
+                if spec.is_dark { "Dark" } else { "Light" }
+            ));
+        }
+        amane::request_frame();
+    }
+
+    pub fn toggle_color_mode(dark_mode: bool) {
+        let current_style = ConfigService::read().manifest.theme.style.clone();
+        let target = find_palette(&current_style)
+            .and_then(|cur| {
+                if cur.is_dark == dark_mode {
+                    Some(cur)
+                } else {
+                    find_palette(cur.counterpart)
+                }
+            })
+            .unwrap_or_else(|| default_palette_for_mode(dark_mode));
+
+        Self::apply_palette(target);
+    }
+
     fn sync_settings_ini(&self) {
+        let prefer_dark = if ConfigService::read().manifest.theme.dark_mode {
+            1
+        } else {
+            0
+        };
         let content = format!(
-            "[Settings]\ngtk-theme-name={}\ngtk-icon-theme-name={}\ngtk-cursor-theme-name={}\ngtk-cursor-theme-size={}\ngtk-font-name={}\ngtk-application-prefer-dark-theme=1\n",
+            "[Settings]\ngtk-theme-name={}\ngtk-icon-theme-name={}\ngtk-cursor-theme-name={}\ngtk-cursor-theme-size={}\ngtk-font-name={}\ngtk-application-prefer-dark-theme={}\n",
             self.current_gtk_theme,
             self.current_icon_theme,
             self.current_cursor_theme,
             self.cursor_size,
             self.current_font,
+            prefer_dark,
         );
 
         if let Some(home) = std::env::var_os("HOME") {
@@ -496,7 +559,7 @@ mod tests {
         assert!(PROFILES.len() >= 5);
         let cyber = PROFILES.iter().find(|p| p.id == "cyber-synthwave").unwrap();
         assert_eq!(cyber.shell_style, "cyber-synthwave");
-        assert_eq!(cyber.accent, "#FF007F");
+        assert_eq!(cyber.accent, "#04C5F0");
     }
 
     #[test]

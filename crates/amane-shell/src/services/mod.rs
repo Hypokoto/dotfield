@@ -6,6 +6,7 @@ pub mod display;
 pub mod night_light;
 pub mod niri;
 pub mod niri_config;
+pub mod palettes;
 pub mod presentation;
 pub mod telemetry;
 pub mod tray;

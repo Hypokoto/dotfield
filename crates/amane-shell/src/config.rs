@@ -2,6 +2,10 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+fn default_dark_mode() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ThemeConfig {
@@ -9,6 +13,8 @@ pub struct ThemeConfig {
     pub font_size: f64,
     pub style: String,
     pub wallpaper: Option<String>,
+    #[serde(default = "default_dark_mode")]
+    pub dark_mode: bool,
 }
 
 impl Default for ThemeConfig {
@@ -18,6 +24,7 @@ impl Default for ThemeConfig {
             font_size: 11.5,
             style: "cyber-synthwave".to_string(),
             wallpaper: None,
+            dark_mode: true,
         }
     }
 }

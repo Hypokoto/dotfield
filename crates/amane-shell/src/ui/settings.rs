@@ -16,6 +16,7 @@ use crate::services::appearance::{AppearanceService, PROFILES};
 use crate::services::display::DisplayTopologyService;
 use crate::services::night_light::NightLightService;
 use crate::services::niri_config::NiriConfigService;
+use crate::services::palettes::{PALETTE_FAMILIES, PALETTES};
 use crate::services::telemetry::TelemetryService;
 use crate::ui::animation::panel_motion;
 use crate::ui::components;
@@ -553,9 +554,292 @@ fn render_appearance_tab(
     let usable_width = DETAIL_WIDTH - 36.0; // 710.0 - 36.0 = 674.0
 
     let current_style = &manifest.theme.style;
+    let is_dark_mode = manifest.theme.dark_mode;
+    let selected_family = AppearanceService::read().selected_palette_family.clone();
+
+    // 0. Dark / Light Mode Toggler
+    let mode_btn = |label: &'static str, target_dark: bool, active: bool| -> Rectangle {
+        Rectangle::new()
+            .width(96.0)
+            .height(34.0)
+            .radius(CLAY_TILE_RADIUS)
+            .fill(if active {
+                tokens.surface_active
+            } else {
+                tokens.surface_elevated
+            })
+            .border(1.0, clay_border_color(tokens, active))
+            .shadow(clay_tile_shadow(active))
+            .cursor(Pointer)
+            .align_child(Align::Center, Align::Center)
+            .on_click(move |_| {
+                AppearanceService::toggle_color_mode(target_dark);
+            })
+            .child(
+                Text::new(label)
+                    .size(typography::SECONDARY)
+                    .weight(if active {
+                        Weight::SemiBold
+                    } else {
+                        Weight::Regular
+                    })
+                    .color(if active {
+                        tokens.accent
+                    } else {
+                        tokens.text_secondary
+                    })
+                    .font(&tokens.font_sans),
+            )
+    };
+
+    let mode_card = Rectangle::new()
+        .width(Parent)
+        .height(66.0)
+        .radius(radius::IOS_WIDGET_SM)
+        .fill(tokens.surface)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
+        .padding(pad_sym(14.0, 12.0))
+        .child(
+            Row::new(vec![
+                Box::new(
+                    Column::new(vec![
+                        Box::new(
+                            Text::new("Color Mode")
+                                .size(typography::BODY)
+                                .weight(Weight::SemiBold)
+                                .color(tokens.text_primary)
+                                .font(&tokens.font_sans),
+                        ),
+                        Box::new(
+                            Text::new("Smart-switches theme variant & GTK color-scheme")
+                                .size(typography::CAPTION)
+                                .color(tokens.text_muted)
+                                .font(&tokens.font_sans),
+                        ),
+                    ])
+                    .gap(2.0),
+                ),
+                Box::new(
+                    Row::new(vec![
+                        Box::new(mode_btn("󰖔  Dark", true, is_dark_mode)),
+                        Box::new(mode_btn("󰖙  Light", false, !is_dark_mode)),
+                    ])
+                    .gap(8.0),
+                ),
+            ])
+            .width(Parent)
+            .justify(amane::Justify::SpaceBetween)
+            .align(Align::Center),
+        );
+    rows.push(Box::new(mode_card));
+
+    // 0b. Theme & Color Palettes (PALETTE.md default + Gruvbox, Everforest, Ayu, Catppuccin, Obsidian, Monokai, Tokyo Night, Kanagawa, More)
+    let mut family_pills: Vec<Box<dyn Widget>> = Vec::new();
+    for &fam in PALETTE_FAMILIES {
+        let is_fam = selected_family == fam;
+        let pill_w = (fam.len() as f32 * 7.2 + 22.0).max(52.0);
+        let fam_owned = fam.to_string();
+        let pill = Rectangle::new()
+            .width(pill_w)
+            .height(26.0)
+            .radius(radius::PILL)
+            .fill(if is_fam {
+                tokens.surface_active
+            } else {
+                tokens.surface_elevated
+            })
+            .border(1.0, clay_border_color(tokens, is_fam))
+            .shadow(clay_tile_shadow(is_fam))
+            .cursor(Pointer)
+            .align_child(Align::Center, Align::Center)
+            .on_click(move |_| {
+                AppearanceService::write().selected_palette_family = fam_owned.clone();
+                amane::request_frame();
+            })
+            .child(
+                Text::new(fam)
+                    .size(typography::CAPTION)
+                    .weight(if is_fam {
+                        Weight::SemiBold
+                    } else {
+                        Weight::Regular
+                    })
+                    .color(if is_fam {
+                        tokens.accent
+                    } else {
+                        tokens.text_secondary
+                    })
+                    .font(&tokens.font_sans),
+            );
+        family_pills.push(Box::new(pill));
+    }
+
+    let mut fam_row_1: Vec<Box<dyn Widget>> = Vec::new();
+    let mut fam_row_2: Vec<Box<dyn Widget>> = Vec::new();
+    for (idx, pill) in family_pills.into_iter().enumerate() {
+        if idx < 6 {
+            fam_row_1.push(pill);
+        } else {
+            fam_row_2.push(pill);
+        }
+    }
+
+    let col_w = (usable_width - 28.0 - 12.0) / 2.0; // 317.0 px inside 14px card padding
+    let filtered_palettes: Vec<&crate::services::palettes::PaletteSpec> = PALETTES
+        .iter()
+        .filter(|p| {
+            if selected_family == "All" {
+                p.is_dark == is_dark_mode
+            } else {
+                p.family == selected_family
+            }
+        })
+        .collect();
+
+    let mut palette_cards: Vec<Box<dyn Widget>> = Vec::new();
+    for spec in &filtered_palettes {
+        let is_cur = current_style == spec.id;
+        let dot = |hex: &'static str| -> Box<dyn Widget> {
+            Box::new(
+                Rectangle::new()
+                    .width(9.0)
+                    .height(9.0)
+                    .radius(radius::PILL)
+                    .fill(Color::from(hex))
+                    .border(1.0, tokens.border_specular),
+            )
+        };
+        let mode_tag = if spec.is_dark { "Dark" } else { "Light" };
+        let spec_copy = **spec;
+
+        let card = Rectangle::new()
+            .width(col_w)
+            .height(50.0)
+            .radius(CLAY_TILE_RADIUS)
+            .fill(if is_cur {
+                tokens.surface_active
+            } else {
+                tokens.surface_elevated
+            })
+            .border(1.0, clay_border_color(tokens, is_cur))
+            .shadow(clay_tile_shadow(is_cur))
+            .cursor(Pointer)
+            .padding(pad_sym(12.0, 8.0))
+            .on_click(move |_| {
+                AppearanceService::apply_palette(&spec_copy);
+            })
+            .child(
+                Row::new(vec![
+                    Box::new(
+                        Column::new(vec![
+                            Box::new(
+                                Text::new(spec.name)
+                                    .size(typography::SECONDARY)
+                                    .weight(Weight::SemiBold)
+                                    .color(if is_cur {
+                                        tokens.accent
+                                    } else {
+                                        tokens.text_primary
+                                    })
+                                    .font(&tokens.font_sans),
+                            ),
+                            Box::new(
+                                Row::new(vec![
+                                    dot(spec.bg),
+                                    dot(spec.surface),
+                                    dot(spec.accent),
+                                    dot(spec.fg),
+                                ])
+                                .gap(4.0)
+                                .align(Align::Center),
+                            ),
+                        ])
+                        .gap(4.0),
+                    ),
+                    Box::new(
+                        Rectangle::new()
+                            .width(42.0)
+                            .height(18.0)
+                            .radius(radius::PILL)
+                            .fill(tokens.bg)
+                            .border(1.0, tokens.border_specular)
+                            .align_child(Align::Center, Align::Center)
+                            .child(
+                                Text::new(mode_tag)
+                                    .size(9.5)
+                                    .color(tokens.text_muted)
+                                    .font(&tokens.font_mono),
+                            ),
+                    ),
+                ])
+                .width(Parent)
+                .justify(amane::Justify::SpaceBetween)
+                .align(Align::Center),
+            );
+        palette_cards.push(Box::new(card));
+    }
+
+    let mut palette_grid_rows: Vec<Box<dyn Widget>> = Vec::new();
+    let mut pit = palette_cards.into_iter();
+    while let Some(left) = pit.next() {
+        if let Some(right) = pit.next() {
+            palette_grid_rows.push(Box::new(Row::new(vec![left, right]).gap(12.0)));
+        } else {
+            palette_grid_rows.push(Box::new(Row::new(vec![left]).gap(12.0)));
+        }
+    }
+
+    let palette_row_count = palette_grid_rows.len();
+    let palettes_card_h = 114.0
+        + (palette_row_count as f32 * 50.0)
+        + (palette_row_count.saturating_sub(1) as f32 * 10.0);
+
+    let palettes_card = Rectangle::new()
+        .width(Parent)
+        .height(palettes_card_h)
+        .radius(radius::IOS_WIDGET_SM)
+        .fill(tokens.surface)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
+        .padding(pad_all(14.0))
+        .child(
+            Column::new(vec![
+                Box::new(
+                    Row::new(vec![
+                        Box::new(
+                            Text::new("Color Palettes")
+                                .size(typography::BODY)
+                                .weight(Weight::SemiBold)
+                                .color(tokens.text_primary)
+                                .font(&tokens.font_sans),
+                        ),
+                        Box::new(
+                            Text::new(
+                                "• PALETTE.md default + Gruvbox, Everforest, Catppuccin & more",
+                            )
+                            .size(typography::CAPTION)
+                            .color(tokens.text_muted)
+                            .font(&tokens.font_sans),
+                        ),
+                    ])
+                    .gap(8.0)
+                    .align(Align::Center),
+                ),
+                Box::new(
+                    Column::new(vec![
+                        Box::new(Row::new(fam_row_1).gap(6.0)),
+                        Box::new(Row::new(fam_row_2).gap(6.0)),
+                    ])
+                    .gap(6.0),
+                ),
+                Box::new(Column::new(palette_grid_rows).gap(10.0)),
+            ])
+            .gap(10.0),
+        );
+    rows.push(Box::new(palettes_card));
 
     // 1. One-Click Rice Profiles (2 columns x 3 rows = 6 profiles)
-    let col_w = (usable_width - 28.0 - 12.0) / 2.0; // 317.0 px inside 14px card padding
     let mut profile_cards: Vec<Box<dyn Widget>> = Vec::new();
 
     for p in PROFILES {

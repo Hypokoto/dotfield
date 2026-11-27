@@ -53,17 +53,10 @@ animations {
 }
 
 // Terminal Geometry (Ghostty, Foot, Kitty, Alacritty)
-// Foot and Kitty manage per-pixel background alpha natively; Ghostty (GTK 4.24) presents an opaque EGL surface so Niri applies 0.84 opacity
 window-rule {
     match app-id=r#"^(com\.mitchellh\.ghostty|ghostty|floating-term|foot|kitty|Alacritty)$"#
 
     geometry-corner-radius 12
     clip-to-geometry true
     draw-border-with-background false
-}
-
-window-rule {
-    match app-id=r#"^(com\.mitchellh\.ghostty|ghostty)$"#
-
-    opacity 0.84
 }

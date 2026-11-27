@@ -97,3 +97,5 @@ invisible=1
 # Locked Mode (Privacy Mode: suppress notification popups while screen is locked)
 [mode=locked]
 invisible=1
+
+include=~/.config/dotfield/themes/mako.conf

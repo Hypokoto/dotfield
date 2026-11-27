@@ -533,7 +533,7 @@ if [[ -d "$HOME/.bun" ]]; then
 fi
 
 ### 12. Amane Settings Live Theme Sync
-[[ -f "$HOME/.config/dotfield/themes/zsh.zsh" ]] && source "$HOME/.config/dotfield/themes/zsh.zsh"
+[[ -f "$HOME/.config/zsh/dotfield-theme.zsh" ]] && source "$HOME/.config/zsh/dotfield-theme.zsh"
 [[ -f "$HOME/.config/dotfield/themes/starship.toml" ]] && export STARSHIP_CONFIG="$HOME/.config/dotfield/themes/starship.toml"
 [[ -f "$HOME/.config/dotfield/themes/imv.conf" ]] && export imv_config="$HOME/.config/dotfield/themes/imv.conf"
 

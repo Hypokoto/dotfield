@@ -4,7 +4,7 @@
 
 # --- Theme & Colors ---
 theme = dotfield-theme
-background-opacity = 0.80
+background-opacity = 0.72
 background-opacity-cells = false
 background-blur = false
 alpha-blending = native

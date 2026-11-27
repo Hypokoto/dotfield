@@ -36,7 +36,7 @@ impl Default for ThemeConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PaletteConfig {
     pub background: String,

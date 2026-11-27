@@ -718,6 +718,11 @@ impl ThemeTokens {
             Self::dark_controlled_chaos()
         } else if style == "obsidian-mint" {
             Self::obsidian_mint()
+        } else if style == "nordic-slate" || style == "win11-dark" || style == "minimal" {
+            let spec =
+                crate::services::palettes::find_palette_or_alias(&style, manifest.theme.dark_mode);
+            custom_spec = Some(spec);
+            Self::from_palette_spec(spec)
         } else if let Some(spec) = crate::services::palettes::find_palette(&style) {
             if spec.id == "cyber-synthwave" {
                 Self::cyber_synthwave()
@@ -743,6 +748,7 @@ impl ThemeTokens {
                 && !style.contains("mint"));
 
         let p = &manifest.palette;
+        let palette_active = *p != default_palette;
         if is_synthwave {
             if p.background != default_palette.background {
                 tokens.bg = Color::from(p.background.as_str());
@@ -793,14 +799,14 @@ impl ThemeTokens {
                 tokens.border_danger = Color::rgba(dc.red(), dc.green(), dc.blue(), 160);
             }
         } else if let Some(spec) = custom_spec {
-            if p.accent != spec.accent && p.accent != default_palette.accent {
+            if palette_active && p.accent != spec.accent {
                 let ac = Color::from(p.accent.as_str());
                 tokens.accent = ac;
                 tokens.border_focus = Color::rgba(ac.red(), ac.green(), ac.blue(), 145);
                 tokens.indicator_active = ac;
                 tokens.accent_tint = Color::rgba(ac.red(), ac.green(), ac.blue(), 38);
             }
-        } else if p.accent != default_palette.accent {
+        } else if palette_active {
             let ac = Color::from(p.accent.as_str());
             tokens.accent = ac;
             tokens.border_focus = Color::rgba(ac.red(), ac.green(), ac.blue(), 140);
@@ -901,5 +907,21 @@ mod tests {
         let cat_mocha = crate::services::palettes::find_palette("catppuccin-mocha").unwrap();
         assert_eq!(cat_mocha.counterpart, "catppuccin-latte");
         assert!(cat_mocha.is_dark);
+    }
+
+    #[test]
+    fn test_tokens_cyan_accent_override_on_curated_palette() {
+        let mut manifest = ShellManifest::default();
+        let gruv = crate::services::palettes::find_palette("gruvbox-dark-medium").unwrap();
+        crate::services::appearance::transition_manifest_palette(&mut manifest, gruv);
+        crate::services::appearance::transition_manifest_accent(&mut manifest, "#04C5F0");
+        let tokens = ThemeTokens::from_manifest(&manifest);
+        assert_eq!(tokens.bg, Color::from("#282828"));
+        assert_eq!(tokens.accent, Color::from("#04C5F0"));
+
+        manifest.theme.style = "nordic-slate".to_string();
+        let nordic_tokens = ThemeTokens::from_manifest(&manifest);
+        assert_eq!(nordic_tokens.bg, Color::from("#2e3440"));
+        assert_eq!(nordic_tokens.accent, Color::from("#04C5F0"));
     }
 }

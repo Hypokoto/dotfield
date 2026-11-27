@@ -310,7 +310,8 @@ fn ipc_reload_handler(_args: &[String]) -> String {
     let path = config::ShellManifest::default_path();
     match config::ShellManifest::load_from_path(&path) {
         Ok(manifest) => {
-            config::ConfigService::write().manifest = manifest;
+            config::ConfigService::write().manifest = manifest.clone();
+            services::appearance::AppearanceService::reconcile_theme(&manifest);
             "reloaded".to_string()
         }
         Err(e) => format!("reload failed: {e}"),
@@ -500,6 +501,7 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         }
     };
     config::ConfigService::write().manifest = manifest.clone();
+    services::appearance::AppearanceService::reconcile_theme(&manifest);
 
     // Clean up stale IPC socket if present (safe since we hold the lock)
     let sock = amane::ipc_socket();

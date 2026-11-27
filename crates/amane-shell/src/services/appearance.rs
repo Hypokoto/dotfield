@@ -5,8 +5,11 @@ use std::time::Duration;
 
 use amane::Service;
 
-use crate::config::ConfigService;
-use crate::services::palettes::{PaletteSpec, default_palette_for_mode, find_palette};
+use crate::config::{ConfigService, ShellManifest};
+use crate::services::palettes::{
+    PaletteSpec, default_palette_for_mode, find_palette, find_palette_or_alias,
+    resolve_manifest_palette,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RiceProfile {
@@ -251,14 +254,13 @@ impl AppearanceService {
     }
 
     pub fn apply_rice_profile(profile: &RiceProfile) {
-        // 1. Update manifest style, accent, font
+        let mut updated = None;
         let _ = ConfigService::update_and_save(|m| {
-            m.theme.style = profile.shell_style.to_string();
-            m.palette.accent = profile.accent.to_string();
-            m.theme.font_family = profile.font.to_string();
+            transition_manifest_rice_profile(m, profile);
+            updated = Some(m.clone());
         });
 
-        // 2. Apply GTK theme if specified
+        // Apply GTK / icon / cursor / font gsettings
         if let Some(gtk) = profile.gtk_theme {
             let _ = write_gsetting("gtk-theme", gtk);
         }
@@ -282,91 +284,112 @@ impl AppearanceService {
                 svc.current_cursor_theme = cur.to_string();
             }
             svc.current_font = profile.font.to_string();
-            svc.sync_settings_ini();
             svc.status_message = Some(format!("Loaded profile '{}'", profile.name));
         }
-        amane::request_frame();
+
+        if let Some(manifest) = updated {
+            Self::reconcile_theme(&manifest);
+        }
     }
 
     pub fn apply_palette(spec: &PaletteSpec) {
+        let mut updated = None;
         let _ = ConfigService::update_and_save(|m| {
-            m.theme.style = spec.id.to_string();
-            m.theme.dark_mode = spec.is_dark;
-            m.palette.background = spec.bg.to_string();
-            m.palette.surface = spec.surface.to_string();
-            m.palette.overlay = spec.overlay.to_string();
-            m.palette.muted = spec.fg_muted.to_string();
-            m.palette.accent = spec.accent.to_string();
-            m.palette.highlight = spec.warning.to_string();
-            m.palette.foreground = spec.fg.to_string();
-            m.palette.border = spec.border.to_string();
-            m.palette.hover = spec.fg_secondary.to_string();
-            m.palette.steel = spec.fg_muted.to_string();
-            m.palette.success = spec.success.to_string();
-            m.palette.danger_critical = spec.danger.to_string();
+            transition_manifest_palette(m, spec);
+            updated = Some(m.clone());
         });
-
-        let _ = write_gsetting(
-            "color-scheme",
-            if spec.is_dark {
-                "prefer-dark"
-            } else {
-                "prefer-light"
-            },
-        );
-
-        if ConfigService::read().manifest.theme.sync_apps {
-            crate::services::theme_sync::sync_all(spec);
-        }
 
         {
             let mut svc = AppearanceService::write();
-            svc.sync_settings_ini();
             svc.status_message = Some(format!(
                 "Applied {} ({})",
                 spec.name,
                 if spec.is_dark { "Dark" } else { "Light" }
             ));
         }
-        amane::request_frame();
+
+        if let Some(manifest) = updated {
+            Self::reconcile_theme(&manifest);
+        }
     }
 
-    pub fn toggle_sync_apps(enabled: bool) {
-        let style = {
-            let mut target_style = String::new();
-            let _ = ConfigService::update_and_save(|m| {
-                m.theme.sync_apps = enabled;
-                target_style = m.theme.style.clone();
-            });
-            target_style
-        };
-        if enabled && let Some(spec) = find_palette(&style) {
-            crate::services::theme_sync::sync_all(spec);
-        }
+    pub fn apply_accent(hex: &str) {
+        let mut updated = None;
+        let _ = ConfigService::update_and_save(|m| {
+            transition_manifest_accent(m, hex);
+            updated = Some(m.clone());
+        });
+
         {
             let mut svc = AppearanceService::write();
-            svc.status_message = Some(if enabled {
+            svc.status_message = Some(format!("Accent updated to {hex}"));
+        }
+
+        if let Some(manifest) = updated {
+            Self::reconcile_theme(&manifest);
+        }
+    }
+
+    pub fn toggle_sync_apps() {
+        let mut updated = None;
+        let mut now_enabled = false;
+        let _ = ConfigService::update_and_save(|m| {
+            now_enabled = transition_manifest_toggle_sync(m);
+            updated = Some(m.clone());
+        });
+
+        {
+            let mut svc = AppearanceService::write();
+            svc.status_message = Some(if now_enabled {
                 "Synced theme to terminals, apps & GTK".to_string()
             } else {
                 "App theme sync paused (Amane only)".to_string()
             });
         }
-        amane::request_frame();
+
+        if let Some(manifest) = updated {
+            Self::reconcile_theme(&manifest);
+        }
     }
 
     pub fn toggle_color_mode(dark_mode: bool) {
         let current_style = ConfigService::read().manifest.theme.style.clone();
-        let target = find_palette(&current_style)
-            .and_then(|cur| {
-                if cur.is_dark == dark_mode {
-                    Some(cur)
-                } else {
-                    find_palette(cur.counterpart)
-                }
-            })
-            .unwrap_or_else(|| default_palette_for_mode(dark_mode));
+        let cur = find_palette_or_alias(&current_style, !dark_mode);
+        let target = if cur.is_dark == dark_mode {
+            cur
+        } else {
+            find_palette(cur.counterpart).unwrap_or_else(|| default_palette_for_mode(dark_mode))
+        };
 
         Self::apply_palette(target);
+    }
+
+    /// Reconcile system/app theme state (gsettings, GTK settings.ini, external app templates, frame redraw)
+    /// from an authoritative ShellManifest snapshot.
+    pub fn reconcile_theme(manifest: &ShellManifest) {
+        let resolved = resolve_manifest_palette(manifest);
+        let _ = write_gsetting(
+            "color-scheme",
+            if resolved.is_dark {
+                "prefer-dark"
+            } else {
+                "prefer-light"
+            },
+        );
+
+        {
+            let mut svc = AppearanceService::write();
+            if !manifest.theme.font_family.is_empty() {
+                svc.current_font = manifest.theme.font_family.clone();
+            }
+            svc.sync_settings_ini();
+        }
+
+        if manifest.theme.sync_apps {
+            crate::services::theme_sync::sync_manifest(manifest);
+        }
+
+        amane::request_frame();
     }
 
     fn sync_settings_ini(&self) {
@@ -577,6 +600,46 @@ fn write_gsetting(key: &str, val: &str) -> Result<(), ()> {
     if status.success() { Ok(()) } else { Err(()) }
 }
 
+fn apply_spec_colors(m: &mut ShellManifest, spec: &PaletteSpec) {
+    m.theme.dark_mode = spec.is_dark;
+    m.palette.background = spec.bg.to_string();
+    m.palette.surface = spec.surface.to_string();
+    m.palette.overlay = spec.overlay.to_string();
+    m.palette.muted = spec.fg_muted.to_string();
+    m.palette.accent = spec.accent.to_string();
+    m.palette.highlight = spec.warning.to_string();
+    m.palette.foreground = spec.fg.to_string();
+    m.palette.border = spec.border.to_string();
+    m.palette.hover = spec.fg_secondary.to_string();
+    m.palette.steel = spec.fg_muted.to_string();
+    m.palette.success = spec.success.to_string();
+    m.palette.danger_critical = spec.danger.to_string();
+}
+
+pub fn transition_manifest_palette(m: &mut ShellManifest, spec: &PaletteSpec) {
+    m.theme.style = spec.id.to_string();
+    apply_spec_colors(m, spec);
+}
+
+pub fn transition_manifest_rice_profile(m: &mut ShellManifest, profile: &RiceProfile) {
+    let base = find_palette_or_alias(profile.shell_style, m.theme.dark_mode);
+    apply_spec_colors(m, base);
+    m.theme.style = profile.shell_style.to_string();
+    m.palette.accent = profile.accent.to_string();
+    m.theme.font_family = profile.font.to_string();
+}
+
+pub fn transition_manifest_accent(m: &mut ShellManifest, hex: &str) {
+    let base = find_palette_or_alias(&m.theme.style, m.theme.dark_mode);
+    apply_spec_colors(m, base);
+    m.palette.accent = hex.to_string();
+}
+
+pub fn transition_manifest_toggle_sync(m: &mut ShellManifest) -> bool {
+    m.theme.sync_apps = !m.theme.sync_apps;
+    m.theme.sync_apps
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -587,6 +650,39 @@ mod tests {
         let cyber = PROFILES.iter().find(|p| p.id == "cyber-synthwave").unwrap();
         assert_eq!(cyber.shell_style, "cyber-synthwave");
         assert_eq!(cyber.accent, "#04C5F0");
+    }
+
+    #[test]
+    fn test_explicit_manifest_state_transitions() {
+        let mut m = ShellManifest::default();
+        let latte = find_palette("catppuccin-latte").unwrap();
+        transition_manifest_palette(&mut m, latte);
+        assert!(!m.theme.dark_mode);
+        assert_eq!(m.palette.background, latte.bg);
+
+        // Switching to a RiceProfile must reset all 12 palette fields + dark_mode, not leave light-mode stale!
+        let nordic = PROFILES.iter().find(|p| p.id == "nordic-slate").unwrap();
+        transition_manifest_rice_profile(&mut m, nordic);
+        assert!(m.theme.dark_mode);
+        assert_eq!(m.theme.style, "nordic-slate");
+        assert_eq!(m.palette.background, "#2e3440");
+        assert_eq!(m.palette.accent, nordic.accent);
+
+        // Selecting cyan accent (#04C5F0) keeps nordic-slate base and overrides accent cleanly
+        transition_manifest_accent(&mut m, "#04C5F0");
+        assert_eq!(m.theme.style, "nordic-slate");
+        assert_eq!(m.palette.background, "#2e3440");
+        assert_eq!(m.palette.accent, "#04C5F0");
+
+        let resolved = resolve_manifest_palette(&m);
+        assert_eq!(resolved.accent, "#04C5F0");
+        assert_eq!(resolved.bg, "#2e3440");
+
+        // Atomic sync toggle flips boolean without stale closure state
+        let first = transition_manifest_toggle_sync(&mut m);
+        assert_eq!(first, !ShellManifest::default().theme.sync_apps);
+        let second = transition_manifest_toggle_sync(&mut m);
+        assert_eq!(second, ShellManifest::default().theme.sync_apps);
     }
 
     #[test]

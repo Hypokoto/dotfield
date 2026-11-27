@@ -584,9 +584,10 @@ fn render_appearance_tab(
             tokens.surface_elevated
         })
         .border(1.0, clay_border_color(tokens, sync_apps_enabled))
+        .cursor(Pointer)
         .align_child(Align::Center, Align::Center)
-        .on_click(move |_| {
-            AppearanceService::toggle_sync_apps(!sync_apps_enabled);
+        .on_click(|_| {
+            AppearanceService::toggle_sync_apps();
         })
         .child(
             Text::new(if sync_apps_enabled {
@@ -1003,9 +1004,7 @@ fn render_appearance_tab(
             .cursor(Pointer)
             .padding(pad_sym(8.0, 4.0))
             .on_click(move |_| {
-                let _ = ConfigService::update_and_save(|m| {
-                    m.palette.accent = hex.to_string();
-                });
+                AppearanceService::apply_accent(hex);
             })
             .child(
                 Row::new(vec![

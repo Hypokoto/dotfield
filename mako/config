@@ -31,20 +31,14 @@ text-color=#14B9B5
 border-color=#04C5F0
 progress-color=source #04C5F0
 
-# Low Urgency (Subdued Violet & Teal)
+include=~/.config/dotfield/themes/mako.conf
+
+# Low Urgency
 [urgency=low]
-background-color=#140E29
-text-color=#11AEB3
-border-color=#251B4A
-progress-color=source #11AEB3
 default-timeout=4000
 
-# Critical Urgency (Red Accent & Zero-Timeout)
+# Critical Urgency
 [urgency=critical]
-background-color=#140E29
-text-color=#FFFFFF
-border-color=#BE3F50
-progress-color=source #BE3F50
 default-timeout=0
 ignore-timeout=1
 
@@ -72,21 +66,15 @@ border-color=#04C5F0
 [app-name=Screenshot]
 border-color=#04C5F0
 
-# Battery Alerts (Cyber Synthwave Low & Critical Warnings)
+# Battery Alerts
 [app-name=battery-alert]
 border-color=#04C5F0
 default-timeout=8000
 
 [category=battery-low]
-border-color=#FF7F41
-background-color=#140E29
-text-color=#14B9B5
 default-timeout=10000
 
 [category=battery-critical]
-border-color=#BE3F50
-background-color=#251B4A
-text-color=#FFFFFF
 default-timeout=0
 ignore-timeout=1
 
@@ -97,5 +85,3 @@ invisible=1
 # Locked Mode (Privacy Mode: suppress notification popups while screen is locked)
 [mode=locked]
 invisible=1
-
-include=~/.config/dotfield/themes/mako.conf

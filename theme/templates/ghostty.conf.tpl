@@ -2,6 +2,8 @@
 background = ${DOTFIELD_BG_HEX}
 background-opacity = 1.0
 foreground = ${DOTFIELD_FG_HEX}
+window-titlebar-background = ${DOTFIELD_SURFACE_HEX}
+window-titlebar-foreground = ${DOTFIELD_FG_HEX}
 cursor-color = ${DOTFIELD_ACCENT_HEX}
 cursor-text = ${DOTFIELD_ON_ACCENT_HEX}
 selection-background = ${DOTFIELD_OVERLAY_HEX}

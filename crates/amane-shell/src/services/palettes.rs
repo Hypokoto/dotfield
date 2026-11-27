@@ -989,3 +989,141 @@ pub fn default_palette_for_mode(is_dark: bool) -> &'static PaletteSpec {
     };
     find_palette(target).unwrap_or(&PALETTES[0])
 }
+
+static IOS_GLASS_SPEC: PaletteSpec = PaletteSpec {
+    id: "ios-glass",
+    name: "iOS Glass",
+    family: "System",
+    is_dark: true,
+    counterpart: "catppuccin-latte",
+    bg: "#000000",
+    surface: "#1C1C1E",
+    overlay: "#2C2C2E",
+    track: "#3A3A3C",
+    fg: "#FFFFFF",
+    fg_secondary: "#8E8E93",
+    fg_muted: "#636366",
+    accent: "#007AFF",
+    border: "#38383A",
+    success: "#34C759",
+    warning: "#FF9500",
+    danger: "#FF3B30",
+};
+
+/// Resolve curated palette IDs and legacy/rice-profile style names to a base PaletteSpec.
+pub fn find_palette_or_alias(style: &str, dark_mode: bool) -> &'static PaletteSpec {
+    if let Some(spec) = find_palette(style) {
+        return spec;
+    }
+    match style {
+        "ios-glass" => &IOS_GLASS_SPEC,
+        "nordic-slate" => find_palette("nord").unwrap_or(&PALETTES[0]),
+        "win11-dark" => find_palette("obsidian-dark").unwrap_or(&PALETTES[0]),
+        "minimal" => find_palette(if dark_mode {
+            "obsidian-dark"
+        } else {
+            "obsidian-light"
+        })
+        .unwrap_or(&PALETTES[0]),
+        _ => default_palette_for_mode(dark_mode),
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResolvedPalette {
+    pub id: String,
+    pub name: String,
+    pub is_dark: bool,
+    pub bg: String,
+    pub surface: String,
+    pub overlay: String,
+    pub track: String,
+    pub fg: String,
+    pub fg_secondary: String,
+    pub fg_muted: String,
+    pub accent: String,
+    pub border: String,
+    pub success: String,
+    pub warning: String,
+    pub danger: String,
+}
+
+impl From<&PaletteSpec> for ResolvedPalette {
+    fn from(spec: &PaletteSpec) -> Self {
+        Self {
+            id: spec.id.to_string(),
+            name: spec.name.to_string(),
+            is_dark: spec.is_dark,
+            bg: spec.bg.to_string(),
+            surface: spec.surface.to_string(),
+            overlay: spec.overlay.to_string(),
+            track: spec.track.to_string(),
+            fg: spec.fg.to_string(),
+            fg_secondary: spec.fg_secondary.to_string(),
+            fg_muted: spec.fg_muted.to_string(),
+            accent: spec.accent.to_string(),
+            border: spec.border.to_string(),
+            success: spec.success.to_string(),
+            warning: spec.warning.to_string(),
+            danger: spec.danger.to_string(),
+        }
+    }
+}
+
+pub fn is_valid_hex_color(hex: &str) -> bool {
+    hex.len() == 7 && hex.starts_with('#') && hex[1..].bytes().all(|b| b.is_ascii_hexdigit())
+}
+
+/// Resolve the active palette from a ShellManifest, including rice-profile aliases and accent overrides.
+pub fn resolve_manifest_palette(manifest: &crate::config::ShellManifest) -> ResolvedPalette {
+    let base = find_palette_or_alias(&manifest.theme.style, manifest.theme.dark_mode);
+    let mut resolved = ResolvedPalette::from(base);
+    let default_palette = crate::config::PaletteConfig::default();
+    if manifest.palette != default_palette && is_valid_hex_color(&manifest.palette.accent) {
+        resolved.accent = manifest.palette.accent.clone();
+    }
+    resolved
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::ShellManifest;
+
+    #[test]
+    fn test_aliases_and_accent_override() {
+        assert_eq!(
+            find_palette_or_alias("win11-dark", true).id,
+            "obsidian-dark"
+        );
+        assert_eq!(find_palette_or_alias("nordic-slate", true).id, "nord");
+        assert_eq!(find_palette_or_alias("minimal", false).id, "obsidian-light");
+        assert_eq!(find_palette_or_alias("ios-glass", true).id, "ios-glass");
+        assert_eq!(
+            find_palette_or_alias("obsidian-mint", true).id,
+            "obsidian-mint"
+        );
+        assert_eq!(
+            find_palette_or_alias("controlled-chaos", true).id,
+            "controlled-chaos"
+        );
+        assert_eq!(
+            find_palette_or_alias("playful-clay", false).id,
+            "playful-clay"
+        );
+
+        // Untouched default PaletteConfig keeps curated palette accent
+        let mut m_default = ShellManifest::default();
+        m_default.theme.style = "gruvbox-dark-medium".to_string();
+        let resolved_default = resolve_manifest_palette(&m_default);
+        assert_eq!(resolved_default.accent, "#fe8019");
+
+        // Explicit cyan (#04C5F0) accent override on a populated non-synthwave palette applies cleanly
+        let mut m_override = m_default;
+        m_override.palette.background = resolved_default.bg.clone();
+        m_override.palette.accent = "#04C5F0".to_string();
+        let resolved_override = resolve_manifest_palette(&m_override);
+        assert_eq!(resolved_override.id, "gruvbox-dark-medium");
+        assert_eq!(resolved_override.accent, "#04C5F0");
+    }
+}

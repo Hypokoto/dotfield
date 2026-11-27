@@ -14,17 +14,50 @@ border_symbol = "│"
 border_style = { fg = "${DOTFIELD_BORDER}" }
 
 [status]
+separator_open = ""
+separator_close = ""
+separator_style = { fg = "${DOTFIELD_BORDER}", bg = "${DOTFIELD_BORDER}" }
 overall = { fg = "${DOTFIELD_FG}", bg = "${DOTFIELD_SURFACE}" }
 progress_label = { fg = "${DOTFIELD_ON_ACCENT}", bold = true }
 progress_normal = { fg = "${DOTFIELD_ACCENT}", bg = "${DOTFIELD_OVERLAY}" }
 progress_error = { fg = "${DOTFIELD_DANGER}", bg = "${DOTFIELD_OVERLAY}" }
 
+[select]
+border = { fg = "${DOTFIELD_ACCENT}" }
+active = { fg = "${DOTFIELD_WARNING}", bold = true }
+inactive = { fg = "${DOTFIELD_FG}" }
+
+[input]
+border = { fg = "${DOTFIELD_ACCENT}" }
+title = { fg = "${DOTFIELD_FG}" }
+value = { fg = "${DOTFIELD_FG}" }
+selected = { bg = "${DOTFIELD_OVERLAY}" }
+
+[completion]
+border = { fg = "${DOTFIELD_BORDER}" }
+active = { bg = "${DOTFIELD_OVERLAY}", fg = "${DOTFIELD_ACCENT}" }
+inactive = { fg = "${DOTFIELD_FG}" }
+
+[tasks]
+border = { fg = "${DOTFIELD_BORDER}" }
+title = { fg = "${DOTFIELD_ACCENT}" }
+hovered = { underline = true }
+
 [which]
+cols = 3
 mask = { bg = "${DOTFIELD_SURFACE}" }
 cand = { fg = "${DOTFIELD_ACCENT}" }
 rest = { fg = "${DOTFIELD_FG_MUTED}" }
 desc = { fg = "${DOTFIELD_FG}" }
+separator = "  "
 separator_style = { fg = "${DOTFIELD_BORDER}" }
+
+[help]
+on = { fg = "${DOTFIELD_ACCENT}" }
+exec = { fg = "${DOTFIELD_FG_SECONDARY}" }
+desc = { fg = "${DOTFIELD_FG}" }
+hovered = { bg = "${DOTFIELD_OVERLAY}", bold = true }
+footer = { fg = "${DOTFIELD_ON_ACCENT}", bg = "${DOTFIELD_ACCENT}" }
 
 [notify]
 title_info = { fg = "${DOTFIELD_ACCENT}" }

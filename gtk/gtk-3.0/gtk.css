@@ -47,7 +47,7 @@ button {
 }
 
 button:hover {
-    background-color: #251B4A;
+    background-color: @popover_bg_color;
     border-color: @accent_color;
 }
 
@@ -64,7 +64,7 @@ button.suggested-action {
 }
 
 button.suggested-action:hover {
-    background-color: #61E6FF;
+    background-color: @accent_color;
 }
 
 button.destructive-action {
@@ -91,7 +91,7 @@ popover, menu, .menu {
 }
 
 menuitem:hover, modelbutton:hover {
-    background-color: #251B4A;
+    background-color: @popover_bg_color;
     color: @accent_color;
     border-radius: 6px;
 }

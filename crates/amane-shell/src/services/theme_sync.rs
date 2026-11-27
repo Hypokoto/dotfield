@@ -1,4 +1,5 @@
-use crate::services::palettes::PaletteSpec;
+use crate::config::ShellManifest;
+use crate::services::palettes::{PaletteSpec, ResolvedPalette, resolve_manifest_palette};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -61,55 +62,55 @@ struct Ansi16 {
 }
 
 impl Ansi16 {
-    fn from_spec(spec: &PaletteSpec) -> Self {
+    fn from_resolved(spec: &ResolvedPalette) -> Self {
         let boost = if spec.is_dark { "#FFFFFF" } else { "#000000" };
-        let purple = mix_hex(spec.accent, spec.danger, 0.45);
-        let cyan = mix_hex(spec.accent, spec.success, 0.35);
+        let purple = mix_hex(&spec.accent, &spec.danger, 0.45);
+        let cyan = mix_hex(&spec.accent, &spec.success, 0.35);
 
         let (c0, c7, c8, c15) = if spec.is_dark {
             (
-                spec.surface.to_string(),
-                spec.fg.to_string(),
-                mix_hex(spec.fg_muted, spec.fg, 0.25),
-                mix_hex(spec.fg, "#FFFFFF", 0.30),
+                spec.surface.clone(),
+                spec.fg.clone(),
+                mix_hex(&spec.fg_muted, &spec.fg, 0.25),
+                mix_hex(&spec.fg, "#FFFFFF", 0.30),
             )
         } else {
             (
-                spec.fg.to_string(),
-                spec.overlay.to_string(),
-                spec.fg_muted.to_string(),
-                spec.surface.to_string(),
+                spec.fg.clone(),
+                spec.overlay.clone(),
+                spec.fg_muted.clone(),
+                spec.surface.clone(),
             )
         };
 
         Self {
             c0,
-            c1: spec.danger.to_string(),
-            c2: spec.success.to_string(),
-            c3: spec.warning.to_string(),
-            c4: spec.accent.to_string(),
+            c1: spec.danger.clone(),
+            c2: spec.success.clone(),
+            c3: spec.warning.clone(),
+            c4: spec.accent.clone(),
             c5: purple.clone(),
             c6: cyan.clone(),
             c7,
             c8,
-            c9: mix_hex(spec.danger, boost, 0.20),
-            c10: mix_hex(spec.success, boost, 0.20),
-            c11: mix_hex(spec.warning, boost, 0.20),
-            c12: mix_hex(spec.accent, boost, 0.20),
+            c9: mix_hex(&spec.danger, boost, 0.20),
+            c10: mix_hex(&spec.success, boost, 0.20),
+            c11: mix_hex(&spec.warning, boost, 0.20),
+            c12: mix_hex(&spec.accent, boost, 0.20),
             c13: mix_hex(&purple, boost, 0.20),
             c14: mix_hex(&cyan, boost, 0.20),
             c15,
-            on_accent: contrast_fg(spec.accent),
-            on_danger: contrast_fg(spec.danger),
+            on_accent: contrast_fg(&spec.accent),
+            on_danger: contrast_fg(&spec.danger),
         }
     }
 }
 
-/// Build the single canonical list of color variables for a palette.
-pub fn build_vars(spec: &PaletteSpec) -> Vec<(&'static str, String)> {
-    let a = Ansi16::from_spec(spec);
+/// Build the single canonical list of color variables for a resolved palette.
+pub fn build_vars_resolved(spec: &ResolvedPalette) -> Vec<(&'static str, String)> {
+    let a = Ansi16::from_resolved(spec);
     let mut vars = vec![
-        ("DOTFIELD_THEME_ID", spec.id.to_string()),
+        ("DOTFIELD_THEME_ID", spec.id.clone()),
         (
             "DOTFIELD_MODE",
             if spec.is_dark { "dark" } else { "light" }.to_string(),
@@ -126,17 +127,17 @@ pub fn build_vars(spec: &PaletteSpec) -> Vec<(&'static str, String)> {
     ];
 
     let colors: &[(&'static str, &str)] = &[
-        ("DOTFIELD_BG", spec.bg),
-        ("DOTFIELD_SURFACE", spec.surface),
-        ("DOTFIELD_OVERLAY", spec.overlay),
-        ("DOTFIELD_BORDER", spec.border),
-        ("DOTFIELD_FG", spec.fg),
-        ("DOTFIELD_FG_SECONDARY", spec.fg_secondary),
-        ("DOTFIELD_FG_MUTED", spec.fg_muted),
-        ("DOTFIELD_ACCENT", spec.accent),
-        ("DOTFIELD_SUCCESS", spec.success),
-        ("DOTFIELD_WARNING", spec.warning),
-        ("DOTFIELD_DANGER", spec.danger),
+        ("DOTFIELD_BG", &spec.bg),
+        ("DOTFIELD_SURFACE", &spec.surface),
+        ("DOTFIELD_OVERLAY", &spec.overlay),
+        ("DOTFIELD_BORDER", &spec.border),
+        ("DOTFIELD_FG", &spec.fg),
+        ("DOTFIELD_FG_SECONDARY", &spec.fg_secondary),
+        ("DOTFIELD_FG_MUTED", &spec.fg_muted),
+        ("DOTFIELD_ACCENT", &spec.accent),
+        ("DOTFIELD_SUCCESS", &spec.success),
+        ("DOTFIELD_WARNING", &spec.warning),
+        ("DOTFIELD_DANGER", &spec.danger),
         ("DOTFIELD_ON_ACCENT", &a.on_accent),
         ("DOTFIELD_ON_DANGER", &a.on_danger),
         ("DOTFIELD_C0", &a.c0),
@@ -162,17 +163,17 @@ pub fn build_vars(spec: &PaletteSpec) -> Vec<(&'static str, String)> {
     }
     // Separate static-key table for *_HEX variants (no `#` prefix)
     let hex_keys: &[(&'static str, &str)] = &[
-        ("DOTFIELD_BG_HEX", spec.bg),
-        ("DOTFIELD_SURFACE_HEX", spec.surface),
-        ("DOTFIELD_OVERLAY_HEX", spec.overlay),
-        ("DOTFIELD_BORDER_HEX", spec.border),
-        ("DOTFIELD_FG_HEX", spec.fg),
-        ("DOTFIELD_FG_SECONDARY_HEX", spec.fg_secondary),
-        ("DOTFIELD_FG_MUTED_HEX", spec.fg_muted),
-        ("DOTFIELD_ACCENT_HEX", spec.accent),
-        ("DOTFIELD_SUCCESS_HEX", spec.success),
-        ("DOTFIELD_WARNING_HEX", spec.warning),
-        ("DOTFIELD_DANGER_HEX", spec.danger),
+        ("DOTFIELD_BG_HEX", &spec.bg),
+        ("DOTFIELD_SURFACE_HEX", &spec.surface),
+        ("DOTFIELD_OVERLAY_HEX", &spec.overlay),
+        ("DOTFIELD_BORDER_HEX", &spec.border),
+        ("DOTFIELD_FG_HEX", &spec.fg),
+        ("DOTFIELD_FG_SECONDARY_HEX", &spec.fg_secondary),
+        ("DOTFIELD_FG_MUTED_HEX", &spec.fg_muted),
+        ("DOTFIELD_ACCENT_HEX", &spec.accent),
+        ("DOTFIELD_SUCCESS_HEX", &spec.success),
+        ("DOTFIELD_WARNING_HEX", &spec.warning),
+        ("DOTFIELD_DANGER_HEX", &spec.danger),
         ("DOTFIELD_ON_ACCENT_HEX", &a.on_accent),
         ("DOTFIELD_ON_DANGER_HEX", &a.on_danger),
         ("DOTFIELD_C0_HEX", &a.c0),
@@ -198,6 +199,10 @@ pub fn build_vars(spec: &PaletteSpec) -> Vec<(&'static str, String)> {
     vars
 }
 
+pub fn build_vars(spec: &PaletteSpec) -> Vec<(&'static str, String)> {
+    build_vars_resolved(&ResolvedPalette::from(spec))
+}
+
 /// Substitute `${VAR}` placeholders using the variable table.
 pub fn render_template(template: &str, vars: &[(&'static str, String)]) -> String {
     let mut out = template.to_string();
@@ -215,8 +220,8 @@ pub fn render_colors_sh(vars: &[(&'static str, String)]) -> String {
     out
 }
 
-pub fn render_colors_lua(spec: &PaletteSpec) -> String {
-    let a = Ansi16::from_spec(spec);
+pub fn render_colors_lua_resolved(spec: &ResolvedPalette) -> String {
+    let a = Ansi16::from_resolved(spec);
     let mode = if spec.is_dark { "dark" } else { "light" };
     format!(
         "-- Auto-generated by Amane Settings ({id})\n\
@@ -244,8 +249,12 @@ pub fn render_colors_lua(spec: &PaletteSpec) -> String {
     )
 }
 
-pub fn render_colors_tmux(spec: &PaletteSpec) -> String {
-    let a = Ansi16::from_spec(spec);
+pub fn render_colors_lua(spec: &PaletteSpec) -> String {
+    render_colors_lua_resolved(&ResolvedPalette::from(spec))
+}
+
+pub fn render_colors_tmux_resolved(spec: &ResolvedPalette) -> String {
+    let a = Ansi16::from_resolved(spec);
     format!(
         "# Auto-generated by Amane Settings ({id})\n\
          set -g @dotfield_bg \"{bg}\"\n\
@@ -270,8 +279,12 @@ pub fn render_colors_tmux(spec: &PaletteSpec) -> String {
     )
 }
 
-pub fn render_gtk_css(spec: &PaletteSpec) -> String {
-    let a = Ansi16::from_spec(spec);
+pub fn render_colors_tmux(spec: &PaletteSpec) -> String {
+    render_colors_tmux_resolved(&ResolvedPalette::from(spec))
+}
+
+pub fn render_gtk_css_resolved(spec: &ResolvedPalette) -> String {
+    let a = Ansi16::from_resolved(spec);
     format!(
         "/* Auto-generated by Amane Settings ({id}) */\n\
          @define-color accent_color {accent};\n\
@@ -310,6 +323,10 @@ pub fn render_gtk_css(spec: &PaletteSpec) -> String {
     )
 }
 
+pub fn render_gtk_css(spec: &PaletteSpec) -> String {
+    render_gtk_css_resolved(&ResolvedPalette::from(spec))
+}
+
 fn load_template(templates_dir: &Path, filename: &str, fallback: &str) -> String {
     fs::read_to_string(templates_dir.join(filename)).unwrap_or_else(|_| fallback.to_string())
 }
@@ -327,6 +344,15 @@ fn spawn_detached(bin: &str, args: &[&str]) {
 
 /// Update central color variable files and apply them across all configured app templates.
 pub fn sync_all(spec: &PaletteSpec) {
+    sync_resolved(&ResolvedPalette::from(spec));
+}
+
+/// Resolve and sync the active palette from a ShellManifest (including accent overrides and rice aliases).
+pub fn sync_manifest(manifest: &ShellManifest) {
+    sync_resolved(&resolve_manifest_palette(manifest));
+}
+
+pub fn sync_resolved(spec: &ResolvedPalette) {
     let Some(home) = std::env::var_os("HOME") else {
         return;
     };
@@ -334,13 +360,19 @@ pub fn sync_all(spec: &PaletteSpec) {
     let dotfield_dir = h.join(".config/dotfield");
     let themes_dir = dotfield_dir.join("themes");
     let templates_dir = dotfield_dir.join("templates");
-    let vars = build_vars(spec);
+    let vars = build_vars_resolved(spec);
 
     // 1. Native variable files (apps reference variables directly)
     write_file(&dotfield_dir.join("colors.sh"), &render_colors_sh(&vars));
-    write_file(&dotfield_dir.join("colors.lua"), &render_colors_lua(spec));
-    write_file(&dotfield_dir.join("colors.tmux"), &render_colors_tmux(spec));
-    let gtk_css = render_gtk_css(spec);
+    write_file(
+        &dotfield_dir.join("colors.lua"),
+        &render_colors_lua_resolved(spec),
+    );
+    write_file(
+        &dotfield_dir.join("colors.tmux"),
+        &render_colors_tmux_resolved(spec),
+    );
+    let gtk_css = render_gtk_css_resolved(spec);
     write_file(&h.join(".config/gtk-3.0/dotfield-live.css"), &gtk_css);
     write_file(&h.join(".config/gtk-4.0/dotfield-live.css"), &gtk_css);
 
@@ -420,6 +452,7 @@ pub fn sync_all(spec: &PaletteSpec) {
 
     // 3. Non-blocking live reloads
     spawn_detached("pkill", &["-USR1", "kitty"]);
+    spawn_detached("pkill", &["-USR2", "ghostty"]);
     spawn_detached("pkill", &["-USR1", "cava"]);
     spawn_detached("pkill", &["-USR2", "btop"]);
     spawn_detached("pkill", &["-USR1", "nvim"]);
@@ -429,6 +462,13 @@ pub fn sync_all(spec: &PaletteSpec) {
         &[
             "source-file",
             &dotfield_dir.join("colors.tmux").to_string_lossy(),
+        ],
+    );
+    spawn_detached(
+        "tmux",
+        &[
+            "source-file",
+            &h.join(".config/tmux/tmux.conf").to_string_lossy(),
         ],
     );
     spawn_detached("niri", &["msg", "action", "load-config-file"]);
@@ -457,6 +497,22 @@ mod tests {
         );
         assert!(ghostty.contains("background = 000000"));
         assert!(ghostty.contains("background-opacity = 1.0"));
+        assert!(ghostty.contains("window-titlebar-background = 140e29"));
+        assert!(ghostty.contains("window-titlebar-foreground = EAF8FA"));
+
+        let starship = render_template(
+            include_str!("../../../../theme/templates/starship.toml.tpl"),
+            &dark_vars,
+        );
+        assert!(starship.contains("palette = \"dotfield\""));
+        assert!(starship.contains("[character]"));
+        assert!(starship.contains("format = \""));
+
+        let imv = render_template(
+            include_str!("../../../../theme/templates/imv.conf.tpl"),
+            &dark_vars,
+        );
+        assert!(imv.contains("[binds]"));
 
         let fuzzel = render_template(
             include_str!("../../../../theme/templates/fuzzel.ini.tpl"),
@@ -469,9 +525,20 @@ mod tests {
             &dark_vars,
         );
         assert!(mako.contains("border-color=#04C5F0"));
+        assert!(!mako.contains("[global]"));
 
         assert!(render_colors_lua(light).contains("mode = \"light\""));
         assert!(render_colors_tmux(dark).contains("set -g @dotfield_accent \"#04C5F0\""));
         assert!(render_gtk_css(dark).contains("@define-color accent_color #04C5F0;"));
+
+        // Resolved manifest palette with rice alias + cyan accent override
+        let mut manifest = ShellManifest::default();
+        manifest.theme.style = "gruvbox-dark-medium".to_string();
+        manifest.palette.background = "#282828".to_string();
+        manifest.palette.accent = "#04C5F0".to_string();
+        let vars = build_vars_resolved(&resolve_manifest_palette(&manifest));
+        let sh_override = render_colors_sh(&vars);
+        assert!(sh_override.contains("DOTFIELD_THEME_ID=\"gruvbox-dark-medium\""));
+        assert!(sh_override.contains("DOTFIELD_ACCENT=\"#04C5F0\""));
     }
 }

@@ -47,7 +47,7 @@ impl Default for NiriSettingsState {
             default_column_width: 0.5,
             center_focused_column: "never".to_string(),
             animations_enabled: true,
-            animation_duration_ms: 200,
+            animation_duration_ms: 110,
             animation_curve: "ease-out-cubic".to_string(),
             border_width: 2.0,
             active_border_color: "#04C5F0".to_string(),

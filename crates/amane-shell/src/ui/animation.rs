@@ -6,9 +6,9 @@ use amane::{Rectangle, request_frame};
 pub const MOTION_SPATIAL_CURVE: [f32; 4] = [0.2, 0.0, 0.0, 1.0];
 pub const MOTION_EFFECTS_CURVE: [f32; 4] = [0.34, 0.8, 0.34, 1.0];
 
-pub const PANEL_STIFFNESS: f32 = 500.0;
-pub const PANEL_OPEN_DAMPING: f32 = 44.72; // 2 * sqrt(500) -> critically damped
-pub const PANEL_CLOSE_DAMPING: f32 = 50.0; // Slightly overdamped crisp tuck
+pub const PANEL_STIFFNESS: f32 = 1400.0;
+pub const PANEL_OPEN_DAMPING: f32 = 74.83315; // 2 * sqrt(1400) -> critically damped (~160ms settle)
+pub const PANEL_CLOSE_DAMPING: f32 = 84.0; // Slightly overdamped crisp tuck (~130ms settle)
 
 const SPRING_MAX_STEP: f32 = 1.0 / 30.0;
 const SPRING_SETTLED_POS: f32 = 0.002;

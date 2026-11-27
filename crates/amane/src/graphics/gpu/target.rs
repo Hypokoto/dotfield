@@ -89,11 +89,13 @@ pub(super) fn configure(surface: &Surface, adapter: &Adapter) -> SurfaceConfigur
             .unwrap_or(CompositeAlphaMode::Auto)
     };
 
-    // amane waits for frame callbacks itself, so presenting should not wait again
-    let present_mode = if capabilities.present_modes.contains(&PresentMode::Mailbox) {
+    // Wayland FIFO vsync prevents Mailbox buffer-dropping/flicker while frame callbacks pace animations
+    let present_mode = if capabilities.present_modes.contains(&PresentMode::Fifo) {
+        PresentMode::Fifo
+    } else if capabilities.present_modes.contains(&PresentMode::Mailbox) {
         PresentMode::Mailbox
     } else {
-        PresentMode::Fifo
+        PresentMode::AutoVsync
     };
 
     SurfaceConfiguration {
@@ -103,7 +105,7 @@ pub(super) fn configure(surface: &Surface, adapter: &Adapter) -> SurfaceConfigur
         width: 0,
         height: 0,
         present_mode,
-        desired_maximum_frame_latency: 2,
+        desired_maximum_frame_latency: 1,
         alpha_mode,
         view_formats: Vec::new(),
     }

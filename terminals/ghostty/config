@@ -7,6 +7,8 @@ theme = dotfield-theme
 background-opacity = 0.80
 background-opacity-cells = false
 background-blur = false
+alpha-blending = native
+window-vsync = false
 
 # --- Typography & Font Rendering ---
 font-family = JetBrainsMono Nerd Font
@@ -86,6 +88,7 @@ keybind = alt+5=goto_tab:5
 
 # --- Native Splits & Independent Zoom (Ghostty-native) ---
 split-preserve-zoom = navigation
+unfocused-split-opacity = 0.92
 keybind = alt+enter=new_split:right
 keybind = alt+shift+enter=new_split:down
 keybind = alt+h=goto_split:left

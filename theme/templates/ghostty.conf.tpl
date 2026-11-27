@@ -8,6 +8,13 @@ cursor-color = ${DOTFIELD_ACCENT_HEX}
 cursor-text = ${DOTFIELD_ON_ACCENT_HEX}
 selection-background = ${DOTFIELD_OVERLAY_HEX}
 selection-foreground = ${DOTFIELD_FG_HEX}
+split-divider-color = ${DOTFIELD_BORDER_HEX}
+unfocused-split-fill = ${DOTFIELD_BG_HEX}
+search-foreground = ${DOTFIELD_ON_ACCENT_HEX}
+search-background = ${DOTFIELD_WARNING_HEX}
+search-selected-foreground = ${DOTFIELD_ON_ACCENT_HEX}
+search-selected-background = ${DOTFIELD_ACCENT_HEX}
+gtk-custom-css = ~/.config/dotfield/themes/ghostty-gtk.css
 palette = 0=${DOTFIELD_C0_HEX}
 palette = 1=${DOTFIELD_C1_HEX}
 palette = 2=${DOTFIELD_C2_HEX}

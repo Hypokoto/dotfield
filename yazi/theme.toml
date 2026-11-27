@@ -4,27 +4,3 @@
 [flavor]
 dark  = "dotfield-live"
 light = "dotfield-live"
-
-[filetype]
-rules = [
-    # Media
-    { mime = "image/*", fg = "#9147a8" },
-    { mime = "video/*", fg = "#be3f50" },
-    { mime = "audio/*", fg = "#ff7f41" },
-    # Archives
-    { mime = "application/*zip", fg = "#04c5f0" },
-    { mime = "application/x-tar", fg = "#04c5f0" },
-    { mime = "application/x-bzip2", fg = "#04c5f0" },
-    { mime = "application/x-7z-compressed", fg = "#04c5f0" },
-    { mime = "application/x-rar", fg = "#04c5f0" },
-    # Code & Configs
-    { url = "*.rs", fg = "#04c5f0" },
-    { url = "*.kdl", fg = "#04c5f0" },
-    { url = "*.toml", fg = "#ff7f41" },
-    { url = "*.json", fg = "#ff7f41" },
-    { url = "*.sh", fg = "#7cd699" },
-    { url = "*.zsh", fg = "#7cd699" },
-    { url = "*.md", fg = "#11aeb3" },
-    # Directories
-    { url = "*/", fg = "#04c5f0", bold = true },
-]

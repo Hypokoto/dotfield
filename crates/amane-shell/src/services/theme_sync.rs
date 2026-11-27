@@ -2,7 +2,7 @@ use crate::config::ShellManifest;
 use crate::services::palettes::{PaletteSpec, ResolvedPalette, resolve_manifest_palette};
 use std::fs;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 fn parse_hex(hex: &str) -> (u8, u8, u8) {
     let s = hex.trim_start_matches('#');
@@ -338,8 +338,16 @@ fn write_file(path: &Path, content: &str) {
     let _ = fs::write(path, content);
 }
 
-fn spawn_detached(bin: &str, args: &[&str]) {
-    let _ = Command::new(bin).args(args).spawn();
+fn run_reload_commands(cmds: Vec<(String, Vec<String>)>) {
+    std::thread::spawn(move || {
+        for (bin, args) in cmds {
+            let _ = Command::new(&bin)
+                .args(&args)
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status();
+        }
+    });
 }
 
 /// Update central color variable files and apply them across all configured app templates.
@@ -382,6 +390,11 @@ pub fn sync_resolved(spec: &ResolvedPalette) {
             "ghostty.conf.tpl",
             include_str!("../../../../theme/templates/ghostty.conf.tpl"),
             themes_dir.join("ghostty.conf"),
+        ),
+        (
+            "ghostty-gtk.css.tpl",
+            include_str!("../../../../theme/templates/ghostty-gtk.css.tpl"),
+            themes_dir.join("ghostty-gtk.css"),
         ),
         (
             "kitty.conf.tpl",
@@ -450,28 +463,29 @@ pub fn sync_resolved(spec: &ResolvedPalette) {
         write_file(dest, &render_template(&tpl, &vars));
     }
 
-    // 3. Non-blocking live reloads
-    spawn_detached("pkill", &["-USR1", "kitty"]);
-    spawn_detached("pkill", &["-USR2", "ghostty"]);
-    spawn_detached("pkill", &["-USR1", "cava"]);
-    spawn_detached("pkill", &["-USR2", "btop"]);
-    spawn_detached("pkill", &["-USR1", "nvim"]);
-    spawn_detached("makoctl", &["reload"]);
-    spawn_detached(
-        "tmux",
-        &[
-            "source-file",
-            &dotfield_dir.join("colors.tmux").to_string_lossy(),
-        ],
-    );
-    spawn_detached(
-        "tmux",
-        &[
-            "source-file",
-            &h.join(".config/tmux/tmux.conf").to_string_lossy(),
-        ],
-    );
-    spawn_detached("niri", &["msg", "action", "load-config-file"]);
+    // 3. Non-blocking live reloads (reaped in background thread)
+    let colors_tmux = dotfield_dir
+        .join("colors.tmux")
+        .to_string_lossy()
+        .into_owned();
+    let tmux_conf = h
+        .join(".config/tmux/tmux.conf")
+        .to_string_lossy()
+        .into_owned();
+    run_reload_commands(vec![
+        ("pkill".into(), vec!["-USR1".into(), "kitty".into()]),
+        ("pkill".into(), vec!["-USR2".into(), "ghostty".into()]),
+        ("pkill".into(), vec!["-USR1".into(), "cava".into()]),
+        ("pkill".into(), vec!["-USR2".into(), "btop".into()]),
+        ("pkill".into(), vec!["-USR1".into(), "nvim".into()]),
+        ("makoctl".into(), vec!["reload".into()]),
+        ("tmux".into(), vec!["source-file".into(), colors_tmux]),
+        ("tmux".into(), vec!["source-file".into(), tmux_conf]),
+        (
+            "niri".into(),
+            vec!["msg".into(), "action".into(), "load-config-file".into()],
+        ),
+    ]);
 }
 
 #[cfg(test)]
@@ -499,6 +513,28 @@ mod tests {
         assert!(ghostty.contains("background-opacity = 1.0"));
         assert!(ghostty.contains("window-titlebar-background = 140e29"));
         assert!(ghostty.contains("window-titlebar-foreground = EAF8FA"));
+        assert!(ghostty.contains("split-divider-color = "));
+        assert!(ghostty.contains("gtk-custom-css = ~/.config/dotfield/themes/ghostty-gtk.css"));
+
+        let ghostty_css = render_template(
+            include_str!("../../../../theme/templates/ghostty-gtk.css.tpl"),
+            &dark_vars,
+        );
+        assert!(ghostty_css.contains("--ghostty-bg: #000000;"));
+        assert!(ghostty_css.contains("tabbar tab:checked"));
+
+        let yazi = render_template(
+            include_str!("../../../../theme/templates/yazi.toml.tpl"),
+            &dark_vars,
+        );
+        assert!(yazi.contains("[indicator]"));
+        assert!(yazi.contains("[tabs]"));
+        assert!(yazi.contains("sep_left"));
+        assert!(yazi.contains("[pick]"));
+        assert!(yazi.contains("[cmp]"));
+        assert!(yazi.contains("[filetype]"));
+        assert!(!yazi.contains("separator_open"));
+        assert!(!yazi.contains("[select]"));
 
         let starship = render_template(
             include_str!("../../../../theme/templates/starship.toml.tpl"),

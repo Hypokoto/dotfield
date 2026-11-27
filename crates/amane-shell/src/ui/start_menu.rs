@@ -249,6 +249,12 @@ pub fn get_shell_actions() -> Vec<ShellAction> {
             subtitle: "Record active monitor or window area",
         },
         ShellAction {
+            id: "settings",
+            icon: "󰒓",
+            title: "Settings",
+            subtitle: "Appearance, displays, shortcuts, and preferences",
+        },
+        ShellAction {
             id: "lock",
             icon: "󰌾",
             title: "Lock Screen",
@@ -273,6 +279,9 @@ pub fn execute_shell_action(id: &str) {
         }
         "record" => {
             crate::ui::screen_record::toggle();
+        }
+        "settings" => {
+            crate::ui::settings::toggle();
         }
         "lock" => {
             let _ = std::process::Command::new("swaylock").spawn();

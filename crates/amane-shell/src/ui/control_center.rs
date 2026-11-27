@@ -264,7 +264,60 @@ pub fn control_center_panel() -> LayerWindow {
 }
 
 fn render_header(tokens: &ThemeTokens) -> Rectangle {
-    components::modal_header("󰒓", "Control Center", None, tokens, close)
+    let title_row = Row::new(vec![
+        Box::new(
+            Text::new("󱄅")
+                .size(typography::TITLE_SM)
+                .color(tokens.accent)
+                .font(&tokens.font_mono)
+                .tight(),
+        ),
+        Box::new(
+            Text::new("Control Center")
+                .size(typography::TITLE_SM)
+                .weight(Weight::SemiBold)
+                .color(tokens.text_primary)
+                .font(&tokens.font_sans),
+        ),
+    ])
+    .gap(spacing::GAP_SM)
+    .align(Align::Center);
+
+    let settings_btn = Rectangle::new()
+        .width(26.0)
+        .height(26.0)
+        .radius(radius::PILL)
+        .fill(tokens.surface_elevated)
+        .border(1.0, tokens.border_subtle)
+        .cursor(Pointer)
+        .align_child(Center, Center)
+        .on_click(|_| {
+            crate::ui::settings::toggle();
+        })
+        .child(
+            Text::new("󰒓")
+                .size(13.0)
+                .color(tokens.text_secondary)
+                .font(&tokens.font_mono)
+                .tight(),
+        );
+
+    let close_btn = components::close_button(close, tokens);
+
+    let actions = Row::new(vec![Box::new(settings_btn), Box::new(close_btn)])
+        .gap(spacing::GAP_XS)
+        .align(Align::Center);
+
+    let header_row = Row::new(vec![Box::new(title_row), Box::new(actions)])
+        .width(Parent)
+        .justify(Justify::SpaceBetween)
+        .align(Align::Center);
+
+    Rectangle::new()
+        .width(Parent)
+        .height(28.0)
+        .align_child(Align::Start, Align::Center)
+        .child(header_row)
 }
 
 fn render_system_overview(tokens: &ThemeTokens, _font: &str) -> Rectangle {

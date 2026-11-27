@@ -11,6 +11,7 @@ pub enum ModalType {
     ScreenRecord,
     StartMenu,
     Overview,
+    Settings,
 }
 
 pub struct ModalManager;
@@ -39,6 +40,9 @@ impl ModalManager {
         if target != ModalType::Overview {
             crate::ui::overview::close();
         }
+        if target != ModalType::Settings {
+            crate::ui::settings::close();
+        }
 
         #[cfg(target_os = "linux")]
         unsafe {
@@ -55,6 +59,7 @@ impl ModalManager {
         crate::ui::powermenu::close();
         crate::ui::screen_record::close();
         crate::ui::overview::close();
+        crate::ui::settings::close();
 
         #[cfg(target_os = "linux")]
         unsafe {

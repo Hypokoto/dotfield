@@ -113,6 +113,9 @@ fn parse_cli_args() -> Result<Cli, String> {
             "--display-config" | "display-config" => {
                 cli.target_action = Some("display-config".to_string())
             }
+            "--settings" | "settings" | "--setting" | "setting" => {
+                cli.target_action = Some("settings".to_string())
+            }
             "--control-center" | "control-center" => {
                 cli.target_action = Some("control-center".to_string())
             }
@@ -354,6 +357,18 @@ fn ipc_display_config_handler(_args: &[String]) -> String {
     "display-config toggled".to_string()
 }
 
+fn ipc_settings_handler(args: &[String]) -> String {
+    if let Some(cat) = args
+        .first()
+        .and_then(|a| ui::settings::SettingsCategory::from_str_loose(a))
+    {
+        ui::settings::open_category(cat);
+        return format!("settings opened at category '{}'", cat.name());
+    }
+    ui::settings::toggle();
+    "settings toggled".to_string()
+}
+
 fn ipc_powermenu_handler(_args: &[String]) -> String {
     ui::powermenu::toggle();
     "powermenu toggled".to_string()
@@ -522,6 +537,8 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         .ipc("notifications", ipc_notifications_handler)
         .ipc("notification-center", ipc_notifications_handler)
         .ipc("display-config", ipc_display_config_handler)
+        .ipc("settings", ipc_settings_handler)
+        .ipc("setting", ipc_settings_handler)
         .ipc("presentation", ipc_presentation_handler)
         .ipc("widgets", ipc_widgets_handler)
         .ipc("start-menu", ipc_start_menu_handler)
@@ -551,6 +568,7 @@ fn run_shell(config_path: Option<PathBuf>, no_bar: bool) -> anyhow::Result<()> {
         .window(ui::screen_record::screen_record_overlay)
         .window(ui::start_menu::start_menu_overlay)
         .window(ui::overview::overview_overlay)
+        .window(ui::settings::settings_overlay)
         .run();
 
     // If event loop returns unexpectedly, exit with code 1 so supervisor can restart

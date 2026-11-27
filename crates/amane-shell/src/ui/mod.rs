@@ -11,6 +11,7 @@ pub mod osd;
 pub mod overview;
 pub mod powermenu;
 pub mod screen_record;
+pub mod settings;
 pub mod start_menu;
 pub mod tokens;
 pub mod tray;

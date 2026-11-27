@@ -11,3 +11,7 @@ include "conf.d/05-startup.kdl"
 include "conf.d/06-window-tiling.kdl"
 include "conf.d/07-floating.kdl"
 include "conf.d/08-binds.kdl"
+include optional=true "conf.d/99-amane-settings.kdl"
+
+// WallForge: live wallpaper in the overview (managed by WallForge)
+include optional=true "wallforge.kdl"

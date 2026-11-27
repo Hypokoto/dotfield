@@ -8,6 +8,7 @@ pub struct ThemeConfig {
     pub font_family: String,
     pub font_size: f64,
     pub style: String,
+    pub wallpaper: Option<String>,
 }
 
 impl Default for ThemeConfig {
@@ -16,6 +17,7 @@ impl Default for ThemeConfig {
             font_family: "IBM Plex Sans".to_string(),
             font_size: 11.5,
             style: "cyber-synthwave".to_string(),
+            wallpaper: None,
         }
     }
 }
@@ -164,6 +166,30 @@ impl Default for TerminalSettings {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct NightLightSettings {
+    pub enabled: bool,
+    pub mode: String,
+    pub night_temp: u32,
+    pub day_temp: u32,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+}
+
+impl Default for NightLightSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            mode: "manual".to_string(),
+            night_temp: 4000,
+            day_temp: 6500,
+            latitude: None,
+            longitude: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct ShellManifest {
@@ -175,6 +201,7 @@ pub struct ShellManifest {
     pub launcher: LauncherSettings,
     pub control_center: ControlCenterSettings,
     pub terminal: TerminalSettings,
+    pub night_light: NightLightSettings,
 }
 
 impl ShellManifest {
@@ -191,6 +218,18 @@ impl ShellManifest {
         let manifest: Self = toml::from_str(&raw)?;
         Ok(manifest)
     }
+
+    pub fn save_to_path_atomic(&self, path: &Path) -> Result<()> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let serialized = toml::to_string_pretty(self).or_else(|_| toml::to_string(self))?;
+
+        let tmp_path = path.with_extension(format!("tmp.{}", std::process::id()));
+        std::fs::write(&tmp_path, serialized.as_bytes())?;
+        std::fs::rename(&tmp_path, path)?;
+        Ok(())
+    }
 }
 
 /// Unified, reactive shell configuration service.
@@ -199,6 +238,25 @@ impl ShellManifest {
 #[derive(Debug, Clone, Default)]
 pub struct ConfigService {
     pub manifest: ShellManifest,
+}
+
+impl ConfigService {
+    /// Mutates the manifest in memory, atomically saves it to ~/.config/dotfield/shell.toml,
+    /// and requests a compositor frame redraw.
+    pub fn update_and_save<F>(mutate: F) -> Result<()>
+    where
+        F: FnOnce(&mut ShellManifest),
+    {
+        use amane::Service;
+        let manifest = {
+            let mut svc = Self::write();
+            mutate(&mut svc.manifest);
+            svc.manifest.clone()
+        };
+        manifest.save_to_path_atomic(&ShellManifest::default_path())?;
+        amane::request_frame();
+        Ok(())
+    }
 }
 
 impl amane::Service for ConfigService {
@@ -269,5 +327,29 @@ mod tests {
     fn test_corrupt_toml_returns_error() {
         let res: Result<ShellManifest, _> = toml::from_str("[unclosed_table");
         assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_atomic_save_and_reload() {
+        let dir = std::env::temp_dir().join(format!("amane_test_{}", std::process::id()));
+        let path = dir.join("test_shell.toml");
+
+        let mut manifest = ShellManifest::default();
+        manifest.bar.position = "top".to_string();
+        manifest.bar.height = 54.0;
+        manifest.theme.style = "minimal".to_string();
+
+        manifest
+            .save_to_path_atomic(&path)
+            .expect("failed to save manifest atomically");
+
+        let loaded = ShellManifest::load_from_path(&path).expect("failed to reload saved manifest");
+        assert_eq!(loaded.bar.position, "top");
+        assert_eq!(loaded.bar.height, 54.0);
+        assert_eq!(loaded.theme.style, "minimal");
+
+        // Cleanup
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_dir(&dir);
     }
 }

@@ -13,7 +13,7 @@ binds {
     Mod+B { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-ror.sh browser"; }    // Win+B: Run-or-Raise Web Browser
     Mod+A { spawn "amane-msg" "control-center"; } // Win+A: Quick Settings
     Mod+N { spawn "amane-msg" "notifications"; }  // Win+N: Notification Center
-    Mod+I { spawn "amane-msg" "control-center"; } // Win+I: Settings
+    Mod+I { spawn "amane-msg" "settings"; }       // Win+I: Settings
     Mod+L { spawn "sh" "-c" "~/.config/dotfield/scripts/lock.sh"; } // Win+L: Lock Screen
     Mod+Tab { toggle-overview; }                  // Win+Tab: Task View
     Alt+Tab { toggle-overview; }                  // Alt+Tab: Window Switcher
@@ -49,6 +49,7 @@ binds {
     Mod+Shift+C { spawn "amane-msg" "calendar"; }
     Mod+Shift+R { spawn "amane-msg" "screen-recorder"; }
     Mod+Shift+P { spawn "amane-msg" "presentation"; }
+    Mod+Shift+Comma { spawn "amane-msg" "settings"; }
     Mod+Escape { spawn "sh" "-c" "~/.config/dotfield/scripts/lock.sh"; }
 
     // Screen Capturing

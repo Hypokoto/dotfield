@@ -7,7 +7,9 @@ useDefault = true
 [allowlist]
 description = "Global allowlist for build artifacts and dummy test tokens"
 paths = [
-  '''target/.*'''
+  '''target/.*''',
+  '''\.10x/.*''',
+  '''\.planning/.*'''
 ]
 regexes = [
   '''(?i)example[_-]?key''',

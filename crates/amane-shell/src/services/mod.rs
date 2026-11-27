@@ -1,7 +1,11 @@
+pub mod appearance;
 pub mod battery;
 pub mod cava;
 pub mod clock;
+pub mod display;
+pub mod night_light;
 pub mod niri;
+pub mod niri_config;
 pub mod presentation;
 pub mod telemetry;
 pub mod tray;

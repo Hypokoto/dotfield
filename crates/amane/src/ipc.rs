@@ -118,6 +118,7 @@ pub const OP_OSD_BRIGHT_DN: u8 = 0x14;
 pub const OP_START_MENU: u8 = 0x15;
 pub const OP_ACTION_CENTER: u8 = 0x16;
 pub const OP_OVERVIEW: u8 = 0x17;
+pub const OP_SETTINGS: u8 = 0x18;
 
 pub fn opcode_to_name(opcode: u8) -> Option<(&'static str, &'static [&'static str])> {
     match opcode {
@@ -144,6 +145,7 @@ pub fn opcode_to_name(opcode: u8) -> Option<(&'static str, &'static [&'static st
         OP_START_MENU => Some(("start-menu", &[])),
         OP_ACTION_CENTER => Some(("action-center", &[])),
         OP_OVERVIEW => Some(("overview", &[])),
+        OP_SETTINGS => Some(("settings", &[])),
         _ => None,
     }
 }
@@ -173,6 +175,7 @@ pub fn name_to_opcode(name: &str) -> Option<u8> {
         "start-menu" | "start" => Some(OP_START_MENU),
         "action-center" => Some(OP_ACTION_CENTER),
         "overview" => Some(OP_OVERVIEW),
+        "settings" | "setting" => Some(OP_SETTINGS),
         _ => None,
     }
 }
@@ -203,6 +206,8 @@ mod tests {
         assert_eq!(name_to_opcode("start"), Some(OP_START_MENU));
         assert_eq!(name_to_opcode("action-center"), Some(OP_ACTION_CENTER));
         assert_eq!(name_to_opcode("overview"), Some(OP_OVERVIEW));
+        assert_eq!(name_to_opcode("settings"), Some(OP_SETTINGS));
+        assert_eq!(name_to_opcode("setting"), Some(OP_SETTINGS));
         assert_eq!(name_to_opcode("unknown-cmd"), None);
 
         assert_eq!(opcode_to_name(OP_LAUNCHER), Some(("launcher", &[][..])));
@@ -218,6 +223,7 @@ mod tests {
             Some(("action-center", &[][..]))
         );
         assert_eq!(opcode_to_name(OP_OVERVIEW), Some(("overview", &[][..])));
+        assert_eq!(opcode_to_name(OP_SETTINGS), Some(("settings", &[][..])));
         let (osd, args) = opcode_to_name(OP_OSD_VOL_UP).unwrap();
         assert_eq!(osd, "osd");
         assert_eq!(args, &["volume-up"]);

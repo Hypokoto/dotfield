@@ -39,6 +39,7 @@ Fast-Path Opcodes (0-alloc byte frames, <0.2ms):
   powermenu             Toggle power menu
   calendar              Toggle calendar & clock
   screen-recorder       Toggle screen recorder HUD
+  settings              Toggle unified settings UI (or amane-msg settings <category>)
   reload                Reload desktop shell configuration
   volume-up             OSD volume up
   volume-down           OSD volume down

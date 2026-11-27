@@ -7,7 +7,7 @@ theme = dotfield-theme
 background-opacity = 1.0
 background-opacity-cells = false
 background-blur = false
-alpha-blending = native
+alpha-blending = linear-corrected
 window-vsync = false
 
 # --- Typography & Font Rendering ---

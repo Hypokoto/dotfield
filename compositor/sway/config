@@ -3,8 +3,8 @@
 # Modular system split across ~/.config/sway/conf.d/*.conf
 
 # 1. Include core modular subsystem configurations
-include ~/.config/sway/conf.d/*.conf
+include $HOME/.config/sway/conf.d/*.conf
 
 # 2. Modular Drop-ins (Dotfield Managed Overrides)
 # Fragments in config.d are loaded alphabetically and take precedence over defaults
-include ~/.config/sway/config.d/*.conf
+include $HOME/.config/sway/config.d/*.conf

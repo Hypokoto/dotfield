@@ -4,14 +4,14 @@
 binds {
     // Column & Window Navigation (Seamless Neovim + Niri Vi & Arrow Integration)
     // Note: Mod+L is strictly reserved for Lock Screen (Win+L) in 08-binds.kdl
-    Mod+H         { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh left"; }
-    Mod+Semicolon { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh right"; }
-    Mod+J         { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh down w"; }
-    Mod+K         { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh up w"; }
-    Mod+Left      { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh left"; }
-    Mod+Right     { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh right"; }
-    Mod+Down      { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh down w"; }
-    Mod+Up        { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-nav.sh up w"; }
+    Mod+H         { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/niri-nav.sh\" left"; }
+    Mod+Semicolon { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/niri-nav.sh\" right"; }
+    Mod+J         { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/niri-nav.sh\" down w"; }
+    Mod+K         { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/niri-nav.sh\" up w"; }
+    Mod+Left      { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/niri-nav.sh\" left"; }
+    Mod+Right     { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/niri-nav.sh\" right"; }
+    Mod+Down      { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/niri-nav.sh\" down w"; }
+    Mod+Up        { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/niri-nav.sh\" up w"; }
 
     // Moving Columns & Windows
     Mod+Shift+H         { move-column-left; }

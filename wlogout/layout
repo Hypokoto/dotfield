@@ -1,6 +1,6 @@
 {
     "label" : "lock",
-    "action" : "~/.config/dotfield/scripts/lock.sh",
+    "action" : "\"$HOME/.config/dotfield/scripts/lock.sh\"",
     "text" : "󰌾 Lock (l)",
     "keybind" : "l"
 }

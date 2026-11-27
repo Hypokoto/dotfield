@@ -984,7 +984,7 @@ fn render_appearance(tokens: &ThemeTokens, _font: &str) -> Rectangle {
             let _ = std::process::Command::new("sh")
                 .args([
                     "-c",
-                    "command -v dotfield-session >/dev/null 2>&1 && dotfield-session save || ~/.config/dotfield/scripts/session-manager.sh save",
+                    "command -v dotfield-session >/dev/null 2>&1 && dotfield-session save || \"$HOME/.config/dotfield/scripts/session-manager.sh\" save",
                 ])
                 .spawn();
         })
@@ -1435,7 +1435,7 @@ fn render_power_actions(tokens: &ThemeTokens, _font: &str) -> Rectangle {
             tokens,
             || {
                 let _ = std::process::Command::new("sh")
-                    .args(["-c", "~/.config/dotfield/scripts/lock.sh"])
+                    .args(["-c", "\"$HOME/.config/dotfield/scripts/lock.sh\""])
                     .spawn();
                 close();
             },

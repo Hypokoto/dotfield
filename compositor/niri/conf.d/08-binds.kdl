@@ -9,12 +9,12 @@ binds {
     Mod+C { spawn "amane-msg" "control-center"; } // Win+C: Control Center & Quick Settings
     Mod+S { spawn "amane-msg" "start-menu"; }     // Win+S: Search & Start
     Mod+Space { spawn "amane-msg" "start-menu"; }
-    Mod+E { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-ror.sh files"; }      // Win+E: Run-or-Raise File Explorer
-    Mod+B { spawn "sh" "-c" "~/.config/dotfield/scripts/niri-ror.sh browser"; }    // Win+B: Run-or-Raise Web Browser
+    Mod+E { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/niri-ror.sh\" files"; }      // Win+E: Run-or-Raise File Explorer
+    Mod+B { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/niri-ror.sh\" browser"; }    // Win+B: Run-or-Raise Web Browser
     Mod+A { spawn "amane-msg" "control-center"; } // Win+A: Quick Settings
     Mod+N { spawn "amane-msg" "notifications"; }  // Win+N: Notification Center
     Mod+I { spawn "amane-msg" "settings"; }       // Win+I: Settings
-    Mod+L { spawn "sh" "-c" "~/.config/dotfield/scripts/lock.sh"; } // Win+L: Lock Screen
+    Mod+L { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/lock.sh\""; } // Win+L: Lock Screen
     Mod+Tab { toggle-overview; }                  // Win+Tab: Task View
     Alt+Tab { toggle-overview; }                  // Alt+Tab: Window Switcher
     Alt+F4 { close-window; }                      // Alt+F4: Close Active Window
@@ -29,16 +29,16 @@ binds {
     Ctrl+Mod+D { focus-workspace "05 SCRATCH"; }
 
     // Terminal Launchers & Scratchpad
-    Mod+Return { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
-    Mod+Shift+Return { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-cwd.sh"; } // Spawn Terminal in Focused Window CWD
+    Mod+Return { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/terminal-select.sh\""; }
+    Mod+Shift+Return { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/terminal-cwd.sh\""; } // Spawn Terminal in Focused Window CWD
     Mod+Alt+Return { spawn "amane-msg" "sidecar"; }                                     // Spawn Companion Terminal Sidecar
-    Mod+U { spawn "sh" "-c" "~/.config/dotfield/scripts/scratchpad.sh"; }               // Dynamic Floating Scratchpad
-    Ctrl+Alt+T { spawn "sh" "-c" "~/.config/dotfield/scripts/terminal-select.sh"; }
+    Mod+U { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/scratchpad.sh\""; }               // Dynamic Floating Scratchpad
+    Ctrl+Alt+T { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/terminal-select.sh\""; }
     Mod+Ctrl+Return { spawn "ghostty" "--class=floating-term"; }
 
     // Session Management (Snapshot & Restore)
-    Mod+Ctrl+S { spawn "sh" "-c" "~/.config/dotfield/scripts/session-manager.sh save"; }
-    Mod+Ctrl+R { spawn "sh" "-c" "~/.config/dotfield/scripts/session-manager.sh restore"; }
+    Mod+Ctrl+S { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/session-manager.sh\" save"; }
+    Mod+Ctrl+R { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/session-manager.sh\" restore"; }
 
     // Dotfield Interactive Hardware & System Widgets
     Mod+Shift+N { spawn "amane-msg" "network"; }
@@ -50,26 +50,26 @@ binds {
     Mod+Shift+R { spawn "amane-msg" "screen-recorder"; }
     Mod+Shift+P { spawn "amane-msg" "presentation"; }
     Mod+Shift+Comma { spawn "amane-msg" "settings"; }
-    Mod+Escape { spawn "sh" "-c" "~/.config/dotfield/scripts/lock.sh"; }
+    Mod+Escape { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/lock.sh\""; }
 
     // Screen Capturing
-    Print { spawn "sh" "-c" "~/.config/dotfield/scripts/screenshot.sh --full"; }
-    Shift+Print { spawn "sh" "-c" "~/.config/dotfield/scripts/screenshot.sh --area"; }
-    Mod+Shift+S { spawn "sh" "-c" "~/.config/dotfield/scripts/screenshot.sh --area"; }
+    Print { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/screenshot.sh\" --full"; }
+    Shift+Print { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/screenshot.sh\" --area"; }
+    Mod+Shift+S { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/screenshot.sh\" --area"; }
 
     // Media & Hardware Controls (OSD Integrated)
-    XF86AudioRaiseVolume allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh volume_up"; }
-    XF86AudioLowerVolume allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh volume_down"; }
-    XF86AudioMute        allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh volume_mute"; }
-    XF86AudioMicMute     allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh mic_mute"; }
-    XF86MonBrightnessUp   allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh brightness_up"; }
-    XF86MonBrightnessDown allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh brightness_down"; }
-    XF86AudioPlay        allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh media_play_pause"; }
-    XF86AudioNext        allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh media_next"; }
-    XF86AudioPrev        allow-when-locked=true { spawn "sh" "-c" "~/.config/dotfield/scripts/osd.sh media_prev"; }
+    XF86AudioRaiseVolume allow-when-locked=true { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/osd.sh\" volume_up"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/osd.sh\" volume_down"; }
+    XF86AudioMute        allow-when-locked=true { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/osd.sh\" volume_mute"; }
+    XF86AudioMicMute     allow-when-locked=true { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/osd.sh\" mic_mute"; }
+    XF86MonBrightnessUp   allow-when-locked=true { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/osd.sh\" brightness_up"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/osd.sh\" brightness_down"; }
+    XF86AudioPlay        allow-when-locked=true { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/osd.sh\" media_play_pause"; }
+    XF86AudioNext        allow-when-locked=true { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/osd.sh\" media_next"; }
+    XF86AudioPrev        allow-when-locked=true { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/osd.sh\" media_prev"; }
 }
 
 switch-events {
-    lid-close { spawn "sh" "-c" "~/.config/dotfield/scripts/lid-handler.sh close"; }
-    lid-open { spawn "sh" "-c" "~/.config/dotfield/scripts/lid-handler.sh open"; }
+    lid-close { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/lid-handler.sh\" close"; }
+    lid-open { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/lid-handler.sh\" open"; }
 }

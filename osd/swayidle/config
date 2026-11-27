@@ -6,7 +6,7 @@
 timeout 150 'brightnessctl -s set 15% 2>/dev/null || true' resume 'brightnessctl -r 2>/dev/null || true'
 
 # Stage 2: Lock screen after 300s (5 min) of inactivity
-timeout 300 '~/.config/dotfield/scripts/lock.sh 2>/dev/null || swaylock -f'
+timeout 300 '"$HOME/.config/dotfield/scripts/lock.sh" 2>/dev/null || swaylock -f'
 
 # Stage 3: Turn off displays (DPMS) after 330s (5.5 min)
 timeout 330 'swaymsg "output * power off" 2>/dev/null || niri msg action power-off-monitors 2>/dev/null || true' resume 'swaymsg "output * power on" 2>/dev/null || niri msg action power-on-monitors 2>/dev/null || true'
@@ -15,7 +15,7 @@ timeout 330 'swaymsg "output * power off" 2>/dev/null || niri msg action power-o
 timeout 900 'systemctl suspend'
 
 # Lock screen before suspend/sleep (laptop lid close or manual sleep)
-before-sleep '~/.config/dotfield/scripts/lock.sh 2>/dev/null || swaylock -f'
+before-sleep '"$HOME/.config/dotfield/scripts/lock.sh" 2>/dev/null || swaylock -f'
 
 # Handle logind LockSession signal
-lock '~/.config/dotfield/scripts/lock.sh 2>/dev/null || swaylock -f'
+lock '"$HOME/.config/dotfield/scripts/lock.sh" 2>/dev/null || swaylock -f'

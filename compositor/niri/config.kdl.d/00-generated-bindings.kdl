@@ -10,7 +10,7 @@ binds {
     Mod+Shift+F { fullscreen-window; }
 
     // Phase 4 Utilities: Screenshots and Lockscreen
-    Print { spawn "sh" "-c" "~/.config/dotfield/scripts/screenshot.sh --area"; }
-    Shift+Print { spawn "sh" "-c" "~/.config/dotfield/scripts/screenshot.sh --full"; }
+    Print { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/screenshot.sh\" --area"; }
+    Shift+Print { spawn "sh" "-c" "\"$HOME/.config/dotfield/scripts/screenshot.sh\" --full"; }
     Mod+Escape { spawn "swaylock" "-f"; }
 }

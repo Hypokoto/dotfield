@@ -35,7 +35,7 @@ pub const PROFILES: &[RiceProfile] = &[
     RiceProfile {
         id: "win11-dark",
         name: "Win11 Dark",
-        description: "Modern acrylic dark desktop with crisp blue accents",
+        description: "Acrylic dark desktop with crisp blue accents",
         shell_style: "win11-dark",
         accent: "#0078D4",
         font: "Inter",

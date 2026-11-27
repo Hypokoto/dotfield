@@ -1,6 +1,6 @@
 use amane::{
     Align, Center, Color, Column, InputArea, Justify, Padding, Parent, Pointer, Rectangle, Row,
-    Scroll, Stack, Text, Weight, Widget,
+    Scroll, Shadow, Stack, Text, Weight, Widget,
 };
 
 use crate::ui::animation::PanelMotion;
@@ -38,7 +38,13 @@ pub fn close_button(on_click_fn: impl Fn() + 'static, tokens: &ThemeTokens) -> R
         .height(26.0)
         .radius(radius::PILL)
         .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
+        .border(border::THIN, tokens.border_specular)
+        .shadow(
+            Shadow::drop(Color::BLACK)
+                .opacity(0.22)
+                .blur(6.0)
+                .offset(0.0, 2.0),
+        )
         .cursor(Pointer)
         .align_child(Center, Center)
         .on_click(move |_| on_click_fn())

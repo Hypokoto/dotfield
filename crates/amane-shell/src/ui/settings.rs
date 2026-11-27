@@ -7,8 +7,8 @@ use std::time::Duration;
 
 use amane::{
     Align, Color, Column, Horizontal, Key, Keyboard, Layer, LayerWindow, Margin, OutputTarget,
-    Padding, Parent, Pointer, Rectangle, Row, ScrollArea, Service, Text, Vertical, Weight, Widget,
-    Zone,
+    Padding, Parent, Pointer, Rectangle, Row, ScrollArea, Service, Shadow, Text, Vertical, Weight,
+    Widget, Zone,
 };
 
 use crate::config::ConfigService;
@@ -21,6 +21,48 @@ use crate::ui::animation::panel_motion;
 use crate::ui::components;
 use crate::ui::modal_manager::{ModalManager, ModalType};
 use crate::ui::tokens::{ThemeTokens, radius, spacing, typography};
+
+const CLAY_TILE_RADIUS: f32 = 12.0;
+
+#[inline]
+fn clay_card_shadow() -> Shadow {
+    Shadow::drop(Color::BLACK)
+        .opacity(0.28)
+        .blur(14.0)
+        .offset(0.0, 5.0)
+}
+
+#[inline]
+fn clay_tile_shadow(active: bool) -> Shadow {
+    if active {
+        Shadow::inner(Color::BLACK)
+            .opacity(0.26)
+            .blur(8.0)
+            .offset(0.0, 2.0)
+    } else {
+        Shadow::drop(Color::BLACK)
+            .opacity(0.22)
+            .blur(10.0)
+            .offset(0.0, 3.0)
+    }
+}
+
+#[inline]
+fn clay_inset_shadow() -> Shadow {
+    Shadow::inner(Color::BLACK)
+        .opacity(0.28)
+        .blur(8.0)
+        .offset(0.0, 2.0)
+}
+
+#[inline]
+fn clay_border_color(tokens: &ThemeTokens, active: bool) -> Color {
+    if active {
+        tokens.border_focus
+    } else {
+        tokens.border_specular
+    }
+}
 
 pub const SETTINGS_WIDTH: f32 = 940.0;
 pub const SETTINGS_HEIGHT: f32 = 660.0;
@@ -239,9 +281,10 @@ pub fn settings_overlay() -> LayerWindow {
     let search_badge = Rectangle::new()
         .width(Parent)
         .height(34.0)
-        .radius(radius::SM)
+        .radius(CLAY_TILE_RADIUS)
         .fill(tokens.surface_elevated)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_inset_shadow())
         .padding(pad_sym(10.0, 6.0))
         .child(
             Row::new(vec![
@@ -282,20 +325,16 @@ pub fn settings_overlay() -> LayerWindow {
         }
 
         let is_active = cat == selected_cat;
-        let (pill_bg, _pill_fg, pill_border) = if is_active {
-            (tokens.surface_active, tokens.accent, tokens.accent)
+        let (pill_bg, pill_border) = if is_active {
+            (tokens.surface_active, tokens.border_focus)
         } else {
-            (
-                Color::TRANSPARENT,
-                tokens.text_secondary,
-                Color::TRANSPARENT,
-            )
+            (Color::TRANSPARENT, Color::TRANSPARENT)
         };
 
-        let cat_row = Rectangle::new()
+        let mut cat_row = Rectangle::new()
             .width(Parent)
             .height(38.0)
-            .radius(radius::SM)
+            .radius(CLAY_TILE_RADIUS)
             .fill(pill_bg)
             .border(1.0, pill_border)
             .cursor(Pointer)
@@ -303,59 +342,63 @@ pub fn settings_overlay() -> LayerWindow {
             .on_click(move |_| {
                 let mut s = SettingsService::write();
                 s.selected = cat;
-            })
-            .child(
-                Row::new(vec![
-                    Box::new(
-                        Rectangle::new()
-                            .width(3.0)
-                            .height(14.0)
-                            .radius(radius::PILL)
-                            .fill(if is_active {
-                                tokens.accent
-                            } else {
-                                Color::TRANSPARENT
-                            }),
-                    ),
-                    Box::new(
-                        Text::new(cat.icon())
-                            .size(14.0)
-                            .color(if is_active {
-                                tokens.accent
-                            } else {
-                                tokens.text_muted
-                            })
-                            .font(&tokens.font_mono)
-                            .tight(),
-                    ),
-                    Box::new(
-                        Text::new(cat.name())
-                            .size(typography::BODY)
-                            .weight(if is_active {
-                                Weight::SemiBold
-                            } else {
-                                Weight::Regular
-                            })
-                            .color(if is_active {
-                                tokens.text_primary
-                            } else {
-                                tokens.text_secondary
-                            })
-                            .font(&tokens.font_sans),
-                    ),
-                ])
-                .gap(spacing::GAP_SM)
-                .align(Align::Center),
-            );
+            });
+        if is_active {
+            cat_row = cat_row.shadow(clay_tile_shadow(true));
+        }
+        let cat_row = cat_row.child(
+            Row::new(vec![
+                Box::new(
+                    Rectangle::new()
+                        .width(3.0)
+                        .height(14.0)
+                        .radius(radius::PILL)
+                        .fill(if is_active {
+                            tokens.accent
+                        } else {
+                            Color::TRANSPARENT
+                        }),
+                ),
+                Box::new(
+                    Text::new(cat.icon())
+                        .size(14.0)
+                        .color(if is_active {
+                            tokens.accent
+                        } else {
+                            tokens.text_muted
+                        })
+                        .font(&tokens.font_mono)
+                        .tight(),
+                ),
+                Box::new(
+                    Text::new(cat.name())
+                        .size(typography::BODY)
+                        .weight(if is_active {
+                            Weight::SemiBold
+                        } else {
+                            Weight::Regular
+                        })
+                        .color(if is_active {
+                            tokens.text_primary
+                        } else {
+                            tokens.text_secondary
+                        })
+                        .font(&tokens.font_sans),
+                ),
+            ])
+            .gap(spacing::GAP_SM)
+            .align(Align::Center),
+        );
 
         nav_items.push(Box::new(cat_row));
     }
 
     let sidebar = Rectangle::new()
-        .width(SIDEBAR_WIDTH)
+        .width(SIDEBAR_WIDTH - 1.0)
         .height(Parent)
+        .radius_top_left(radius::LG)
+        .radius_bottom_left(radius::LG)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -383,7 +426,7 @@ pub fn settings_overlay() -> LayerWindow {
                     Rectangle::new()
                         .width(Parent)
                         .height(1.0)
-                        .fill(tokens.border_subtle),
+                        .fill(tokens.border_specular),
                 ),
                 Box::new(Column::new(nav_items).gap(6.0).width(Parent)),
             ])
@@ -416,6 +459,8 @@ pub fn settings_overlay() -> LayerWindow {
     let detail_pane = Rectangle::new()
         .width(DETAIL_WIDTH)
         .height(Parent)
+        .radius_top_right(radius::LG)
+        .radius_bottom_right(radius::LG)
         .fill(tokens.bg)
         .padding(pad_all(18.0))
         .child(
@@ -425,7 +470,7 @@ pub fn settings_overlay() -> LayerWindow {
                     Rectangle::new()
                         .width(Parent)
                         .height(1.0)
-                        .fill(tokens.border_subtle),
+                        .fill(tokens.border_specular),
                 ),
                 Box::new(
                     ScrollArea::new("settings_detail_scroll", Column::new(vec![detail_content]))
@@ -438,16 +483,31 @@ pub fn settings_overlay() -> LayerWindow {
             .height(Parent),
         );
 
-    let body = Row::new(vec![Box::new(sidebar), Box::new(detail_pane)])
-        .width(Parent)
-        .height(Parent);
+    let sidebar_divider = Rectangle::new()
+        .width(1.0)
+        .height(Parent)
+        .fill(tokens.border_specular);
+
+    let body = Row::new(vec![
+        Box::new(sidebar),
+        Box::new(sidebar_divider),
+        Box::new(detail_pane),
+    ])
+    .width(Parent)
+    .height(Parent);
 
     let window_shell = Rectangle::new()
         .width(SETTINGS_WIDTH)
         .height(SETTINGS_HEIGHT)
         .radius(radius::LG)
         .fill(tokens.bg)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(
+            Shadow::drop(Color::BLACK)
+                .opacity(0.45)
+                .blur(26.0)
+                .offset(0.0, 10.0),
+        )
         .child(body);
 
     let motion_shell = motion.apply_centered_modal(window_shell);
@@ -495,7 +555,7 @@ fn render_appearance_tab(
     let current_style = &manifest.theme.style;
 
     // 1. One-Click Rice Profiles (2 columns x 3 rows = 6 profiles)
-    let col_w = (usable_width - 12.0) / 2.0; // 331.0 px
+    let col_w = (usable_width - 28.0 - 12.0) / 2.0; // 317.0 px inside 14px card padding
     let mut profile_cards: Vec<Box<dyn Widget>> = Vec::new();
 
     for p in PROFILES {
@@ -511,14 +571,8 @@ fn render_appearance_tab(
             } else {
                 tokens.surface_elevated
             })
-            .border(
-                if is_cur { 1.5 } else { 1.0 },
-                if is_cur {
-                    tokens.accent
-                } else {
-                    tokens.border_subtle
-                },
-            )
+            .border(1.0, clay_border_color(tokens, is_cur))
+            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_all(12.0))
             .on_click({
@@ -553,10 +607,10 @@ fn render_appearance_tab(
                                 Rectangle::new()
                                     .width(90.0)
                                     .height(18.0)
-                                    .radius(radius::SM)
+                                    .radius(radius::PILL)
                                     .fill(tokens.bg)
-                                    .border(1.0, tokens.border_subtle)
-                                    .padding(pad_sym(6.0, 1.0))
+                                    .border(1.0, tokens.border_specular)
+                                    .padding(pad_sym(7.0, 1.0))
                                     .child(
                                         Text::new(p.shell_style)
                                             .size(10.0)
@@ -593,10 +647,11 @@ fn render_appearance_tab(
 
     let profiles_card = Rectangle::new()
         .width(Parent)
-        .height(296.0)
-        .radius(radius::MD)
+        .height(276.0)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -643,21 +698,15 @@ fn render_appearance_tab(
         let color = Color::from(hex);
         let swatch = Rectangle::new()
             .width(swatch_w)
-            .height(32.0)
-            .radius(radius::SM)
+            .height(34.0)
+            .radius(CLAY_TILE_RADIUS)
             .fill(if is_cur {
                 tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
-            .border(
-                if is_cur { 1.5 } else { 1.0 },
-                if is_cur {
-                    tokens.accent
-                } else {
-                    tokens.border_subtle
-                },
-            )
+            .border(1.0, clay_border_color(tokens, is_cur))
+            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(8.0, 4.0))
             .on_click(move |_| {
@@ -698,10 +747,11 @@ fn render_appearance_tab(
 
     let accent_card = Rectangle::new()
         .width(Parent)
-        .height(84.0)
-        .radius(radius::MD)
+        .height(88.0)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -759,20 +809,14 @@ fn render_appearance_tab(
         let btn = Rectangle::new()
             .width(wp_card_w)
             .height(38.0)
-            .radius(radius::SM)
+            .radius(CLAY_TILE_RADIUS)
             .fill(if is_cur {
                 tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
-            .border(
-                if is_cur { 1.5 } else { 1.0 },
-                if is_cur {
-                    tokens.accent
-                } else {
-                    tokens.border_subtle
-                },
-            )
+            .border(1.0, clay_border_color(tokens, is_cur))
+            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(10.0, 6.0))
             .on_click(move |_| {
@@ -823,13 +867,14 @@ fn render_appearance_tab(
             wp_rows.push(Box::new(Row::new(wp_items).gap(8.0)));
         }
 
-        let wp_card_h = if wp_rows.len() > 1 { 136.0 } else { 92.0 };
+        let wp_card_h = if wp_rows.len() > 1 { 138.0 } else { 94.0 };
         let wp_card = Rectangle::new()
             .width(Parent)
             .height(wp_card_h)
-            .radius(radius::MD)
+            .radius(radius::IOS_WIDGET_SM)
             .fill(tokens.surface)
-            .border(1.0, tokens.border_subtle)
+            .border(1.0, tokens.border_specular)
+            .shadow(clay_card_shadow())
             .padding(pad_all(14.0))
             .child(
                 Column::new(vec![
@@ -867,21 +912,15 @@ fn render_appearance_tab(
         let g_clone = g.clone();
         let btn = Rectangle::new()
             .width(theme_btn_w)
-            .height(30.0)
-            .radius(radius::SM)
+            .height(32.0)
+            .radius(CLAY_TILE_RADIUS)
             .fill(if is_cur {
                 tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
-            .border(
-                1.0,
-                if is_cur {
-                    tokens.accent
-                } else {
-                    tokens.border_subtle
-                },
-            )
+            .border(1.0, clay_border_color(tokens, is_cur))
+            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(10.0, 4.0))
             .on_click(move |_| {
@@ -911,21 +950,15 @@ fn render_appearance_tab(
         let ic_clone = ic.clone();
         let btn = Rectangle::new()
             .width(theme_btn_w)
-            .height(30.0)
-            .radius(radius::SM)
+            .height(32.0)
+            .radius(CLAY_TILE_RADIUS)
             .fill(if is_cur {
                 tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
-            .border(
-                1.0,
-                if is_cur {
-                    tokens.accent
-                } else {
-                    tokens.border_subtle
-                },
-            )
+            .border(1.0, clay_border_color(tokens, is_cur))
+            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(10.0, 4.0))
             .on_click(move |_| {
@@ -951,10 +984,11 @@ fn render_appearance_tab(
 
     let gtk_card = Rectangle::new()
         .width(Parent)
-        .height(144.0)
-        .radius(radius::MD)
+        .height(148.0)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -1002,21 +1036,15 @@ fn render_appearance_tab(
         let c_clone = cur.clone();
         let btn = Rectangle::new()
             .width(cursor_btn_w)
-            .height(30.0)
-            .radius(radius::SM)
+            .height(32.0)
+            .radius(CLAY_TILE_RADIUS)
             .fill(if is_cur {
                 tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
-            .border(
-                1.0,
-                if is_cur {
-                    tokens.accent
-                } else {
-                    tokens.border_subtle
-                },
-            )
+            .border(1.0, clay_border_color(tokens, is_cur))
+            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(10.0, 4.0))
             .on_click(move |_| {
@@ -1046,21 +1074,15 @@ fn render_appearance_tab(
         let is_cur = cur_cursor_size == sz;
         let btn = Rectangle::new()
             .width(58.0)
-            .height(30.0)
-            .radius(radius::SM)
+            .height(32.0)
+            .radius(CLAY_TILE_RADIUS)
             .fill(if is_cur {
                 tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
-            .border(
-                1.0,
-                if is_cur {
-                    tokens.accent
-                } else {
-                    tokens.border_subtle
-                },
-            )
+            .border(1.0, clay_border_color(tokens, is_cur))
+            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(8.0, 4.0))
             .on_click(move |_| {
@@ -1086,10 +1108,11 @@ fn render_appearance_tab(
 
     let cursor_card = Rectangle::new()
         .width(Parent)
-        .height(108.0)
-        .radius(radius::MD)
+        .height(110.0)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -1143,21 +1166,15 @@ fn render_appearance_tab(
         let is_cur = (cur_size - sz).abs() < 0.1;
         let btn = Rectangle::new()
             .width(76.0)
-            .height(28.0)
-            .radius(radius::SM)
+            .height(30.0)
+            .radius(CLAY_TILE_RADIUS)
             .fill(if is_cur {
                 tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
-            .border(
-                1.0,
-                if is_cur {
-                    tokens.accent
-                } else {
-                    tokens.border_subtle
-                },
-            )
+            .border(1.0, clay_border_color(tokens, is_cur))
+            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(10.0, 4.0))
             .on_click(move |_| {
@@ -1190,21 +1207,15 @@ fn render_appearance_tab(
         let f_clone = f.clone();
         let btn = Rectangle::new()
             .width(font_btn_w)
-            .height(28.0)
-            .radius(radius::SM)
+            .height(30.0)
+            .radius(CLAY_TILE_RADIUS)
             .fill(if is_cur {
                 tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
-            .border(
-                1.0,
-                if is_cur {
-                    tokens.accent
-                } else {
-                    tokens.border_subtle
-                },
-            )
+            .border(1.0, clay_border_color(tokens, is_cur))
+            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(8.0, 4.0))
             .on_click(move |_| {
@@ -1230,10 +1241,11 @@ fn render_appearance_tab(
 
     let font_card = Rectangle::new()
         .width(Parent)
-        .height(134.0)
-        .radius(radius::MD)
+        .height(140.0)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -1277,9 +1289,10 @@ fn render_shell_bar_tab(
     let pos_card = Rectangle::new()
         .width(Parent)
         .height(106.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -1313,7 +1326,7 @@ fn render_shell_bar_tab(
                                     if is_bottom {
                                         tokens.accent
                                     } else {
-                                        tokens.border_subtle
+                                        tokens.border_specular
                                     },
                                 )
                                 .cursor(Pointer)
@@ -1354,7 +1367,7 @@ fn render_shell_bar_tab(
                                     if !is_bottom {
                                         tokens.accent
                                     } else {
-                                        tokens.border_subtle
+                                        tokens.border_specular
                                     },
                                 )
                                 .cursor(Pointer)
@@ -1409,7 +1422,7 @@ fn render_shell_bar_tab(
                 if is_cur {
                     tokens.accent
                 } else {
-                    tokens.border_subtle
+                    tokens.border_specular
                 },
             )
             .cursor(Pointer)
@@ -1440,9 +1453,10 @@ fn render_shell_bar_tab(
     let height_card = Rectangle::new()
         .width(Parent)
         .height(90.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -1463,9 +1477,10 @@ fn render_shell_bar_tab(
     let timeouts_card = Rectangle::new()
         .width(Parent)
         .height(84.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -1522,7 +1537,7 @@ fn render_shell_bar_tab(
                 if is_cur {
                     tokens.accent
                 } else {
-                    tokens.border_subtle
+                    tokens.border_specular
                 },
             )
             .cursor(Pointer)
@@ -1553,9 +1568,10 @@ fn render_shell_bar_tab(
     let term_card = Rectangle::new()
         .width(Parent)
         .height(96.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -1647,7 +1663,7 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                                     .height(34.0)
                                     .radius(radius::SM)
                                     .fill(tokens.surface)
-                                    .border(1.0, tokens.border_subtle)
+                                    .border(1.0, tokens.border_specular)
                                     .cursor(Pointer)
                                     .padding(pad_sym(16.0, 6.0))
                                     .on_click(|_| {
@@ -1685,7 +1701,7 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
         let border_color = if is_selected {
             tokens.accent
         } else {
-            tokens.border_subtle
+            tokens.border_specular
         };
         let bg_color = if is_selected {
             tokens.surface_elevated
@@ -1774,7 +1790,7 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
             .height(80.0)
             .radius(radius::MD)
             .fill(tokens.surface)
-            .border(1.0, tokens.border_subtle)
+            .border(1.0, tokens.border_specular)
             .padding(pad_all(20.0))
             .child(
                 Text::new("No active displays detected via Niri IPC")
@@ -1816,7 +1832,7 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                         if is_cur {
                             tokens.accent
                         } else {
-                            tokens.border_subtle
+                            tokens.border_specular
                         },
                     )
                     .cursor(Pointer)
@@ -1848,7 +1864,7 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
             .height(115.0)
             .radius(radius::MD)
             .fill(tokens.surface)
-            .border(1.0, tokens.border_subtle)
+            .border(1.0, tokens.border_specular)
             .padding(pad_all(14.0))
             .child(
                 Column::new(vec![
@@ -1891,7 +1907,7 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                     if is_cur {
                         tokens.accent
                     } else {
-                        tokens.border_subtle
+                        tokens.border_specular
                     },
                 )
                 .cursor(Pointer)
@@ -1922,7 +1938,7 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
             .height(95.0)
             .radius(radius::MD)
             .fill(tokens.surface)
-            .border(1.0, tokens.border_subtle)
+            .border(1.0, tokens.border_specular)
             .padding(pad_all(14.0))
             .child(
                 Column::new(vec![
@@ -1953,7 +1969,7 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
             .height(72.0)
             .radius(radius::MD)
             .fill(tokens.surface)
-            .border(1.0, tokens.border_subtle)
+            .border(1.0, tokens.border_specular)
             .padding(pad_all(14.0))
             .child(
                 Row::new(vec![
@@ -2021,7 +2037,7 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                 if is_cur {
                     tokens.accent
                 } else {
-                    tokens.border_subtle
+                    tokens.border_specular
                 },
             )
             .cursor(Pointer)
@@ -2050,9 +2066,10 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let night_light_card = Rectangle::new()
         .width(Parent)
         .height(130.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -2171,7 +2188,7 @@ fn render_workspaces_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                 if is_cur {
                     tokens.accent
                 } else {
-                    tokens.border_subtle
+                    tokens.border_specular
                 },
             )
             .cursor(Pointer)
@@ -2202,9 +2219,10 @@ fn render_workspaces_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let gap_card = Rectangle::new()
         .width(Parent)
         .height(90.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -2247,7 +2265,7 @@ fn render_workspaces_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                 if is_cur {
                     tokens.accent
                 } else {
-                    tokens.border_subtle
+                    tokens.border_specular
                 },
             )
             .cursor(Pointer)
@@ -2278,9 +2296,10 @@ fn render_workspaces_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let col_card = Rectangle::new()
         .width(Parent)
         .height(90.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -2322,7 +2341,7 @@ fn render_workspaces_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                 if is_cur {
                     tokens.accent
                 } else {
-                    tokens.border_subtle
+                    tokens.border_specular
                 },
             )
             .cursor(Pointer)
@@ -2353,9 +2372,10 @@ fn render_workspaces_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let center_card = Rectangle::new()
         .width(Parent)
         .height(90.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -2388,9 +2408,10 @@ fn render_animations_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let toggle_card = Rectangle::new()
         .width(Parent)
         .height(72.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Row::new(vec![
@@ -2453,7 +2474,7 @@ fn render_animations_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                 if is_cur {
                     tokens.accent
                 } else {
-                    tokens.border_subtle
+                    tokens.border_specular
                 },
             )
             .cursor(Pointer)
@@ -2484,9 +2505,10 @@ fn render_animations_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let dur_card = Rectangle::new()
         .width(Parent)
         .height(90.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -2528,7 +2550,7 @@ fn render_animations_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                 if is_cur {
                     tokens.accent
                 } else {
-                    tokens.border_subtle
+                    tokens.border_specular
                 },
             )
             .cursor(Pointer)
@@ -2559,9 +2581,10 @@ fn render_animations_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let curve_card = Rectangle::new()
         .width(Parent)
         .height(90.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -2610,7 +2633,7 @@ fn render_window_rules_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                 if is_cur {
                     tokens.accent
                 } else {
-                    tokens.border_subtle
+                    tokens.border_specular
                 },
             )
             .cursor(Pointer)
@@ -2641,9 +2664,10 @@ fn render_window_rules_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let rad_card = Rectangle::new()
         .width(Parent)
         .height(90.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -2681,7 +2705,7 @@ fn render_window_rules_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                 if is_cur {
                     tokens.accent
                 } else {
-                    tokens.border_subtle
+                    tokens.border_specular
                 },
             )
             .cursor(Pointer)
@@ -2712,9 +2736,10 @@ fn render_window_rules_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let bw_card = Rectangle::new()
         .width(Parent)
         .height(90.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -2757,7 +2782,7 @@ fn render_window_rules_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                 if is_cur {
                     tokens.accent
                 } else {
-                    tokens.border_subtle
+                    tokens.border_specular
                 },
             )
             .cursor(Pointer)
@@ -2788,9 +2813,10 @@ fn render_window_rules_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let op_card = Rectangle::new()
         .width(Parent)
         .height(90.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -2894,7 +2920,7 @@ fn render_shortcuts_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                 .height(44.0)
                 .radius(radius::SM)
                 .fill(tokens.surface)
-                .border(1.0, tokens.border_subtle)
+                .border(1.0, tokens.border_specular)
                 .padding(pad_sym(14.0, 8.0))
                 .child(
                     Row::new(vec![
@@ -2924,7 +2950,7 @@ fn render_shortcuts_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                                 .height(26.0)
                                 .radius(radius::SM)
                                 .fill(tokens.surface_elevated)
-                                .border(1.0, tokens.border_subtle)
+                                .border(1.0, tokens.border_specular)
                                 .padding(pad_sym(10.0, 4.0))
                                 .child(
                                     Text::new(bind)
@@ -2959,9 +2985,10 @@ fn render_input_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let nat_card = Rectangle::new()
         .width(Parent)
         .height(72.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Row::new(vec![
@@ -3001,9 +3028,10 @@ fn render_input_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let tap_card = Rectangle::new()
         .width(Parent)
         .height(72.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Row::new(vec![
@@ -3059,7 +3087,7 @@ fn render_input_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                 if is_cur {
                     tokens.accent
                 } else {
-                    tokens.border_subtle
+                    tokens.border_specular
                 },
             )
             .cursor(Pointer)
@@ -3090,9 +3118,10 @@ fn render_input_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let del_card = Rectangle::new()
         .width(Parent)
         .height(90.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -3123,9 +3152,10 @@ fn render_audio_bluetooth_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let audio_card = Rectangle::new()
         .width(Parent)
         .height(84.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Row::new(vec![
@@ -3180,9 +3210,10 @@ fn render_audio_bluetooth_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let bt_card = Rectangle::new()
         .width(Parent)
         .height(84.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Row::new(vec![
@@ -3213,7 +3244,7 @@ fn render_audio_bluetooth_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                         .height(32.0)
                         .radius(radius::SM)
                         .fill(tokens.surface_elevated)
-                        .border(1.0, tokens.border_subtle)
+                        .border(1.0, tokens.border_specular)
                         .cursor(Pointer)
                         .padding(pad_sym(12.0, 6.0))
                         .on_click(|_| {
@@ -3254,9 +3285,10 @@ fn render_system_power_tab(
     let telem_card = Rectangle::new()
         .width(Parent)
         .height(100.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -3337,7 +3369,7 @@ fn render_system_power_tab(
                 if is_cur {
                     tokens.accent
                 } else {
-                    tokens.border_subtle
+                    tokens.border_specular
                 },
             )
             .cursor(Pointer)
@@ -3368,9 +3400,10 @@ fn render_system_power_tab(
     let to_card = Rectangle::new()
         .width(Parent)
         .height(90.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Column::new(vec![
@@ -3391,9 +3424,10 @@ fn render_system_power_tab(
     let power_card = Rectangle::new()
         .width(Parent)
         .height(84.0)
-        .radius(radius::MD)
+        .radius(radius::IOS_WIDGET_SM)
         .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
+        .border(1.0, tokens.border_specular)
+        .shadow(clay_card_shadow())
         .padding(pad_all(14.0))
         .child(
             Row::new(vec![

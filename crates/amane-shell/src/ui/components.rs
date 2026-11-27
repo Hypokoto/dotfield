@@ -1058,6 +1058,69 @@ where
         .child(Stack::new(layers))
 }
 
+/// Tactile, modern iOS/Fluent squircle pill switch widget (~46×26px).
+/// Features a smooth sliding knob appearance, high-contrast active track, and subtle specular borders.
+pub fn pill_switch(
+    is_active: bool,
+    tokens: &ThemeTokens,
+    on_toggle: impl Fn() + Send + Sync + 'static,
+) -> Rectangle {
+    let width = 46.0;
+    let height = 26.0;
+    let knob_size = 20.0;
+    let knob_margin = 3.0;
+
+    let (track_bg, track_border) = if is_active {
+        (tokens.accent, tokens.accent)
+    } else {
+        (tokens.surface_track, tokens.border_subtle)
+    };
+
+    let track = Rectangle::new()
+        .width(width)
+        .height(height)
+        .radius(radius::PILL)
+        .fill(track_bg)
+        .border(1.0, track_border);
+
+    let knob = Rectangle::new()
+        .width(knob_size)
+        .height(knob_size)
+        .radius(radius::PILL)
+        .fill(if is_active {
+            tokens.text_on_accent
+        } else {
+            tokens.text_secondary
+        });
+
+    let knob_container = Rectangle::new()
+        .width(width)
+        .height(height)
+        .padding(Padding {
+            top: knob_margin,
+            bottom: knob_margin,
+            left: if is_active {
+                width - knob_size - knob_margin
+            } else {
+                knob_margin
+            },
+            right: if is_active {
+                knob_margin
+            } else {
+                width - knob_size - knob_margin
+            },
+        })
+        .align_child(Align::Start, Align::Center)
+        .child(knob);
+
+    Rectangle::new()
+        .width(width)
+        .height(height)
+        .cursor(Pointer)
+        .on_click(move |_| on_toggle())
+        .child(Stack::new(vec![Box::new(track), Box::new(knob_container)]))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -22,10 +22,10 @@ use crate::ui::components;
 use crate::ui::modal_manager::{ModalManager, ModalType};
 use crate::ui::tokens::{ThemeTokens, radius, spacing, typography};
 
-pub const SETTINGS_WIDTH: f32 = 880.0;
-pub const SETTINGS_HEIGHT: f32 = 620.0;
-pub const SIDEBAR_WIDTH: f32 = 220.0;
-pub const DETAIL_WIDTH: f32 = 624.0; // 880 - 220 - padding/borders
+pub const SETTINGS_WIDTH: f32 = 940.0;
+pub const SETTINGS_HEIGHT: f32 = 660.0;
+pub const SIDEBAR_WIDTH: f32 = 230.0;
+pub const DETAIL_WIDTH: f32 = 710.0; // 940 - 230
 
 #[inline]
 fn pad(top: f32, right: f32, bottom: f32, left: f32) -> Padding {
@@ -282,8 +282,8 @@ pub fn settings_overlay() -> LayerWindow {
         }
 
         let is_active = cat == selected_cat;
-        let (pill_bg, pill_fg, pill_border) = if is_active {
-            (tokens.accent, tokens.text_on_accent, tokens.accent)
+        let (pill_bg, _pill_fg, pill_border) = if is_active {
+            (tokens.surface_active, tokens.accent, tokens.accent)
         } else {
             (
                 Color::TRANSPARENT,
@@ -294,12 +294,12 @@ pub fn settings_overlay() -> LayerWindow {
 
         let cat_row = Rectangle::new()
             .width(Parent)
-            .height(36.0)
+            .height(38.0)
             .radius(radius::SM)
             .fill(pill_bg)
             .border(1.0, pill_border)
             .cursor(Pointer)
-            .padding(pad_sym(12.0, 6.0))
+            .padding(pad_sym(12.0, 7.0))
             .on_click(move |_| {
                 let mut s = SettingsService::write();
                 s.selected = cat;
@@ -307,9 +307,24 @@ pub fn settings_overlay() -> LayerWindow {
             .child(
                 Row::new(vec![
                     Box::new(
+                        Rectangle::new()
+                            .width(3.0)
+                            .height(14.0)
+                            .radius(radius::PILL)
+                            .fill(if is_active {
+                                tokens.accent
+                            } else {
+                                Color::TRANSPARENT
+                            }),
+                    ),
+                    Box::new(
                         Text::new(cat.icon())
                             .size(14.0)
-                            .color(pill_fg)
+                            .color(if is_active {
+                                tokens.accent
+                            } else {
+                                tokens.text_muted
+                            })
                             .font(&tokens.font_mono)
                             .tight(),
                     ),
@@ -321,7 +336,11 @@ pub fn settings_overlay() -> LayerWindow {
                             } else {
                                 Weight::Regular
                             })
-                            .color(pill_fg)
+                            .color(if is_active {
+                                tokens.text_primary
+                            } else {
+                                tokens.text_secondary
+                            })
                             .font(&tokens.font_sans),
                     ),
                 ])
@@ -471,25 +490,29 @@ fn render_appearance_tab(
     tokens: &ThemeTokens,
 ) -> Box<dyn Widget> {
     let mut rows: Vec<Box<dyn Widget>> = Vec::new();
+    let usable_width = DETAIL_WIDTH - 36.0; // 710.0 - 36.0 = 674.0
 
-    // 1. Shell Style Presets
     let current_style = &manifest.theme.style;
-    let styles = &["cyber-synthwave", "win11-dark", "nordic-slate", "minimal"];
-    let mut style_buttons: Vec<Box<dyn Widget>> = Vec::new();
 
-    for &s in styles {
-        let is_cur = current_style == s;
-        let btn = Rectangle::new()
-            .width(130.0)
-            .height(30.0)
-            .radius(radius::SM)
+    // 1. One-Click Rice Profiles (2 columns x 3 rows = 6 profiles)
+    let col_w = (usable_width - 12.0) / 2.0; // 331.0 px
+    let mut profile_cards: Vec<Box<dyn Widget>> = Vec::new();
+
+    for p in PROFILES {
+        let is_cur = current_style == p.shell_style;
+        let p_accent_color = Color::from(p.accent);
+
+        let card = Rectangle::new()
+            .width(col_w)
+            .height(68.0)
+            .radius(radius::MD)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
             .border(
-                1.0,
+                if is_cur { 1.5 } else { 1.0 },
                 if is_cur {
                     tokens.accent
                 } else {
@@ -497,157 +520,7 @@ fn render_appearance_tab(
                 },
             )
             .cursor(Pointer)
-            .padding(pad_sym(12.0, 4.0))
-            .on_click(move |_| {
-                let _ = ConfigService::update_and_save(|m| {
-                    m.theme.style = s.to_string();
-                });
-            })
-            .child(
-                Text::new(s)
-                    .size(typography::SECONDARY)
-                    .weight(if is_cur {
-                        Weight::SemiBold
-                    } else {
-                        Weight::Regular
-                    })
-                    .color(if is_cur {
-                        tokens.text_on_accent
-                    } else {
-                        tokens.text_secondary
-                    })
-                    .font(&tokens.font_sans),
-            );
-        style_buttons.push(Box::new(btn));
-    }
-
-    let style_card = Rectangle::new()
-        .width(Parent)
-        .height(96.0)
-        .radius(radius::MD)
-        .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
-        .padding(pad_all(14.0))
-        .child(
-            Column::new(vec![
-                Box::new(
-                    Text::new("Shell Theme Style")
-                        .size(typography::BODY)
-                        .weight(Weight::SemiBold)
-                        .color(tokens.text_primary)
-                        .font(&tokens.font_sans),
-                ),
-                Box::new(
-                    Text::new("Immediate GPU style preset applied to taskbar, popups, and HUDs")
-                        .size(typography::SECONDARY)
-                        .color(tokens.text_muted)
-                        .font(&tokens.font_sans),
-                ),
-                Box::new(Row::new(style_buttons).gap(spacing::GAP_SM)),
-            ])
-            .gap(8.0),
-        );
-    rows.push(Box::new(style_card));
-
-    // 2. Accent Color Swatches
-    let accents = &[
-        ("#04C5F0", "Cyan"),
-        ("#00F5D4", "Mint"),
-        ("#FF7F41", "Amber"),
-        ("#FF3366", "Neon Pink"),
-        ("#A78BFA", "Violet"),
-    ];
-    let cur_accent = &manifest.palette.accent;
-    let mut swatch_buttons: Vec<Box<dyn Widget>> = Vec::new();
-
-    for &(hex, label) in accents {
-        let is_cur = cur_accent.eq_ignore_ascii_case(hex);
-        let color = Color::from(hex);
-        let swatch = Rectangle::new()
-            .width(96.0)
-            .height(30.0)
-            .radius(radius::SM)
-            .fill(color)
-            .border(
-                if is_cur { 2.0 } else { 1.0 },
-                if is_cur {
-                    Color::WHITE
-                } else {
-                    tokens.border_subtle
-                },
-            )
-            .cursor(Pointer)
-            .padding(pad_sym(10.0, 4.0))
-            .on_click(move |_| {
-                let _ = ConfigService::update_and_save(|m| {
-                    m.palette.accent = hex.to_string();
-                });
-            })
-            .child(
-                Text::new(if is_cur {
-                    format!("✓ {label}")
-                } else {
-                    label.to_string()
-                })
-                .size(typography::SECONDARY)
-                .weight(Weight::SemiBold)
-                .color(Color::BLACK)
-                .font(&tokens.font_sans),
-            );
-        swatch_buttons.push(Box::new(swatch));
-    }
-
-    let accent_card = Rectangle::new()
-        .width(Parent)
-        .height(96.0)
-        .radius(radius::MD)
-        .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
-        .padding(pad_all(14.0))
-        .child(
-            Column::new(vec![
-                Box::new(
-                    Text::new("Accent Color")
-                        .size(typography::BODY)
-                        .weight(Weight::SemiBold)
-                        .color(tokens.text_primary)
-                        .font(&tokens.font_sans),
-                ),
-                Box::new(
-                    Text::new("Primary highlights, active pills, indicators, and focus rings")
-                        .size(typography::SECONDARY)
-                        .color(tokens.text_muted)
-                        .font(&tokens.font_sans),
-                ),
-                Box::new(Row::new(swatch_buttons).gap(spacing::GAP_SM)),
-            ])
-            .gap(8.0),
-        );
-    rows.push(Box::new(accent_card));
-
-    // 3. One-Click Rice Profiles
-    let mut profile_cards: Vec<Box<dyn Widget>> = Vec::new();
-    for p in PROFILES {
-        let is_cur = current_style == p.shell_style;
-        let card = Rectangle::new()
-            .width(186.0)
-            .height(84.0)
-            .radius(radius::MD)
-            .fill(if is_cur {
-                tokens.surface_elevated
-            } else {
-                tokens.surface
-            })
-            .border(
-                if is_cur { 1.5 } else { 1.0 },
-                if is_cur {
-                    Color::from(p.accent)
-                } else {
-                    tokens.border_subtle
-                },
-            )
-            .cursor(Pointer)
-            .padding(pad_all(10.0))
+            .padding(pad_all(12.0))
             .on_click({
                 let p = p.clone();
                 move |_| {
@@ -663,17 +536,36 @@ fn render_appearance_tab(
                                     .width(10.0)
                                     .height(10.0)
                                     .radius(radius::PILL)
-                                    .fill(Color::from(p.accent)),
+                                    .fill(p_accent_color),
                             ),
                             Box::new(
                                 Text::new(p.name)
                                     .size(typography::BODY)
                                     .weight(Weight::SemiBold)
-                                    .color(tokens.text_primary)
+                                    .color(if is_cur {
+                                        tokens.accent
+                                    } else {
+                                        tokens.text_primary
+                                    })
                                     .font(&tokens.font_sans),
                             ),
+                            Box::new(
+                                Rectangle::new()
+                                    .width(90.0)
+                                    .height(18.0)
+                                    .radius(radius::SM)
+                                    .fill(tokens.bg)
+                                    .border(1.0, tokens.border_subtle)
+                                    .padding(pad_sym(6.0, 1.0))
+                                    .child(
+                                        Text::new(p.shell_style)
+                                            .size(10.0)
+                                            .color(tokens.text_muted)
+                                            .font(&tokens.font_mono),
+                                    ),
+                            ),
                         ])
-                        .gap(6.0)
+                        .gap(8.0)
                         .align(Align::Center),
                     ),
                     Box::new(
@@ -688,9 +580,20 @@ fn render_appearance_tab(
         profile_cards.push(Box::new(card));
     }
 
+    // Pair up into 3 rows of 2 (preserving forward order)
+    let mut profile_grid_rows: Vec<Box<dyn Widget>> = Vec::new();
+    let mut it = profile_cards.into_iter();
+    while let Some(left) = it.next() {
+        if let Some(right) = it.next() {
+            profile_grid_rows.push(Box::new(Row::new(vec![left, right]).gap(12.0)));
+        } else {
+            profile_grid_rows.push(Box::new(Row::new(vec![left]).gap(12.0)));
+        }
+    }
+
     let profiles_card = Rectangle::new()
         .width(Parent)
-        .height(220.0)
+        .height(296.0)
         .radius(radius::MD)
         .fill(tokens.surface)
         .border(1.0, tokens.border_subtle)
@@ -698,31 +601,136 @@ fn render_appearance_tab(
         .child(
             Column::new(vec![
                 Box::new(
-                    Text::new("One-Click Rice Profiles")
-                        .size(typography::BODY)
-                        .weight(Weight::SemiBold)
-                        .color(tokens.text_primary)
-                        .font(&tokens.font_sans),
-                ),
-                Box::new(
-                    Text::new("Synchronized theme suites across Shell, GTK, Icons, Cursor, and Accent colors")
-                        .size(typography::SECONDARY)
-                        .color(tokens.text_muted)
-                        .font(&tokens.font_sans),
-                ),
-                Box::new(
-                    Column::new(vec![
-                        Box::new(Row::new(profile_cards.drain(0..3).collect()).gap(8.0)),
-                        Box::new(Row::new(profile_cards).gap(8.0)),
+                    Row::new(vec![
+                        Box::new(
+                            Text::new("One-Click Rice Profiles")
+                                .size(typography::BODY)
+                                .weight(Weight::SemiBold)
+                                .color(tokens.text_primary)
+                                .font(&tokens.font_sans),
+                        ),
+                        Box::new(
+                            Text::new("• Complete shell & desktop presets")
+                                .size(typography::SECONDARY)
+                                .color(tokens.text_muted)
+                                .font(&tokens.font_sans),
+                        ),
                     ])
-                    .gap(8.0),
+                    .gap(8.0)
+                    .align(Align::Center),
                 ),
+                Box::new(Column::new(profile_grid_rows).gap(10.0)),
             ])
-            .gap(10.0),
+            .gap(12.0),
         );
     rows.push(Box::new(profiles_card));
 
-    // 4. Wallpaper Browser (awww)
+    // 2. Accent Color Customization
+    let accents = &[
+        ("#FF007F", "Magenta"),
+        ("#04C5F0", "Cyan"),
+        ("#00F5D4", "Mint"),
+        ("#FF7F41", "Amber"),
+        ("#88C0D0", "Frost"),
+        ("#A78BFA", "Violet"),
+    ];
+    let cur_accent = &manifest.palette.accent;
+    let swatch_w = (usable_width - 28.0 - 5.0 * 8.0) / 6.0; // ~98px each
+    let mut swatch_buttons: Vec<Box<dyn Widget>> = Vec::new();
+
+    for &(hex, label) in accents {
+        let is_cur = cur_accent.eq_ignore_ascii_case(hex);
+        let color = Color::from(hex);
+        let swatch = Rectangle::new()
+            .width(swatch_w)
+            .height(32.0)
+            .radius(radius::SM)
+            .fill(if is_cur {
+                tokens.surface_active
+            } else {
+                tokens.surface_elevated
+            })
+            .border(
+                if is_cur { 1.5 } else { 1.0 },
+                if is_cur {
+                    tokens.accent
+                } else {
+                    tokens.border_subtle
+                },
+            )
+            .cursor(Pointer)
+            .padding(pad_sym(8.0, 4.0))
+            .on_click(move |_| {
+                let _ = ConfigService::update_and_save(|m| {
+                    m.palette.accent = hex.to_string();
+                });
+            })
+            .child(
+                Row::new(vec![
+                    Box::new(
+                        Rectangle::new()
+                            .width(12.0)
+                            .height(12.0)
+                            .radius(radius::PILL)
+                            .fill(color),
+                    ),
+                    Box::new(
+                        Text::new(label)
+                            .size(typography::SECONDARY)
+                            .weight(if is_cur {
+                                Weight::SemiBold
+                            } else {
+                                Weight::Regular
+                            })
+                            .color(if is_cur {
+                                tokens.accent
+                            } else {
+                                tokens.text_primary
+                            })
+                            .font(&tokens.font_sans),
+                    ),
+                ])
+                .gap(6.0)
+                .align(Align::Center),
+            );
+        swatch_buttons.push(Box::new(swatch));
+    }
+
+    let accent_card = Rectangle::new()
+        .width(Parent)
+        .height(84.0)
+        .radius(radius::MD)
+        .fill(tokens.surface)
+        .border(1.0, tokens.border_subtle)
+        .padding(pad_all(14.0))
+        .child(
+            Column::new(vec![
+                Box::new(
+                    Row::new(vec![
+                        Box::new(
+                            Text::new("Accent Color Override")
+                                .size(typography::BODY)
+                                .weight(Weight::SemiBold)
+                                .color(tokens.text_primary)
+                                .font(&tokens.font_sans),
+                        ),
+                        Box::new(
+                            Text::new("• Highlights, active pills, indicators, and focus rings")
+                                .size(typography::SECONDARY)
+                                .color(tokens.text_muted)
+                                .font(&tokens.font_sans),
+                        ),
+                    ])
+                    .gap(8.0)
+                    .align(Align::Center),
+                ),
+                Box::new(Row::new(swatch_buttons).gap(8.0)),
+            ])
+            .gap(10.0),
+        );
+    rows.push(Box::new(accent_card));
+
+    // 3. Wallpaper Browser (awww)
     let app_svc = AppearanceService::read();
     let current_wp = app_svc.current_wallpaper.clone();
     let wallpapers = app_svc.wallpapers.clone();
@@ -737,6 +745,7 @@ fn render_appearance_tab(
     let cur_font = app_svc.current_font.clone();
     drop(app_svc);
 
+    let wp_card_w = (usable_width - 28.0 - 16.0) / 3.0; // 3 columns spaced by 8px
     let mut wp_items: Vec<Box<dyn Widget>> = Vec::new();
     for wp in wallpapers.iter().take(6) {
         let is_cur = current_wp.as_ref() == Some(wp);
@@ -748,16 +757,16 @@ fn render_appearance_tab(
         let wp_path = wp.clone();
 
         let btn = Rectangle::new()
-            .width(186.0)
-            .height(44.0)
+            .width(wp_card_w)
+            .height(38.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
             .border(
-                1.0,
+                if is_cur { 1.5 } else { 1.0 },
                 if is_cur {
                     tokens.accent
                 } else {
@@ -773,11 +782,11 @@ fn render_appearance_tab(
                 Row::new(vec![
                     Box::new(
                         Text::new("󰸉")
-                            .size(16.0)
+                            .size(15.0)
                             .color(if is_cur {
-                                tokens.surface
-                            } else {
                                 tokens.accent
+                            } else {
+                                tokens.text_muted
                             })
                             .font(&tokens.font_mono)
                             .tight(),
@@ -791,23 +800,33 @@ fn render_appearance_tab(
                                 Weight::Regular
                             })
                             .color(if is_cur {
-                                tokens.surface
+                                tokens.accent
                             } else {
                                 tokens.text_primary
                             })
                             .font(&tokens.font_sans),
                     ),
                 ])
-                .gap(6.0)
+                .gap(8.0)
                 .align(Align::Center),
             );
         wp_items.push(Box::new(btn));
     }
 
     if !wp_items.is_empty() {
+        let mut wp_rows: Vec<Box<dyn Widget>> = Vec::new();
+        if wp_items.len() > 3 {
+            let row2: Vec<Box<dyn Widget>> = wp_items.split_off(3);
+            wp_rows.push(Box::new(Row::new(wp_items).gap(8.0)));
+            wp_rows.push(Box::new(Row::new(row2).gap(8.0)));
+        } else {
+            wp_rows.push(Box::new(Row::new(wp_items).gap(8.0)));
+        }
+
+        let wp_card_h = if wp_rows.len() > 1 { 136.0 } else { 92.0 };
         let wp_card = Rectangle::new()
             .width(Parent)
-            .height(130.0)
+            .height(wp_card_h)
             .radius(radius::MD)
             .fill(tokens.surface)
             .border(1.0, tokens.border_subtle)
@@ -815,38 +834,43 @@ fn render_appearance_tab(
             .child(
                 Column::new(vec![
                     Box::new(
-                        Text::new("Wallpaper Browser (awww)")
-                            .size(typography::BODY)
-                            .weight(Weight::SemiBold)
-                            .color(tokens.text_primary)
-                            .font(&tokens.font_sans),
+                        Row::new(vec![
+                            Box::new(
+                                Text::new("Wallpaper Browser (awww)")
+                                    .size(typography::BODY)
+                                    .weight(Weight::SemiBold)
+                                    .color(tokens.text_primary)
+                                    .font(&tokens.font_sans),
+                            ),
+                            Box::new(
+                                Text::new("• ~/Pictures/Wallpapers")
+                                    .size(typography::SECONDARY)
+                                    .color(tokens.text_muted)
+                                    .font(&tokens.font_sans),
+                            ),
+                        ])
+                        .gap(8.0)
+                        .align(Align::Center),
                     ),
-                    Box::new(
-                        Text::new(
-                            "Wallpapers located in ~/Pictures/Wallpapers or /usr/share/backgrounds",
-                        )
-                        .size(typography::SECONDARY)
-                        .color(tokens.text_muted)
-                        .font(&tokens.font_sans),
-                    ),
-                    Box::new(Row::new(wp_items).gap(8.0)),
+                    Box::new(Column::new(wp_rows).gap(8.0)),
                 ])
                 .gap(10.0),
             );
         rows.push(Box::new(wp_card));
     }
 
-    // 5. GTK & Icon Theme Selectors
+    // 4. GTK & Icon Theme Selectors
+    let theme_btn_w = (usable_width - 28.0 - 18.0) / 4.0; // ~157px each
     let mut gtk_buttons: Vec<Box<dyn Widget>> = Vec::new();
     for g in gtk_themes.iter().take(4) {
         let is_cur = cur_gtk == *g;
         let g_clone = g.clone();
         let btn = Rectangle::new()
-            .width(135.0)
+            .width(theme_btn_w)
             .height(30.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
@@ -872,7 +896,7 @@ fn render_appearance_tab(
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.surface
+                        tokens.accent
                     } else {
                         tokens.text_primary
                     })
@@ -886,11 +910,11 @@ fn render_appearance_tab(
         let is_cur = cur_icon == *ic;
         let ic_clone = ic.clone();
         let btn = Rectangle::new()
-            .width(135.0)
+            .width(theme_btn_w)
             .height(30.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
@@ -916,7 +940,7 @@ fn render_appearance_tab(
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.surface
+                        tokens.accent
                     } else {
                         tokens.text_primary
                     })
@@ -927,7 +951,7 @@ fn render_appearance_tab(
 
     let gtk_card = Rectangle::new()
         .width(Parent)
-        .height(140.0)
+        .height(144.0)
         .radius(radius::MD)
         .fill(tokens.surface)
         .border(1.0, tokens.border_subtle)
@@ -941,7 +965,7 @@ fn render_appearance_tab(
                         .color(tokens.text_primary)
                         .font(&tokens.font_sans),
                 ),
-                Box::new(Row::new(vec![Box::new(
+                Box::new(
                     Column::new(vec![
                         Box::new(
                             Text::new("GTK Theme")
@@ -952,8 +976,8 @@ fn render_appearance_tab(
                         Box::new(Row::new(gtk_buttons).gap(6.0)),
                     ])
                     .gap(4.0),
-                )])),
-                Box::new(Row::new(vec![Box::new(
+                ),
+                Box::new(
                     Column::new(vec![
                         Box::new(
                             Text::new("Icon Theme")
@@ -964,23 +988,24 @@ fn render_appearance_tab(
                         Box::new(Row::new(icon_buttons).gap(6.0)),
                     ])
                     .gap(4.0),
-                )])),
+                ),
             ])
-            .gap(8.0),
+            .gap(10.0),
         );
     rows.push(Box::new(gtk_card));
 
-    // 6. Cursor Theme & Size Controls
+    // 5. Cursor Theme & Size Controls
+    let cursor_btn_w = (usable_width - 28.0 - 24.0 - 190.0) / 3.0; // Left side fills remaining width
     let mut cursor_buttons: Vec<Box<dyn Widget>> = Vec::new();
-    for cur in cursor_themes.iter().take(4) {
+    for cur in cursor_themes.iter().take(3) {
         let is_cur = cur_cursor == *cur;
         let c_clone = cur.clone();
         let btn = Rectangle::new()
-            .width(150.0)
+            .width(cursor_btn_w)
             .height(30.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
@@ -1006,7 +1031,7 @@ fn render_appearance_tab(
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.surface
+                        tokens.accent
                     } else {
                         tokens.text_primary
                     })
@@ -1020,11 +1045,11 @@ fn render_appearance_tab(
     for &sz in sizes {
         let is_cur = cur_cursor_size == sz;
         let btn = Rectangle::new()
-            .width(60.0)
+            .width(58.0)
             .height(30.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
@@ -1050,7 +1075,7 @@ fn render_appearance_tab(
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.surface
+                        tokens.accent
                     } else {
                         tokens.text_primary
                     })
@@ -1061,7 +1086,7 @@ fn render_appearance_tab(
 
     let cursor_card = Rectangle::new()
         .width(Parent)
-        .height(115.0)
+        .height(108.0)
         .radius(radius::MD)
         .fill(tokens.surface)
         .border(1.0, tokens.border_subtle)
@@ -1080,7 +1105,7 @@ fn render_appearance_tab(
                         Box::new(
                             Column::new(vec![
                                 Box::new(
-                                    Text::new("Cursor Theme")
+                                    Text::new("Active Theme")
                                         .size(typography::CAPTION)
                                         .color(tokens.text_muted)
                                         .font(&tokens.font_sans),
@@ -1092,7 +1117,7 @@ fn render_appearance_tab(
                         Box::new(
                             Column::new(vec![
                                 Box::new(
-                                    Text::new("Size")
+                                    Text::new("Pointer Size")
                                         .size(typography::CAPTION)
                                         .color(tokens.text_muted)
                                         .font(&tokens.font_sans),
@@ -1102,14 +1127,14 @@ fn render_appearance_tab(
                             .gap(4.0),
                         ),
                     ])
-                    .gap(16.0),
+                    .gap(20.0),
                 ),
             ])
             .gap(8.0),
         );
     rows.push(Box::new(cursor_card));
 
-    // 7. Font Size & Family Controls
+    // 6. Font Size & Family Controls
     let font_sizes = &[10.0, 11.5, 13.0, 14.5];
     let cur_size = manifest.theme.font_size;
     let mut size_buttons: Vec<Box<dyn Widget>> = Vec::new();
@@ -1121,7 +1146,7 @@ fn render_appearance_tab(
             .height(28.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
@@ -1149,7 +1174,7 @@ fn render_appearance_tab(
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.text_on_accent
+                        tokens.accent
                     } else {
                         tokens.text_secondary
                     })
@@ -1158,16 +1183,17 @@ fn render_appearance_tab(
         size_buttons.push(Box::new(btn));
     }
 
+    let font_btn_w = (usable_width - 28.0 - 18.0) / 4.0;
     let mut font_pills: Vec<Box<dyn Widget>> = Vec::new();
     for f in font_families.iter().take(4) {
         let is_cur = cur_font.starts_with(f) || manifest.theme.font_family.starts_with(f);
         let f_clone = f.clone();
         let btn = Rectangle::new()
-            .width(135.0)
+            .width(font_btn_w)
             .height(28.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
@@ -1193,7 +1219,7 @@ fn render_appearance_tab(
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.surface
+                        tokens.accent
                     } else {
                         tokens.text_primary
                     })
@@ -1204,7 +1230,7 @@ fn render_appearance_tab(
 
     let font_card = Rectangle::new()
         .width(Parent)
-        .height(130.0)
+        .height(134.0)
         .radius(radius::MD)
         .fill(tokens.surface)
         .border(1.0, tokens.border_subtle)
@@ -1214,26 +1240,26 @@ fn render_appearance_tab(
                 Box::new(
                     Row::new(vec![
                         Box::new(
-                            Text::new("UI Base Font & Size")
+                            Text::new("UI Base Font & Scale")
                                 .size(typography::BODY)
                                 .weight(Weight::SemiBold)
                                 .color(tokens.text_primary)
                                 .font(&tokens.font_sans),
                         ),
                         Box::new(
-                            Text::new(format!("• {}", manifest.theme.font_family))
+                            Text::new(format!("• Active: {}", manifest.theme.font_family))
                                 .size(typography::SECONDARY)
                                 .color(tokens.text_muted)
                                 .font(&tokens.font_mono),
                         ),
                     ])
-                    .gap(spacing::GAP_SM)
+                    .gap(8.0)
                     .align(Align::Center),
                 ),
                 Box::new(Row::new(size_buttons).gap(spacing::GAP_SM)),
                 Box::new(Row::new(font_pills).gap(spacing::GAP_SM)),
             ])
-            .gap(8.0),
+            .gap(10.0),
         );
     rows.push(Box::new(font_card));
 
@@ -1781,9 +1807,9 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                     .height(34.0)
                     .radius(radius::SM)
                     .fill(if is_cur {
-                        tokens.accent
+                        tokens.surface_active
                     } else {
-                        tokens.surface
+                        tokens.surface_elevated
                     })
                     .border(
                         1.0,
@@ -1807,7 +1833,7 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                                 Weight::Regular
                             })
                             .color(if is_cur {
-                                tokens.surface
+                                tokens.accent
                             } else {
                                 tokens.text_primary
                             })
@@ -1856,9 +1882,9 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                 .height(34.0)
                 .radius(radius::SM)
                 .fill(if is_cur {
-                    tokens.accent
+                    tokens.surface_active
                 } else {
-                    tokens.surface
+                    tokens.surface_elevated
                 })
                 .border(
                     1.0,
@@ -1882,7 +1908,7 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                             Weight::Regular
                         })
                         .color(if is_cur {
-                            tokens.surface
+                            tokens.accent
                         } else {
                             tokens.text_primary
                         })
@@ -1952,43 +1978,11 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                             ),
                         ])
                         .gap(4.0)
-                        .width(420.0),
+                        .width(550.0),
                     ),
-                    Box::new(
-                        Rectangle::new()
-                            .width(84.0)
-                            .height(34.0)
-                            .radius(radius::SM)
-                            .fill(if vrr_on {
-                                tokens.accent
-                            } else {
-                                tokens.surface
-                            })
-                            .border(
-                                1.0,
-                                if vrr_on {
-                                    tokens.accent
-                                } else {
-                                    tokens.border_subtle
-                                },
-                            )
-                            .cursor(Pointer)
-                            .padding(pad_sym(12.0, 6.0))
-                            .on_click(move |_| {
-                                DisplayTopologyService::apply_vrr(&sel_out, !vrr_on);
-                            })
-                            .child(
-                                Text::new(if vrr_on { "Enabled" } else { "Disabled" })
-                                    .size(typography::SECONDARY)
-                                    .weight(Weight::SemiBold)
-                                    .color(if vrr_on {
-                                        tokens.surface
-                                    } else {
-                                        tokens.text_primary
-                                    })
-                                    .font(&tokens.font_sans),
-                            ),
-                    ),
+                    Box::new(components::pill_switch(vrr_on, tokens, move || {
+                        DisplayTopologyService::apply_vrr(&sel_out, !vrr_on);
+                    })),
                 ])
                 .gap(12.0)
                 .align(Align::Center)
@@ -2018,9 +2012,9 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
             .height(34.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
-                tokens.surface
+                tokens.surface_elevated
             })
             .border(
                 1.0,
@@ -2044,7 +2038,7 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.surface
+                        tokens.accent
                     } else {
                         tokens.text_primary
                     })
@@ -2088,43 +2082,11 @@ fn render_display_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                                 ),
                             ])
                             .gap(4.0)
-                            .width(420.0),
+                            .width(550.0),
                         ),
-                        Box::new(
-                            Rectangle::new()
-                                .width(84.0)
-                                .height(34.0)
-                                .radius(radius::SM)
-                                .fill(if nl_enabled {
-                                    tokens.accent
-                                } else {
-                                    tokens.surface
-                                })
-                                .border(
-                                    1.0,
-                                    if nl_enabled {
-                                        tokens.accent
-                                    } else {
-                                        tokens.border_subtle
-                                    },
-                                )
-                                .cursor(Pointer)
-                                .padding(pad_sym(12.0, 6.0))
-                                .on_click(|_| {
-                                    NightLightService::toggle();
-                                })
-                                .child(
-                                    Text::new(if nl_enabled { "Active" } else { "Turn On" })
-                                        .size(typography::SECONDARY)
-                                        .weight(Weight::SemiBold)
-                                        .color(if nl_enabled {
-                                            tokens.surface
-                                        } else {
-                                            tokens.text_primary
-                                        })
-                                        .font(&tokens.font_sans),
-                                ),
-                        ),
+                        Box::new(components::pill_switch(nl_enabled, tokens, || {
+                            NightLightService::toggle();
+                        })),
                     ])
                     .gap(12.0)
                     .align(Align::Center)
@@ -2197,10 +2159,10 @@ fn render_workspaces_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
         let is_cur = (cur_gap - g).abs() < 0.5;
         let btn = Rectangle::new()
             .width(68.0)
-            .height(28.0)
+            .height(30.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
@@ -2228,7 +2190,7 @@ fn render_workspaces_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.text_on_accent
+                        tokens.accent
                     } else {
                         tokens.text_secondary
                     })
@@ -2273,10 +2235,10 @@ fn render_workspaces_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
         let is_cur = (cur_col - w).abs() < 0.05;
         let btn = Rectangle::new()
             .width(115.0)
-            .height(28.0)
+            .height(30.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
@@ -2304,7 +2266,7 @@ fn render_workspaces_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.text_on_accent
+                        tokens.accent
                     } else {
                         tokens.text_secondary
                     })
@@ -2348,10 +2310,10 @@ fn render_workspaces_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
         let is_cur = cur_center == mode;
         let btn = Rectangle::new()
             .width(115.0)
-            .height(28.0)
+            .height(30.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
@@ -2379,7 +2341,7 @@ fn render_workspaces_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.text_on_accent
+                        tokens.accent
                     } else {
                         tokens.text_secondary
                     })
@@ -2425,7 +2387,7 @@ fn render_animations_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let anim_enabled = state.animations_enabled;
     let toggle_card = Rectangle::new()
         .width(Parent)
-        .height(80.0)
+        .height(72.0)
         .radius(radius::MD)
         .fill(tokens.surface)
         .border(1.0, tokens.border_subtle)
@@ -2451,45 +2413,13 @@ fn render_animations_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                         ),
                     ])
                     .gap(4.0)
-                    .width(420.0),
+                    .width(550.0),
                 ),
-                Box::new(
-                    Rectangle::new()
-                        .width(100.0)
-                        .height(32.0)
-                        .radius(radius::SM)
-                        .fill(if anim_enabled {
-                            tokens.accent
-                        } else {
-                            tokens.surface_elevated
-                        })
-                        .border(
-                            1.0,
-                            if anim_enabled {
-                                tokens.accent
-                            } else {
-                                tokens.border_subtle
-                            },
-                        )
-                        .cursor(Pointer)
-                        .padding(pad_sym(12.0, 6.0))
-                        .on_click(move |_| {
-                            let _ = NiriConfigService::update_and_validate(|s| {
-                                s.animations_enabled = !anim_enabled;
-                            });
-                        })
-                        .child(
-                            Text::new(if anim_enabled { "Enabled" } else { "Disabled" })
-                                .size(typography::SECONDARY)
-                                .weight(Weight::SemiBold)
-                                .color(if anim_enabled {
-                                    tokens.text_on_accent
-                                } else {
-                                    tokens.text_secondary
-                                })
-                                .font(&tokens.font_sans),
-                        ),
-                ),
+                Box::new(components::pill_switch(anim_enabled, tokens, move || {
+                    let _ = NiriConfigService::update_and_validate(|s| {
+                        s.animations_enabled = !anim_enabled;
+                    });
+                })),
             ])
             .gap(12.0)
             .align(Align::Center)
@@ -2511,10 +2441,10 @@ fn render_animations_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
         let is_cur = cur_dur == d;
         let btn = Rectangle::new()
             .width(140.0)
-            .height(28.0)
+            .height(30.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
@@ -2542,7 +2472,7 @@ fn render_animations_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.text_on_accent
+                        tokens.accent
                     } else {
                         tokens.text_secondary
                     })
@@ -2586,10 +2516,10 @@ fn render_animations_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
         let is_cur = cur_curve == c;
         let btn = Rectangle::new()
             .width(135.0)
-            .height(28.0)
+            .height(30.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
@@ -2617,7 +2547,7 @@ fn render_animations_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.text_on_accent
+                        tokens.accent
                     } else {
                         tokens.text_secondary
                     })
@@ -2668,10 +2598,10 @@ fn render_window_rules_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
         let is_cur = (cur_r - r).abs() < 0.5;
         let btn = Rectangle::new()
             .width(76.0)
-            .height(28.0)
+            .height(30.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
@@ -2699,7 +2629,7 @@ fn render_window_rules_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.text_on_accent
+                        tokens.accent
                     } else {
                         tokens.text_secondary
                     })
@@ -2739,10 +2669,10 @@ fn render_window_rules_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
         let is_cur = (cur_bw - b).abs() < 0.5;
         let btn = Rectangle::new()
             .width(76.0)
-            .height(28.0)
+            .height(30.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
@@ -2770,7 +2700,7 @@ fn render_window_rules_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.text_on_accent
+                        tokens.accent
                     } else {
                         tokens.text_secondary
                     })
@@ -2815,10 +2745,10 @@ fn render_window_rules_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
         let is_cur = (cur_op - op).abs() < 0.03;
         let btn = Rectangle::new()
             .width(105.0)
-            .height(28.0)
+            .height(30.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
@@ -2846,7 +2776,7 @@ fn render_window_rules_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.text_on_accent
+                        tokens.accent
                     } else {
                         tokens.text_secondary
                     })
@@ -2887,7 +2817,7 @@ fn render_window_rules_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
 fn render_shortcuts_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
     let mut rows: Vec<Box<dyn Widget>> = Vec::new();
 
-    let shortcut_groups = &[
+    let shell_shortcuts = &[
         (
             "Super / Mod+D / Mod+Space",
             "Start Menu & App Launcher",
@@ -2900,6 +2830,14 @@ fn render_shortcuts_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
         ),
         ("Mod+N", "Notification Center HUD", "󰂚"),
         ("Mod+I / Mod+Shift+Comma", "Amane Settings Window", "󰒓"),
+        (
+            "Ctrl+Mod+Up / Down",
+            "Navigate Workspaces (Vertical Axis)",
+            "󰘳",
+        ),
+    ];
+
+    let window_shortcuts = &[
         ("Mod+Return", "Default Terminal Emulator", "󰞷"),
         (
             "Mod+Shift+Return",
@@ -2915,11 +2853,9 @@ fn render_shortcuts_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
             "Interactive Task Overview & Switcher",
             "󰘲",
         ),
-        (
-            "Ctrl+Mod+Up / Down",
-            "Navigate Workspaces (Vertical Axis)",
-            "󰘳",
-        ),
+    ];
+
+    let system_shortcuts = &[
         (
             "Mod+Shift+S / Shift+Print",
             "Interactive Screen Area Snip",
@@ -2929,77 +2865,85 @@ fn render_shortcuts_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
         ("Ctrl+Alt+Delete / Mod+Shift+E", "Power & Session Menu", "󰐥"),
     ];
 
-    let header_card = Rectangle::new()
-        .width(Parent)
-        .height(60.0)
-        .radius(radius::MD)
-        .fill(tokens.surface)
-        .border(1.0, tokens.border_subtle)
-        .padding(pad_all(14.0))
-        .child(
-            Text::new("Compositor & Shell Keybindings (Configured in 08-binds.kdl)")
-                .size(typography::BODY)
-                .weight(Weight::SemiBold)
-                .color(tokens.text_primary)
-                .font(&tokens.font_sans),
-        );
-    rows.push(Box::new(header_card));
+    type ShortcutDef = (&'static str, &'static str, &'static str);
+    type ShortcutCategory = (&'static str, &'static [ShortcutDef]);
 
-    for &(bind, desc, icon) in shortcut_groups {
-        let item = Rectangle::new()
+    let categories: &[ShortcutCategory] = &[
+        ("󰍹 Shell & Compositor", shell_shortcuts.as_slice()),
+        ("󰖲 Windows & Navigation", window_shortcuts.as_slice()),
+        ("󰒓 System & Tools", system_shortcuts.as_slice()),
+    ];
+
+    for &(cat_name, items) in categories {
+        let cat_header = Rectangle::new()
             .width(Parent)
-            .height(44.0)
-            .radius(radius::SM)
-            .fill(tokens.surface_elevated)
-            .border(1.0, tokens.border_subtle)
-            .padding(pad_sym(14.0, 8.0))
+            .height(30.0)
+            .padding(pad_sym(4.0, 6.0))
             .child(
-                Row::new(vec![
-                    Box::new(
-                        Row::new(vec![
-                            Box::new(
-                                Text::new(icon)
-                                    .size(16.0)
-                                    .color(tokens.accent)
-                                    .font(&tokens.font_mono),
-                            ),
-                            Box::new(
-                                Text::new(desc)
-                                    .size(typography::BODY)
-                                    .weight(Weight::Medium)
-                                    .color(tokens.text_primary)
-                                    .font(&tokens.font_sans),
-                            ),
-                        ])
-                        .gap(10.0)
-                        .align(Align::Center)
-                        .width(280.0),
-                    ),
-                    Box::new(
-                        Rectangle::new()
-                            .width(220.0)
-                            .height(26.0)
-                            .radius(radius::SM)
-                            .fill(tokens.surface)
-                            .border(1.0, tokens.border_subtle)
-                            .padding(pad_sym(10.0, 4.0))
-                            .child(
-                                Text::new(bind)
-                                    .size(typography::BADGE)
-                                    .weight(Weight::SemiBold)
-                                    .color(tokens.accent)
-                                    .font(&tokens.font_mono),
-                            ),
-                    ),
-                ])
-                .gap(12.0)
-                .align(Align::Center)
-                .width(Parent),
+                Text::new(cat_name)
+                    .size(typography::BODY)
+                    .weight(Weight::SemiBold)
+                    .color(tokens.accent)
+                    .font(&tokens.font_sans),
             );
-        rows.push(Box::new(item));
+        rows.push(Box::new(cat_header));
+
+        for &(bind, desc, icon) in items {
+            let item = Rectangle::new()
+                .width(Parent)
+                .height(44.0)
+                .radius(radius::SM)
+                .fill(tokens.surface)
+                .border(1.0, tokens.border_subtle)
+                .padding(pad_sym(14.0, 8.0))
+                .child(
+                    Row::new(vec![
+                        Box::new(
+                            Row::new(vec![
+                                Box::new(
+                                    Text::new(icon)
+                                        .size(16.0)
+                                        .color(tokens.accent)
+                                        .font(&tokens.font_mono),
+                                ),
+                                Box::new(
+                                    Text::new(desc)
+                                        .size(typography::BODY)
+                                        .weight(Weight::Medium)
+                                        .color(tokens.text_primary)
+                                        .font(&tokens.font_sans),
+                                ),
+                            ])
+                            .gap(10.0)
+                            .align(Align::Center)
+                            .width(320.0),
+                        ),
+                        Box::new(
+                            Rectangle::new()
+                                .width(220.0)
+                                .height(26.0)
+                                .radius(radius::SM)
+                                .fill(tokens.surface_elevated)
+                                .border(1.0, tokens.border_subtle)
+                                .padding(pad_sym(10.0, 4.0))
+                                .child(
+                                    Text::new(bind)
+                                        .size(typography::BADGE)
+                                        .weight(Weight::SemiBold)
+                                        .color(tokens.accent)
+                                        .font(&tokens.font_mono),
+                                ),
+                        ),
+                    ])
+                    .gap(12.0)
+                    .align(Align::Center)
+                    .width(Parent),
+                );
+            rows.push(Box::new(item));
+        }
     }
 
-    Box::new(Column::new(rows).gap(8.0).width(Parent))
+    Box::new(Column::new(rows).gap(6.0).width(Parent))
 }
 
 // ---------------------------------------------------------------------------
@@ -3038,45 +2982,13 @@ fn render_input_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                         ),
                     ])
                     .gap(4.0)
-                    .width(420.0),
+                    .width(550.0),
                 ),
-                Box::new(
-                    Rectangle::new()
-                        .width(96.0)
-                        .height(30.0)
-                        .radius(radius::SM)
-                        .fill(if nat_scroll {
-                            tokens.accent
-                        } else {
-                            tokens.surface_elevated
-                        })
-                        .border(
-                            1.0,
-                            if nat_scroll {
-                                tokens.accent
-                            } else {
-                                tokens.border_subtle
-                            },
-                        )
-                        .cursor(Pointer)
-                        .padding(pad_sym(12.0, 6.0))
-                        .on_click(move |_| {
-                            let _ = NiriConfigService::update_and_validate(|s| {
-                                s.natural_scroll = !nat_scroll;
-                            });
-                        })
-                        .child(
-                            Text::new(if nat_scroll { "Enabled" } else { "Disabled" })
-                                .size(typography::SECONDARY)
-                                .weight(Weight::SemiBold)
-                                .color(if nat_scroll {
-                                    tokens.text_on_accent
-                                } else {
-                                    tokens.text_secondary
-                                })
-                                .font(&tokens.font_sans),
-                        ),
-                ),
+                Box::new(components::pill_switch(nat_scroll, tokens, move || {
+                    let _ = NiriConfigService::update_and_validate(|s| {
+                        s.natural_scroll = !nat_scroll;
+                    });
+                })),
             ])
             .gap(12.0)
             .align(Align::Center)
@@ -3112,45 +3024,13 @@ fn render_input_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                         ),
                     ])
                     .gap(4.0)
-                    .width(420.0),
+                    .width(550.0),
                 ),
-                Box::new(
-                    Rectangle::new()
-                        .width(96.0)
-                        .height(30.0)
-                        .radius(radius::SM)
-                        .fill(if tap {
-                            tokens.accent
-                        } else {
-                            tokens.surface_elevated
-                        })
-                        .border(
-                            1.0,
-                            if tap {
-                                tokens.accent
-                            } else {
-                                tokens.border_subtle
-                            },
-                        )
-                        .cursor(Pointer)
-                        .padding(pad_sym(12.0, 6.0))
-                        .on_click(move |_| {
-                            let _ = NiriConfigService::update_and_validate(|s| {
-                                s.tap_to_click = !tap;
-                            });
-                        })
-                        .child(
-                            Text::new(if tap { "Enabled" } else { "Disabled" })
-                                .size(typography::SECONDARY)
-                                .weight(Weight::SemiBold)
-                                .color(if tap {
-                                    tokens.text_on_accent
-                                } else {
-                                    tokens.text_secondary
-                                })
-                                .font(&tokens.font_sans),
-                        ),
-                ),
+                Box::new(components::pill_switch(tap, tokens, move || {
+                    let _ = NiriConfigService::update_and_validate(|s| {
+                        s.tap_to_click = !tap;
+                    });
+                })),
             ])
             .gap(12.0)
             .align(Align::Center)
@@ -3167,10 +3047,10 @@ fn render_input_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
         let is_cur = cur_del == d;
         let btn = Rectangle::new()
             .width(115.0)
-            .height(28.0)
+            .height(30.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
@@ -3198,7 +3078,7 @@ fn render_input_tab(tokens: &ThemeTokens) -> Box<dyn Widget> {
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.text_on_accent
+                        tokens.accent
                     } else {
                         tokens.text_secondary
                     })
@@ -3445,10 +3325,10 @@ fn render_system_power_tab(
         let is_cur = cur_to == to_sec;
         let btn = Rectangle::new()
             .width(85.0)
-            .height(28.0)
+            .height(30.0)
             .radius(radius::SM)
             .fill(if is_cur {
-                tokens.accent
+                tokens.surface_active
             } else {
                 tokens.surface_elevated
             })
@@ -3476,7 +3356,7 @@ fn render_system_power_tab(
                         Weight::Regular
                     })
                     .color(if is_cur {
-                        tokens.text_on_accent
+                        tokens.accent
                     } else {
                         tokens.text_secondary
                     })

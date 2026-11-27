@@ -24,7 +24,7 @@ pub const PROFILES: &[RiceProfile] = &[
     RiceProfile {
         id: "cyber-synthwave",
         name: "Cyber Synthwave",
-        description: "Vibrant neon cyberpunk aesthetics with rich purple gradients",
+        description: "Neon magenta palette with rich synthwave tones",
         shell_style: "cyber-synthwave",
         accent: "#FF007F",
         font: "JetBrainsMono Nerd Font",
@@ -35,7 +35,7 @@ pub const PROFILES: &[RiceProfile] = &[
     RiceProfile {
         id: "win11-dark",
         name: "Win11 Dark",
-        description: "Sleek modern acrylic dark desktop with crisp blue accents",
+        description: "Modern acrylic dark desktop with crisp blue accents",
         shell_style: "win11-dark",
         accent: "#0078D4",
         font: "Inter",
@@ -46,7 +46,7 @@ pub const PROFILES: &[RiceProfile] = &[
     RiceProfile {
         id: "nordic-slate",
         name: "Nordic Slate",
-        description: "Calm arctic frost palette with muted polar tones",
+        description: "Calm arctic frost aesthetic with muted polar slate",
         shell_style: "nordic-slate",
         accent: "#88C0D0",
         font: "Inter",
@@ -57,7 +57,7 @@ pub const PROFILES: &[RiceProfile] = &[
     RiceProfile {
         id: "minimal",
         name: "Minimalist Focus",
-        description: "Zero distraction monochrome layout optimized for high density",
+        description: "Zero distraction monochrome layout for pure focus",
         shell_style: "minimal",
         accent: "#A0A0A0",
         font: "JetBrainsMono Nerd Font",
@@ -68,7 +68,7 @@ pub const PROFILES: &[RiceProfile] = &[
     RiceProfile {
         id: "obsidian-mint",
         name: "Obsidian Mint",
-        description: "Deep obsidian canvas with luminescent emerald highlights",
+        description: "Deep obsidian canvas with vibrant emerald mint",
         shell_style: "obsidian-mint",
         accent: "#50FA7B",
         font: "JetBrainsMono Nerd Font",
@@ -79,7 +79,7 @@ pub const PROFILES: &[RiceProfile] = &[
     RiceProfile {
         id: "playful-clay",
         name: "Playful Clay",
-        description: "Warm pastel tactile claymorphism with soft curves",
+        description: "Warm pastel tactile clay with soft golden curves",
         shell_style: "playful-clay",
         accent: "#FFB86C",
         font: "Inter",
@@ -432,7 +432,7 @@ fn scan_wallpapers() -> Vec<PathBuf> {
     let candidates = [
         dirs_home("Pictures/Wallpapers"),
         dirs_home("Pictures/wallpapers"),
-        dirs_home("Pictures"),
+        dirs_home(".local/share/wallpapers"),
         PathBuf::from("/usr/share/backgrounds"),
     ];
 

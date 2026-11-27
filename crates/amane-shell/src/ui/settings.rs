@@ -34,21 +34,6 @@ fn clay_card_shadow() -> Shadow {
 }
 
 #[inline]
-fn clay_tile_shadow(active: bool) -> Shadow {
-    if active {
-        Shadow::inner(Color::BLACK)
-            .opacity(0.26)
-            .blur(8.0)
-            .offset(0.0, 2.0)
-    } else {
-        Shadow::drop(Color::BLACK)
-            .opacity(0.22)
-            .blur(10.0)
-            .offset(0.0, 3.0)
-    }
-}
-
-#[inline]
 fn clay_inset_shadow() -> Shadow {
     Shadow::inner(Color::BLACK)
         .opacity(0.28)
@@ -332,7 +317,7 @@ pub fn settings_overlay() -> LayerWindow {
             (Color::TRANSPARENT, Color::TRANSPARENT)
         };
 
-        let mut cat_row = Rectangle::new()
+        let cat_row = Rectangle::new()
             .width(Parent)
             .height(38.0)
             .radius(CLAY_TILE_RADIUS)
@@ -343,53 +328,50 @@ pub fn settings_overlay() -> LayerWindow {
             .on_click(move |_| {
                 let mut s = SettingsService::write();
                 s.selected = cat;
-            });
-        if is_active {
-            cat_row = cat_row.shadow(clay_tile_shadow(true));
-        }
-        let cat_row = cat_row.child(
-            Row::new(vec![
-                Box::new(
-                    Rectangle::new()
-                        .width(3.0)
-                        .height(14.0)
-                        .radius(radius::PILL)
-                        .fill(if is_active {
-                            tokens.accent
-                        } else {
-                            Color::TRANSPARENT
-                        }),
-                ),
-                Box::new(
-                    Text::new(cat.icon())
-                        .size(14.0)
-                        .color(if is_active {
-                            tokens.accent
-                        } else {
-                            tokens.text_muted
-                        })
-                        .font(&tokens.font_mono)
-                        .tight(),
-                ),
-                Box::new(
-                    Text::new(cat.name())
-                        .size(typography::BODY)
-                        .weight(if is_active {
-                            Weight::SemiBold
-                        } else {
-                            Weight::Regular
-                        })
-                        .color(if is_active {
-                            tokens.text_primary
-                        } else {
-                            tokens.text_secondary
-                        })
-                        .font(&tokens.font_sans),
-                ),
-            ])
-            .gap(spacing::GAP_SM)
-            .align(Align::Center),
-        );
+            })
+            .child(
+                Row::new(vec![
+                    Box::new(
+                        Rectangle::new()
+                            .width(3.0)
+                            .height(14.0)
+                            .radius(radius::PILL)
+                            .fill(if is_active {
+                                tokens.accent
+                            } else {
+                                Color::TRANSPARENT
+                            }),
+                    ),
+                    Box::new(
+                        Text::new(cat.icon())
+                            .size(14.0)
+                            .color(if is_active {
+                                tokens.accent
+                            } else {
+                                tokens.text_muted
+                            })
+                            .font(&tokens.font_mono)
+                            .tight(),
+                    ),
+                    Box::new(
+                        Text::new(cat.name())
+                            .size(typography::BODY)
+                            .weight(if is_active {
+                                Weight::SemiBold
+                            } else {
+                                Weight::Regular
+                            })
+                            .color(if is_active {
+                                tokens.text_primary
+                            } else {
+                                tokens.text_secondary
+                            })
+                            .font(&tokens.font_sans),
+                    ),
+                ])
+                .gap(spacing::GAP_SM)
+                .align(Align::Center),
+            );
 
         nav_items.push(Box::new(cat_row));
     }
@@ -569,7 +551,6 @@ fn render_appearance_tab(
                 tokens.surface_elevated
             })
             .border(1.0, clay_border_color(tokens, active))
-            .shadow(clay_tile_shadow(active))
             .cursor(Pointer)
             .align_child(Align::Center, Align::Center)
             .on_click(move |_| {
@@ -650,7 +631,6 @@ fn render_appearance_tab(
                 tokens.surface_elevated
             })
             .border(1.0, clay_border_color(tokens, is_fam))
-            .shadow(clay_tile_shadow(is_fam))
             .cursor(Pointer)
             .align_child(Align::Center, Align::Center)
             .on_click(move |_| {
@@ -723,7 +703,6 @@ fn render_appearance_tab(
                 tokens.surface_elevated
             })
             .border(1.0, clay_border_color(tokens, is_cur))
-            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(12.0, 8.0))
             .on_click(move |_| {
@@ -856,7 +835,6 @@ fn render_appearance_tab(
                 tokens.surface_elevated
             })
             .border(1.0, clay_border_color(tokens, is_cur))
-            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_all(12.0))
             .on_click({
@@ -990,7 +968,6 @@ fn render_appearance_tab(
                 tokens.surface_elevated
             })
             .border(1.0, clay_border_color(tokens, is_cur))
-            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(8.0, 4.0))
             .on_click(move |_| {
@@ -1100,7 +1077,6 @@ fn render_appearance_tab(
                 tokens.surface_elevated
             })
             .border(1.0, clay_border_color(tokens, is_cur))
-            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(10.0, 6.0))
             .on_click(move |_| {
@@ -1204,7 +1180,6 @@ fn render_appearance_tab(
                 tokens.surface_elevated
             })
             .border(1.0, clay_border_color(tokens, is_cur))
-            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(10.0, 4.0))
             .on_click(move |_| {
@@ -1242,7 +1217,6 @@ fn render_appearance_tab(
                 tokens.surface_elevated
             })
             .border(1.0, clay_border_color(tokens, is_cur))
-            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(10.0, 4.0))
             .on_click(move |_| {
@@ -1328,7 +1302,6 @@ fn render_appearance_tab(
                 tokens.surface_elevated
             })
             .border(1.0, clay_border_color(tokens, is_cur))
-            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(10.0, 4.0))
             .on_click(move |_| {
@@ -1366,7 +1339,6 @@ fn render_appearance_tab(
                 tokens.surface_elevated
             })
             .border(1.0, clay_border_color(tokens, is_cur))
-            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(8.0, 4.0))
             .on_click(move |_| {
@@ -1458,7 +1430,6 @@ fn render_appearance_tab(
                 tokens.surface_elevated
             })
             .border(1.0, clay_border_color(tokens, is_cur))
-            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(10.0, 4.0))
             .on_click(move |_| {
@@ -1499,7 +1470,6 @@ fn render_appearance_tab(
                 tokens.surface_elevated
             })
             .border(1.0, clay_border_color(tokens, is_cur))
-            .shadow(clay_tile_shadow(is_cur))
             .cursor(Pointer)
             .padding(pad_sym(8.0, 4.0))
             .on_click(move |_| {

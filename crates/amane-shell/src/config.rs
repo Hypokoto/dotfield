@@ -6,6 +6,10 @@ fn default_dark_mode() -> bool {
     true
 }
 
+fn default_sync_apps() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ThemeConfig {
@@ -15,6 +19,8 @@ pub struct ThemeConfig {
     pub wallpaper: Option<String>,
     #[serde(default = "default_dark_mode")]
     pub dark_mode: bool,
+    #[serde(default = "default_sync_apps")]
+    pub sync_apps: bool,
 }
 
 impl Default for ThemeConfig {
@@ -25,6 +31,7 @@ impl Default for ThemeConfig {
             style: "cyber-synthwave".to_string(),
             wallpaper: None,
             dark_mode: true,
+            sync_apps: true,
         }
     }
 }

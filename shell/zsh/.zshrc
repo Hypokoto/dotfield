@@ -532,7 +532,12 @@ if [[ -d "$HOME/.bun" ]]; then
     [[ -s "$HOME/.bun/_bun" ]] && source "$HOME/.bun/_bun"
 fi
 
-### 12. Self-Compiling Optimization
+### 12. Amane Settings Live Theme Sync
+[[ -f "$HOME/.config/dotfield/themes/zsh.zsh" ]] && source "$HOME/.config/dotfield/themes/zsh.zsh"
+[[ -f "$HOME/.config/dotfield/themes/starship.toml" ]] && export STARSHIP_CONFIG="$HOME/.config/dotfield/themes/starship.toml"
+[[ -f "$HOME/.config/dotfield/themes/imv.conf" ]] && export imv_config="$HOME/.config/dotfield/themes/imv.conf"
+
+### 13. Self-Compiling Optimization
 # Background-compile .zshrc if modified for instant bytecode loading
 if [[ ! -s "${ZDOTDIR:-$HOME}/.zshrc.zwc" || "${ZDOTDIR:-$HOME}/.zshrc" -nt "${ZDOTDIR:-$HOME}/.zshrc.zwc" ]]; then
     { zcompile "${ZDOTDIR:-$HOME}/.zshrc" 2>/dev/null } &!

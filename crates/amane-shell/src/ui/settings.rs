@@ -573,6 +573,37 @@ fn render_appearance_tab(
             )
     };
 
+    let sync_apps_enabled = ConfigService::read().manifest.theme.sync_apps;
+    let sync_pill = Rectangle::new()
+        .width(126.0)
+        .height(34.0)
+        .radius(CLAY_TILE_RADIUS)
+        .fill(if sync_apps_enabled {
+            tokens.accent_subtle
+        } else {
+            tokens.surface_elevated
+        })
+        .border(1.0, clay_border_color(tokens, sync_apps_enabled))
+        .align_child(Align::Center, Align::Center)
+        .on_click(move |_| {
+            AppearanceService::toggle_sync_apps(!sync_apps_enabled);
+        })
+        .child(
+            Text::new(if sync_apps_enabled {
+                "󰑓  Sync Apps"
+            } else {
+                "󰑓  Amane Only"
+            })
+            .size(typography::CAPTION)
+            .weight(Weight::SemiBold)
+            .color(if sync_apps_enabled {
+                tokens.accent
+            } else {
+                tokens.text_muted
+            })
+            .font(&tokens.font_sans),
+        );
+
     let mode_card = Rectangle::new()
         .width(Parent)
         .height(66.0)
@@ -593,7 +624,7 @@ fn render_appearance_tab(
                                 .font(&tokens.font_sans),
                         ),
                         Box::new(
-                            Text::new("Smart-switches theme variant & GTK color-scheme")
+                            Text::new("Smart-switches theme, GTK, terminals & TUI apps")
                                 .size(typography::CAPTION)
                                 .color(tokens.text_muted)
                                 .font(&tokens.font_sans),
@@ -603,6 +634,7 @@ fn render_appearance_tab(
                 ),
                 Box::new(
                     Row::new(vec![
+                        Box::new(sync_pill),
                         Box::new(mode_btn("󰖔  Dark", true, is_dark_mode)),
                         Box::new(mode_btn("󰖙  Light", false, !is_dark_mode)),
                     ])

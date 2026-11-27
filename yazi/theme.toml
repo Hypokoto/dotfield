@@ -1,6 +1,10 @@
 # Dotfield Yazi Theme Configuration
 # Cyber Synthwave (Void #000000, Surface #140E29, Overlay #251B4A, Foreground #14B9B5, Blue #04C5F0, Green #7CD699, Red #BE3F50)
 
+[flavor]
+dark  = "dotfield-live"
+light = "dotfield-live"
+
 [mgr]
 cwd = { fg = "#04c5f0", bold = true }
 hovered = { bg = "#251b4a", bold = true }

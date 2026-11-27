@@ -114,3 +114,6 @@ keybind = alt+shift+j=resize_split:down,30
 keybind = alt+s=start_search
 keybind = alt+f=start_search
 keybind = ctrl+shift+f=start_search
+
+# --- Amane Settings Live Theme Sync ---
+config-file = ?~/.config/dotfield/themes/ghostty.conf

@@ -9,4 +9,5 @@ pub mod niri_config;
 pub mod palettes;
 pub mod presentation;
 pub mod telemetry;
+pub mod theme_sync;
 pub mod tray;

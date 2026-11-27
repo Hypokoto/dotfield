@@ -35,9 +35,17 @@ end
 -- load theme safely
 pcall(dofile, vim.g.base46_cache .. "defaults")
 pcall(dofile, vim.g.base46_cache .. "statusline")
+pcall(dofile, vim.fn.expand("~/.config/dotfield/themes/nvim.lua"))
 
 require("options")
 require("autocmds")
+
+vim.api.nvim_create_autocmd("Signal", {
+  pattern = "SIGUSR1",
+  callback = function()
+    pcall(dofile, vim.fn.expand("~/.config/dotfield/themes/nvim.lua"))
+  end,
+})
 
 vim.schedule(function()
   require("mappings")

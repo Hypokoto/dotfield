@@ -34,6 +34,7 @@ channels = stereo
 mono_option = average
 
 [color]
+theme = 'dotfield-live'
 # Cyber Synthwave Palette Theme
 background = default
 foreground = '#14B9B5'

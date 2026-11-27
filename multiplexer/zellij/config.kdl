@@ -2,7 +2,7 @@
 // Cyber Synthwave Theme — Void Black · Deep Violet · Neon Blue · Cyan-Teal
 // Non-conflicting, high-performance multiplexer configuration
 
-theme "dotfield"
+theme "dotfield-live"
 
 themes {
     dotfield {

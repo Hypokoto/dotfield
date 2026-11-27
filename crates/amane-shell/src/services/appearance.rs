@@ -315,6 +315,10 @@ impl AppearanceService {
             },
         );
 
+        if ConfigService::read().manifest.theme.sync_apps {
+            crate::services::theme_sync::sync_all(spec);
+        }
+
         {
             let mut svc = AppearanceService::write();
             svc.sync_settings_ini();
@@ -323,6 +327,29 @@ impl AppearanceService {
                 spec.name,
                 if spec.is_dark { "Dark" } else { "Light" }
             ));
+        }
+        amane::request_frame();
+    }
+
+    pub fn toggle_sync_apps(enabled: bool) {
+        let style = {
+            let mut target_style = String::new();
+            let _ = ConfigService::update_and_save(|m| {
+                m.theme.sync_apps = enabled;
+                target_style = m.theme.style.clone();
+            });
+            target_style
+        };
+        if enabled && let Some(spec) = find_palette(&style) {
+            crate::services::theme_sync::sync_all(spec);
+        }
+        {
+            let mut svc = AppearanceService::write();
+            svc.status_message = Some(if enabled {
+                "Synced theme to terminals, apps & GTK".to_string()
+            } else {
+                "App theme sync paused (Amane only)".to_string()
+            });
         }
         amane::request_frame();
     }

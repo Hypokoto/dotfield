@@ -646,10 +646,21 @@ mod tests {
 
     #[test]
     fn test_rice_profiles_definitions() {
-        assert!(PROFILES.len() >= 5);
+        assert_eq!(PROFILES.len(), 6);
         let cyber = PROFILES.iter().find(|p| p.id == "cyber-synthwave").unwrap();
         assert_eq!(cyber.shell_style, "cyber-synthwave");
         assert_eq!(cyber.accent, "#04C5F0");
+
+        for p in PROFILES {
+            let resolved = find_palette_or_alias(p.shell_style, true);
+            if p.shell_style != "cyber-synthwave" {
+                assert_ne!(
+                    resolved.id, "cyber-synthwave",
+                    "RiceProfile {} fell back to cyber-synthwave instead of explicit alias",
+                    p.id
+                );
+            }
+        }
     }
 
     #[test]

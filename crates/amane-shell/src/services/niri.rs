@@ -115,9 +115,11 @@ impl NiriService {
         FOCUSED_WINDOW.load_full()
     }
 
-    /// Sends an Action request to Niri over IPC.
-    pub fn perform_action(action: Action) -> Result<(), NiriError> {
-        let mut socket = Socket::connect().map_err(|_| NiriError::IoError)?;
+    fn perform_action_with<F>(connect: F, action: Action) -> Result<(), NiriError>
+    where
+        F: FnOnce() -> std::io::Result<Socket>,
+    {
+        let mut socket = connect().map_err(|_| NiriError::IoError)?;
         let reply = socket
             .send(Request::Action(action))
             .map_err(|_| NiriError::IoError)?;
@@ -126,6 +128,11 @@ impl NiriService {
             Ok(_) => Err(NiriError::UnexpectedResponse),
             Err(_) => Err(NiriError::NiriFailure),
         }
+    }
+
+    /// Sends an Action request to Niri over IPC.
+    pub fn perform_action(action: Action) -> Result<(), NiriError> {
+        Self::perform_action_with(Socket::connect, action)
     }
 
     /// Gracefully exits Niri compositor.
@@ -527,11 +534,11 @@ mod tests {
 
     #[test]
     fn test_niri_perform_action_offline_errors_cleanly() {
-        // Never send destructive window actions to a live compositor during unit tests
-        if !NiriService::is_available() {
-            let result = NiriService::close_focused_window();
-            assert!(result.is_err());
-        }
+        let result = NiriService::perform_action_with(
+            || Err(std::io::Error::new(std::io::ErrorKind::NotFound, "offline")),
+            Action::CloseWindow { id: None },
+        );
+        assert_eq!(result, Err(NiriError::IoError));
     }
 
     #[test]
@@ -576,17 +583,32 @@ mod tests {
     }
 
     #[test]
-    fn test_niri_cached_windows_default() {
-        let windows = NiriService::cached_windows();
-        assert!(windows.is_empty() || !windows.is_empty());
+    fn test_niri_window_title_truncation_and_fallback() {
+        let _lock = TEST_MUTEX.lock().unwrap();
+        NiriService::update_active_window(7, "123456789012345678901234567890", "ghostty", 2);
+        let svc = NiriWindowService::read();
+        assert_eq!(svc.display_title, "1234567890123456789012345...");
+        assert!((svc.layout_width - 278.0).abs() < 0.01);
+        drop(svc);
+
+        NiriService::update_active_window(0, "", "", 0);
+        let reset = NiriWindowService::read();
+        assert_eq!(reset.display_title, "Dotfield");
+        assert!(reset.layout_width >= 64.0);
     }
 
     #[test]
     fn test_toggle_overview_offline() {
-        if !NiriService::is_available() {
-            let res = NiriService::toggle_overview();
-            assert!(res.is_err());
-        }
+        let res = NiriService::perform_action_with(
+            || {
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::ConnectionRefused,
+                    "offline",
+                ))
+            },
+            Action::ToggleOverview {},
+        );
+        assert_eq!(res, Err(NiriError::IoError));
     }
 
     #[test]

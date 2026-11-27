@@ -1010,6 +1010,26 @@ static IOS_GLASS_SPEC: PaletteSpec = PaletteSpec {
     danger: "#FF3B30",
 };
 
+static OBSIDIAN_MINT_SPEC: PaletteSpec = PaletteSpec {
+    id: "obsidian-mint",
+    name: "Obsidian Mint",
+    family: "System",
+    is_dark: true,
+    counterpart: "catppuccin-latte",
+    bg: "#080B0B",
+    surface: "#0E1413",
+    overlay: "#16201E",
+    track: "#23322F",
+    fg: "#ECFDF5",
+    fg_secondary: "#94A3A0",
+    fg_muted: "#71827E",
+    accent: "#2DD4BF",
+    border: "#23322F",
+    success: "#10B981",
+    warning: "#FBBF24",
+    danger: "#F43F5E",
+};
+
 /// Resolve curated palette IDs and legacy/rice-profile style names to a base PaletteSpec.
 pub fn find_palette_or_alias(style: &str, dark_mode: bool) -> &'static PaletteSpec {
     if let Some(spec) = find_palette(style) {
@@ -1017,6 +1037,7 @@ pub fn find_palette_or_alias(style: &str, dark_mode: bool) -> &'static PaletteSp
     }
     match style {
         "ios-glass" => &IOS_GLASS_SPEC,
+        "obsidian-mint" => &OBSIDIAN_MINT_SPEC,
         "nordic-slate" => find_palette("nord").unwrap_or(&PALETTES[0]),
         "win11-dark" => find_palette("obsidian-dark").unwrap_or(&PALETTES[0]),
         "minimal" => find_palette(if dark_mode {

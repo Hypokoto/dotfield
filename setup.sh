@@ -1039,6 +1039,12 @@ ensure_config_link_or_dir "${SCRIPT_DIR}/btop" "${HOME}/.config/btop"
 ensure_config_link_or_dir "${SCRIPT_DIR}/cava" "${HOME}/.config/cava"
 ensure_config_link_or_dir "${SCRIPT_DIR}/shell.toml" "${HOME}/.config/dotfield/shell.toml"
 ensure_config_link_or_dir "${SCRIPT_DIR}/theme/templates" "${HOME}/.config/dotfield/templates"
+if [[ "${DRY_RUN}" != true ]]; then
+    mkdir -p "${HOME}/.config/dotfield/themes"
+    for theme_file in foot.ini fuzzel.ini kitty.conf ghostty.conf ghostty-gtk.css mako.conf mpv.conf starship.toml yazi.toml imv.conf cava btop.theme zellij.kdl niri.kdl; do
+        [[ -e "${HOME}/.config/dotfield/themes/${theme_file}" ]] || : > "${HOME}/.config/dotfield/themes/${theme_file}"
+    done
+fi
 ensure_config_link_or_dir "${SCRIPT_DIR}/nvim" "${HOME}/.config/nvim"
 ensure_config_link_or_dir "${SCRIPT_DIR}/multiplexer/tmux" "${HOME}/.config/tmux"
 ensure_config_link_or_dir "${SCRIPT_DIR}/multiplexer/zellij" "${HOME}/.config/zellij"
